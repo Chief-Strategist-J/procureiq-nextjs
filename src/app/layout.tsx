@@ -21,7 +21,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className="dark h-full antialiased"
+      className="h-full antialiased"
     >
       <body className={`${serifFont.className} min-h-full flex flex-col`}>
         <TooltipProvider>{children}</TooltipProvider>
