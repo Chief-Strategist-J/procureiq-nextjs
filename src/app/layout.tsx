@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { EB_Garamond } from "next/font/google";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-const sansFont = Inter({
+const serifFont = EB_Garamond({
   subsets: ["latin"],
   display: "swap",
 });
@@ -23,7 +23,7 @@ export default function RootLayout({
       lang="en"
       className="dark h-full antialiased"
     >
-      <body className={`${sansFont.className} min-h-full flex flex-col`}>
+      <body className={`${serifFont.className} min-h-full flex flex-col`}>
         <TooltipProvider>{children}</TooltipProvider>
       </body>
     </html>
