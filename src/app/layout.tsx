@@ -1,17 +1,6 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
-
-const sansFont = Inter({
-  variable: "--font-sans",
-  subsets: ["latin"],
-});
-
-const monoFont = JetBrains_Mono({
-  variable: "--font-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -26,7 +15,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${sansFont.variable} ${monoFont.variable} dark h-full antialiased`}
+      className="dark h-full antialiased"
     >
       <body className="min-h-full flex flex-col">
         <TooltipProvider>{children}</TooltipProvider>
