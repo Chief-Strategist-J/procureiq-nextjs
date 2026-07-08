@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { Mail, CheckCircle2, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import {
   Dialog,
@@ -16,6 +14,8 @@ import {
   DialogClose,
   DialogFooter
 } from "@/components/ui/dialog";
+import { Field, FieldLabel, FieldError } from "@/components/ui/field";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 
 interface ForgotPasswordDialogProps {
   trigger?: React.ReactNode;
@@ -89,29 +89,31 @@ export function ForgotPasswordDialog({
             </DialogHeader>
 
             {error && (
-              <div className="p-2.5 text-xs bg-red-950/40 border border-red-900/50 text-red-400 rounded-md">
+              <FieldError className="p-2.5 text-xs bg-red-950/40 border border-red-900/50 text-red-400 rounded-md">
                 {error}
-              </div>
+              </FieldError>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="reset-email" className="text-zinc-400 text-xs font-mono">
+            <Field className="space-y-1.5">
+              <FieldLabel htmlFor="reset-email" className="text-zinc-400 text-xs font-mono">
                 Email Address
-              </Label>
-              <div className="relative">
-                <Input
+              </FieldLabel>
+              <InputGroup className="bg-black border-zinc-800 focus-within:border-zinc-700">
+                <InputGroupAddon align="inline-start">
+                  <Mail className="w-4 h-4 text-zinc-500" />
+                </InputGroupAddon>
+                <InputGroupInput
                   id="reset-email"
                   type="email"
                   placeholder="name@company.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={loading}
-                  className="bg-black border-zinc-850 focus-visible:ring-zinc-800 pl-9 text-zinc-100 placeholder-zinc-650 text-sm"
+                  className="text-zinc-100 text-sm"
                   required
                 />
-                <Mail className="absolute left-3 top-3 w-4 h-4 text-zinc-600 pointer-events-none" />
-              </div>
-            </div>
+              </InputGroup>
+            </Field>
 
             <DialogFooter className="pt-2">
               <div className="flex gap-3 w-full justify-end">
