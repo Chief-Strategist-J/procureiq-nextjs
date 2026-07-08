@@ -1,7 +1,7 @@
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { ForgotPasswordDialog } from "@/components/forgot-password-dialog";
-import { expect, test, vi, beforeEach } from "vitest";
+import { expect, test, vi, beforeEach, describe } from "vitest";
 import "@testing-library/jest-dom";
 
 describe("ForgotPasswordDialog Unit Tests", () => {

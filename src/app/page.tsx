@@ -47,15 +47,9 @@ export default function Home() {
               <span>Logged in as <strong className="text-white">{user.username}</strong> ({user.email})</span>
             </div>
             <div className="flex flex-col gap-3 w-full">
-              <Link 
-                href="/reminders" 
-                className="w-full py-2.5 px-4 rounded-lg bg-white text-black text-sm font-medium hover:bg-zinc-200 transition-all text-center"
-              >
-                Go to Proactive Reminder Agent
-              </Link>
               <button 
                 onClick={handleLogout}
-                className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 text-sm font-medium hover:bg-zinc-800 hover:text-white transition-all"
+                className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 text-sm font-medium hover:bg-zinc-800 hover:text-white transition-all cursor-pointer"
               >
                 <LogOut className="w-4 h-4" />
                 Sign Out
@@ -80,58 +74,10 @@ export default function Home() {
                 Register
               </Link>
             </div>
-            <Link 
-              href="/reminders" 
-              className="w-full block py-2.5 px-4 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 text-sm font-medium hover:bg-zinc-850 transition-all text-center"
-            >
-              Go to Proactive Reminder Agent (Demo)
-            </Link>
           </div>
         )}
 
-        <div className="grid grid-cols-5 gap-2 w-full mt-2">
-          <Link 
-            href="/empty" 
-            className="py-2 px-1 rounded-lg border border-zinc-900 bg-zinc-950/60 text-zinc-400 text-[10px] font-light hover:text-white hover:bg-zinc-900 transition-all text-center font-mono"
-          >
-            Zero States
-          </Link>
-          <Link 
-            href="/error-test" 
-            className="py-2 px-1 rounded-lg border border-zinc-900 bg-zinc-950/60 text-zinc-400 text-[10px] font-light hover:text-white hover:bg-zinc-900 transition-all text-center font-mono"
-          >
-            Test Error
-          </Link>
-          <Link 
-            href="/unauthorized" 
-            className="py-2 px-1 rounded-lg border border-zinc-900 bg-zinc-950/60 text-zinc-400 text-[10px] font-light hover:text-white hover:bg-zinc-900 transition-all text-center font-mono"
-          >
-            Test 403
-          </Link>
-          <Link 
-            href="/missing-route-test" 
-            className="py-2 px-1 rounded-lg border border-zinc-900 bg-zinc-950/60 text-zinc-400 text-[10px] font-light hover:text-white hover:bg-zinc-900 transition-all text-center font-mono"
-          >
-            Test 404
-          </Link>
-          <Link 
-            href="/reset-password?token=mock-telemetry-token-99" 
-            className="py-2 px-1 rounded-lg border border-zinc-900 bg-zinc-950/60 text-zinc-400 text-[10px] font-light hover:text-white hover:bg-zinc-900 transition-all text-center font-mono"
-          >
-            Test Reset
-          </Link>
-        </div>
 
-        <div className="w-full h-px bg-zinc-900" />
-        <div className="flex gap-4 text-xs justify-center">
-          <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-zinc-900 text-zinc-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            AlloyDB Local Ready
-          </span>
-          <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-zinc-900 text-zinc-400">
-            Node.js API Active
-          </span>
-        </div>
       </main>
     </div>
   );
