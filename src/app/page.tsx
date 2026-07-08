@@ -89,7 +89,7 @@ export default function Home() {
           </div>
         )}
 
-        <div className="grid grid-cols-4 gap-2 w-full mt-2">
+        <div className="grid grid-cols-5 gap-2 w-full mt-2">
           <Link 
             href="/empty" 
             className="py-2 px-1 rounded-lg border border-zinc-900 bg-zinc-950/60 text-zinc-400 text-[10px] font-light hover:text-white hover:bg-zinc-900 transition-all text-center font-mono"
@@ -113,6 +113,12 @@ export default function Home() {
             className="py-2 px-1 rounded-lg border border-zinc-900 bg-zinc-950/60 text-zinc-400 text-[10px] font-light hover:text-white hover:bg-zinc-900 transition-all text-center font-mono"
           >
             Test 404
+          </Link>
+          <Link 
+            href="/reset-password?token=mock-telemetry-token-99" 
+            className="py-2 px-1 rounded-lg border border-zinc-900 bg-zinc-950/60 text-zinc-400 text-[10px] font-light hover:text-white hover:bg-zinc-900 transition-all text-center font-mono"
+          >
+            Test Reset
           </Link>
         </div>
 

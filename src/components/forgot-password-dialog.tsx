@@ -18,7 +18,7 @@ import { Field, FieldLabel, FieldError } from "@/components/ui/field";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 
 interface ForgotPasswordDialogProps {
-  trigger?: React.ReactNode;
+  trigger?: React.ReactElement;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
@@ -44,11 +44,21 @@ export function ForgotPasswordDialog({
     setError("");
 
     try {
-      // Simulate API network latency
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+      const res = await fetch(`${backendUrl}/api/v1/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || "Unable to dispatch reset authorization. Verify user account exists.");
+      }
+
       setSuccess(true);
     } catch (err: any) {
-      setError("Unable to dispatch reset authorization. Please try again.");
+      setError(err.message || "Unable to dispatch reset authorization. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -70,7 +80,7 @@ export function ForgotPasswordDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
+      {trigger && <DialogTrigger render={trigger} />}
       <DialogContent className="border-zinc-800 bg-zinc-950/95 backdrop-blur-md max-w-sm sm:max-w-md w-full p-6 text-zinc-100 shadow-2xl rounded-xl">
         
         {/* Step 1: Request View */}
