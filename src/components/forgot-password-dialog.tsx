@@ -1,0 +1,167 @@
+"use client";
+
+import { useState } from "react";
+import { Mail, CheckCircle2, KeyRound } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+  DialogFooter
+} from "@/components/ui/dialog";
+
+interface ForgotPasswordDialogProps {
+  trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+export function ForgotPasswordDialog({
+  trigger,
+  open,
+  onOpenChange
+}: ForgotPasswordDialogProps) {
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      setError("Please specify an email address.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      // Simulate API network latency
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      setSuccess(true);
+    } catch (err: any) {
+      setError("Unable to dispatch reset authorization. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenChange = (isOpen: boolean) => {
+    if (onOpenChange) {
+      onOpenChange(isOpen);
+    }
+    if (!isOpen) {
+      // Reset state on close
+      setTimeout(() => {
+        setEmail("");
+        setSuccess(false);
+        setError("");
+      }, 200);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
+      <DialogContent className="border-zinc-800 bg-zinc-950/95 backdrop-blur-md max-w-sm sm:max-w-md w-full p-6 text-zinc-100 shadow-2xl rounded-xl">
+        
+        {/* Step 1: Request View */}
+        {!success ? (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <DialogHeader className="space-y-2">
+              <div className="size-10 rounded-lg bg-zinc-900 border border-zinc-800 text-emerald-400 flex items-center justify-center mb-1">
+                <KeyRound className="w-5 h-5" />
+              </div>
+              <DialogTitle className="text-lg font-light tracking-tight text-white">
+                Request Password Reset
+              </DialogTitle>
+              <DialogDescription className="text-zinc-500 text-xs">
+                Provide your registered corporate email to receive a secure recovery payload.
+              </DialogDescription>
+            </DialogHeader>
+
+            {error && (
+              <div className="p-2.5 text-xs bg-red-950/40 border border-red-900/50 text-red-400 rounded-md">
+                {error}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="reset-email" className="text-zinc-400 text-xs font-mono">
+                Email Address
+              </Label>
+              <div className="relative">
+                <Input
+                  id="reset-email"
+                  type="email"
+                  placeholder="name@company.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
+                  className="bg-black border-zinc-850 focus-visible:ring-zinc-800 pl-9 text-zinc-100 placeholder-zinc-650 text-sm"
+                  required
+                />
+                <Mail className="absolute left-3 top-3 w-4 h-4 text-zinc-600 pointer-events-none" />
+              </div>
+            </div>
+
+            <DialogFooter className="pt-2">
+              <div className="flex gap-3 w-full justify-end">
+                <DialogClose render={<Button variant="ghost" disabled={loading} className="text-zinc-500 hover:text-zinc-300 text-xs" />}>
+                  Cancel
+                </DialogClose>
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="bg-white hover:bg-zinc-200 text-black text-xs font-medium px-4 cursor-pointer"
+                >
+                  {loading ? (
+                    <span className="flex items-center gap-1.5">
+                      <Spinner className="w-3.5 h-3.5 text-black" />
+                      Dispatching...
+                    </span>
+                  ) : (
+                    "Send Reset Link"
+                  )}
+                </Button>
+              </div>
+            </DialogFooter>
+          </form>
+        ) : (
+          /* Step 2: Success View */
+          <div className="space-y-5 py-4 text-center flex flex-col items-center">
+            <div className="relative flex items-center justify-center">
+              <div className="absolute inset-0 rounded-full bg-emerald-500/10 blur-xl animate-pulse" />
+              <div className="w-14 h-14 rounded-full border border-emerald-500/20 bg-zinc-950 flex items-center justify-center relative shadow-lg">
+                <CheckCircle2 className="w-7 h-7 text-emerald-400" />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <DialogTitle className="text-lg font-light tracking-tight text-white">
+                Dispatched Successfully
+              </DialogTitle>
+              <DialogDescription className="text-zinc-500 text-xs max-w-sm mx-auto">
+                If the email <strong className="text-zinc-300 font-mono text-[11px]">{email}</strong> matches our user records, you will receive a password recovery payload shortly.
+              </DialogDescription>
+            </div>
+
+            <DialogFooter className="w-full pt-2">
+              <DialogClose render={<Button className="w-full bg-white hover:bg-zinc-200 text-black text-xs font-medium cursor-pointer" />}>
+                Acknowledge
+              </DialogClose>
+            </DialogFooter>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}

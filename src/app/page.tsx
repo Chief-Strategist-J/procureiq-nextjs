@@ -89,6 +89,33 @@ export default function Home() {
           </div>
         )}
 
+        <div className="grid grid-cols-4 gap-2 w-full mt-2">
+          <Link 
+            href="/empty" 
+            className="py-2 px-1 rounded-lg border border-zinc-900 bg-zinc-950/60 text-zinc-400 text-[10px] font-light hover:text-white hover:bg-zinc-900 transition-all text-center font-mono"
+          >
+            Zero States
+          </Link>
+          <Link 
+            href="/error-test" 
+            className="py-2 px-1 rounded-lg border border-zinc-900 bg-zinc-950/60 text-zinc-400 text-[10px] font-light hover:text-white hover:bg-zinc-900 transition-all text-center font-mono"
+          >
+            Test Error
+          </Link>
+          <Link 
+            href="/unauthorized" 
+            className="py-2 px-1 rounded-lg border border-zinc-900 bg-zinc-950/60 text-zinc-400 text-[10px] font-light hover:text-white hover:bg-zinc-900 transition-all text-center font-mono"
+          >
+            Test 403
+          </Link>
+          <Link 
+            href="/missing-route-test" 
+            className="py-2 px-1 rounded-lg border border-zinc-900 bg-zinc-950/60 text-zinc-400 text-[10px] font-light hover:text-white hover:bg-zinc-900 transition-all text-center font-mono"
+          >
+            Test 404
+          </Link>
+        </div>
+
         <div className="w-full h-px bg-zinc-900" />
         <div className="flex gap-4 text-xs justify-center">
           <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-zinc-900 text-zinc-400">
