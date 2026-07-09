@@ -8,8 +8,8 @@ const navItems = [
   { label: "Home", href: "/", icon: Home },
   { label: "Sessions", href: "/sessions", icon: Activity },
   { label: "Documentation", href: "/documentation", icon: FileText },
-  { label: "Agents", href: "/agent", icon: Bot },
-  { label: "Settings", href: "/setting", icon: Settings },
+  { label: "Agents", href: "/agents", icon: Bot },
+  { label: "Settings", href: "/settings", icon: Settings },
 ];
 
 export function Sidebar() {
