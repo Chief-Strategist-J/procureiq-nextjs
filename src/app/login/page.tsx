@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ForgotPasswordDialog } from "@/components/forgot-password-dialog";
+import { RefreshCw, KeyRound, User, ChevronRight } from "lucide-react";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -53,73 +54,105 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex flex-col flex-1 items-center justify-center min-h-screen bg-black text-white font-sans p-4">
-      <Card className="w-full max-w-md border-zinc-800 bg-zinc-950/80 backdrop-blur-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-light text-center tracking-tight text-white">
+    <div className="relative flex flex-col flex-1 items-center justify-center min-h-screen bg-black text-white font-sans p-4 overflow-hidden">
+      
+      {/* Background ambient glowing spheres */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute bottom-10 right-10 w-[300px] h-[300px] bg-emerald-500/5 rounded-full blur-[100px] pointer-events-none" />
+
+      <Card className="relative w-full max-w-md border border-zinc-800/80 bg-zinc-950/40 backdrop-blur-md shadow-2xl shadow-black/80 rounded-2xl overflow-hidden p-2">
+        {/* Subtle top border accent glow */}
+        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-zinc-700/60 to-transparent" />
+        
+        <CardHeader className="space-y-2 pt-8 pb-4">
+          <div className="flex justify-center mb-3">
+            <div className="h-10 w-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center shadow-lg shadow-black/50">
+              <KeyRound className="h-5 w-5 text-indigo-400" />
+            </div>
+          </div>
+          <CardTitle className="text-2xl font-light text-center tracking-tight bg-gradient-to-b from-white to-zinc-400 bg-clip-text text-transparent">
             Welcome back
           </CardTitle>
-          <CardDescription className="text-zinc-400 text-center text-xs">
-            Enter your credentials to access your ProcureIQ account
+          <CardDescription className="text-zinc-500 text-center text-xs">
+            Authenticate to access the ProcureIQ control panel
           </CardDescription>
         </CardHeader>
-        <CardContent>
+
+        <CardContent className="px-6">
           <form onSubmit={handleLogin} className="space-y-4">
             {error && (
-              <div className="p-3 text-xs bg-red-950/50 border border-red-900/50 text-red-400 rounded-md">
-                {error}
+              <div className="p-3 text-xs bg-red-950/20 border border-red-500/20 text-red-400 rounded-lg flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+                <span>{error}</span>
               </div>
             )}
-            <div className="space-y-2">
-              <Label htmlFor="username" className="text-zinc-300 text-xs">Username</Label>
-              <Input
-                id="username"
-                type="text"
-                placeholder="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="bg-zinc-900 border-zinc-800 text-white placeholder-zinc-500 text-sm focus-visible:ring-zinc-700"
-              />
+            
+            <div className="space-y-1.5">
+              <Label htmlFor="username" className="text-zinc-400 text-xs font-medium">Username</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-650" />
+                <Input
+                  id="username"
+                  type="text"
+                  placeholder="Enter username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="bg-zinc-900/60 border-zinc-800 text-white placeholder-zinc-600 text-sm pl-10 focus:outline-none focus:ring-1 focus:ring-zinc-700 focus:border-zinc-750 transition-all duration-300 rounded-lg"
+                />
+              </div>
             </div>
-            <div className="space-y-2">
+
+            <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-zinc-300 text-xs">Password</Label>
+                <Label htmlFor="password" className="text-zinc-400 text-xs font-medium">Password</Label>
                 <button
                   type="button"
                   onClick={() => setIsResetOpen(true)}
-                  className="text-xs text-zinc-400 hover:text-white hover:underline focus:outline-none cursor-pointer"
+                  className="text-xs text-zinc-500 hover:text-zinc-300 hover:underline focus:outline-none cursor-pointer transition-colors"
                 >
                   Forgot password?
                 </button>
               </div>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="bg-zinc-900 border-zinc-800 text-white placeholder-zinc-500 text-sm focus-visible:ring-zinc-700"
-              />
+              <div className="relative">
+                <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-650" />
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="bg-zinc-900/60 border-zinc-800 text-white placeholder-zinc-600 text-sm pl-10 focus:outline-none focus:ring-1 focus:ring-zinc-700 focus:border-zinc-750 transition-all duration-300 rounded-lg"
+                />
+              </div>
             </div>
+
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-white hover:bg-zinc-200 text-black font-medium py-2 text-sm rounded-lg transition-all"
+              className="w-full bg-white hover:bg-zinc-200 text-black font-semibold py-2.5 text-xs uppercase tracking-wider rounded-lg transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-white/5 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
             >
-              {loading ? "Signing in..." : "Sign In"}
+              {loading ? (
+                <>
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  Verifying...
+                </>
+              ) : (
+                <>
+                  Sign In
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </>
+              )}
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex flex-col space-y-2 text-center text-xs text-zinc-400">
-          <div>
+
+        <CardFooter className="flex flex-col space-y-3 text-center text-xs text-zinc-500 px-6 pb-8 pt-4">
+          <div className="border-t border-zinc-900/60 w-full pt-4">
             Don&apos;t have an account?{" "}
-            <Link href="/signup" className="text-white hover:underline">
+            <Link href="/signup" className="text-zinc-300 hover:text-white font-medium hover:underline transition-colors">
               Sign up
             </Link>
           </div>
-          <Link href="/" className="hover:underline">
-            Back to Home
-          </Link>
         </CardFooter>
       </Card>
       <ForgotPasswordDialog open={isResetOpen} onOpenChange={setIsResetOpen} />

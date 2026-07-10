@@ -1,12 +1,14 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Home, Activity, FileText, Bot, Settings } from "lucide-react";
+import { Home, Bell, Clock, Briefcase, FileText, Bot, Settings } from "lucide-react";
 import { SidebarItem } from "./sidebarItem";
 
 const navItems = [
   { label: "Home", href: "/", icon: Home },
-  { label: "Sessions", href: "/sessions", icon: Activity },
+  { label: "Notifications", href: "/notifications", icon: Bell },
+  { label: "Reminders", href: "/reminders", icon: Clock },
+  { label: "Work Orders", href: "/work-orders", icon: Briefcase },
   { label: "Documentation", href: "/documentation", icon: FileText },
   { label: "Agents", href: "/agents", icon: Bot },
   { label: "Settings", href: "/settings", icon: Settings },

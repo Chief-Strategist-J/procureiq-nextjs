@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RefreshCw, User, Mail, KeyRound, ChevronRight } from "lucide-react";
 
 export default function SignupPage() {
   const [username, setUsername] = useState("");
@@ -53,80 +54,118 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="flex flex-col flex-1 items-center justify-center min-h-screen bg-black text-white font-sans p-4">
-      <Card className="w-full max-w-md border-zinc-800 bg-zinc-950/80 backdrop-blur-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-light text-center tracking-tight text-white">
+    <div className="relative flex flex-col flex-1 items-center justify-center min-h-screen bg-black text-white font-sans p-4 overflow-hidden">
+      
+      {/* Background ambient glowing spheres */}
+      <div className="absolute top-1/4 left-1/3 -translate-x-1/2 w-[550px] h-[550px] bg-indigo-500/5 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute bottom-10 left-10 w-[350px] h-[350px] bg-emerald-500/5 rounded-full blur-[110px] pointer-events-none" />
+
+      <Card className="relative w-full max-w-md border border-zinc-800/80 bg-zinc-950/40 backdrop-blur-md shadow-2xl shadow-black/80 rounded-2xl overflow-hidden p-2">
+        {/* Subtle top border accent glow */}
+        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-zinc-700/60 to-transparent" />
+        
+        <CardHeader className="space-y-2 pt-8 pb-4">
+          <div className="flex justify-center mb-3">
+            <div className="h-10 w-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center shadow-lg shadow-black/50">
+              <User className="h-5 w-5 text-indigo-400" />
+            </div>
+          </div>
+          <CardTitle className="text-2xl font-light text-center tracking-tight bg-gradient-to-b from-white to-zinc-400 bg-clip-text text-transparent">
             Create an account
           </CardTitle>
-          <CardDescription className="text-zinc-400 text-center text-xs">
-            Enter your details to create your ProcureIQ account
+          <CardDescription className="text-zinc-555 text-center text-xs">
+            Sign up for the ProcureIQ orchestrator dashboard
           </CardDescription>
         </CardHeader>
-        <CardContent>
+
+        <CardContent className="px-6">
           <form onSubmit={handleSignup} className="space-y-4">
             {error && (
-              <div className="p-3 text-xs bg-red-950/50 border border-red-900/50 text-red-400 rounded-md">
-                {error}
+              <div className="p-3 text-xs bg-red-950/20 border border-red-500/20 text-red-400 rounded-lg flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+                <span>{error}</span>
               </div>
             )}
+            
             {success && (
-              <div className="p-3 text-xs bg-emerald-950/50 border border-emerald-900/50 text-emerald-400 rounded-md">
-                {success}
+              <div className="p-3 text-xs bg-emerald-950/20 border border-emerald-500/20 text-emerald-400 rounded-lg flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                <span>{success}</span>
               </div>
             )}
-            <div className="space-y-2">
-              <Label htmlFor="username" className="text-zinc-300 text-xs">Username</Label>
-              <Input
-                id="username"
-                type="text"
-                placeholder="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="bg-zinc-900 border-zinc-800 text-white placeholder-zinc-500 text-sm focus-visible:ring-zinc-700"
-              />
+
+            <div className="space-y-1.5">
+              <Label htmlFor="username" className="text-zinc-400 text-xs font-medium">Username</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-650" />
+                <Input
+                  id="username"
+                  type="text"
+                  placeholder="Choose username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="bg-zinc-900/60 border-zinc-800 text-white placeholder-zinc-650 text-sm pl-10 focus:outline-none focus:ring-1 focus:ring-zinc-700 focus:border-zinc-750 transition-all duration-300 rounded-lg"
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-zinc-300 text-xs">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="bg-zinc-900 border-zinc-800 text-white placeholder-zinc-500 text-sm focus-visible:ring-zinc-700"
-              />
+
+            <div className="space-y-1.5">
+              <Label htmlFor="email" className="text-zinc-400 text-xs font-medium">Email Address</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-650" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="name@domain.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="bg-zinc-900/60 border-zinc-800 text-white placeholder-zinc-650 text-sm pl-10 focus:outline-none focus:ring-1 focus:ring-zinc-700 focus:border-zinc-750 transition-all duration-300 rounded-lg"
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-zinc-300 text-xs">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="bg-zinc-900 border-zinc-800 text-white placeholder-zinc-500 text-sm focus-visible:ring-zinc-700"
-              />
+
+            <div className="space-y-1.5">
+              <Label htmlFor="password" className="text-zinc-400 text-xs font-medium">Password</Label>
+              <div className="relative">
+                <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-650" />
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="bg-zinc-900/60 border-zinc-800 text-white placeholder-zinc-650 text-sm pl-10 focus:outline-none focus:ring-1 focus:ring-zinc-700 focus:border-zinc-750 transition-all duration-300 rounded-lg"
+                />
+              </div>
             </div>
+
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-white hover:bg-zinc-200 text-black font-medium py-2 text-sm rounded-lg transition-all"
+              className="w-full bg-white hover:bg-zinc-200 text-black font-semibold py-2.5 text-xs uppercase tracking-wider rounded-lg transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-white/5 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
             >
-              {loading ? "Registering..." : "Sign Up"}
+              {loading ? (
+                <>
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  Creating Account...
+                </>
+              ) : (
+                <>
+                  Create Account
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </>
+              )}
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex flex-col space-y-2 text-center text-xs text-zinc-400">
-          <div>
+
+        <CardFooter className="flex flex-col space-y-3 text-center text-xs text-zinc-500 px-6 pb-8 pt-4">
+          <div className="border-t border-zinc-900/60 w-full pt-4">
             Already have an account?{" "}
-            <Link href="/login" className="text-white hover:underline">
+            <Link href="/login" className="text-zinc-300 hover:text-white font-medium hover:underline transition-colors">
               Log in
             </Link>
           </div>
-          <Link href="/" className="hover:underline">
-            Back to Home
-          </Link>
         </CardFooter>
       </Card>
     </div>
