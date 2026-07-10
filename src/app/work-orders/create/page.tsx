@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Briefcase, ArrowLeft, RefreshCw, CheckCircle2, AlertCircle, Info, Database, Sparkles } from "lucide-react";
+import { ArrowLeft, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
 
 export default function CreateWorkOrderPage() {
   const router = useRouter();
@@ -25,14 +25,14 @@ export default function CreateWorkOrderPage() {
 
     try {
       const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-      const requestPayload = {
-        caseId: caseId ? parseInt(caseId) : null,
-        contactId: contactId ? parseInt(contactId) : null,
-        assetId: assetId ? parseInt(assetId) : null,
-        workTypeId: workTypeId ? parseInt(workTypeId) : null,
+      const requestPayload: Record<string, any> = {
         status,
         priority,
       };
+      if (caseId) requestPayload.caseId = parseInt(caseId);
+      if (contactId) requestPayload.contactId = parseInt(contactId);
+      if (assetId) requestPayload.assetId = parseInt(assetId);
+      if (workTypeId) requestPayload.workTypeId = parseInt(workTypeId);
 
       const response = await fetch(`${backendUrl}/api/v1/fieldservice/work-orders`, {
         method: "POST",
@@ -96,21 +96,6 @@ export default function CreateWorkOrderPage() {
     }
   };
 
-  const getGeneratedJSON = () => {
-    return JSON.stringify(
-      {
-        caseId: caseId ? parseInt(caseId) : null,
-        contactId: contactId ? parseInt(contactId) : null,
-        assetId: assetId ? parseInt(assetId) : null,
-        workTypeId: workTypeId ? parseInt(workTypeId) : null,
-        status,
-        priority,
-      },
-      null,
-      2
-    );
-  };
-
   return (
     <div className="min-h-screen bg-black text-white p-4 sm:p-8 font-sans relative flex flex-col">
       {/* Background Glows */}
@@ -127,7 +112,7 @@ export default function CreateWorkOrderPage() {
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
-            <h1 className="text-2xl font-light tracking-tight bg-gradient-to-r from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent">
+            <h1 className="text-2xl font-light tracking-tight bg-gradient-to-r from-white via-zinc-200 to-zinc-505 bg-clip-text text-transparent">
               Work Order Creation Console
             </h1>
             <p className="text-xs text-zinc-500 mt-1">
@@ -152,158 +137,119 @@ export default function CreateWorkOrderPage() {
         </div>
       )}
 
-      {/* Main Split Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 flex-1 items-stretch">
-        
-        {/* Left Side: Create Form (7 cols) */}
-        <div className="lg:col-span-7 rounded-xl border border-zinc-800 bg-zinc-950/30 backdrop-blur-md p-6 sm:p-8 flex flex-col justify-between shadow-2xl">
-          <form onSubmit={handleCreateWorkOrder} className="space-y-6">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-400 mb-2">Record properties</h3>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-[10px] text-zinc-555 uppercase tracking-widest block font-medium">Case ID (Optional)</label>
-                <input
-                  type="number"
-                  value={caseId}
-                  onChange={(e) => setCaseId(e.target.value)}
-                  placeholder="1"
-                  className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] text-zinc-555 uppercase tracking-widest block font-medium">Contact ID (Optional)</label>
-                <input
-                  type="number"
-                  value={contactId}
-                  onChange={(e) => setContactId(e.target.value)}
-                  placeholder="1"
-                  className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all"
-                />
-              </div>
+      {/* Main Full-Width Form Layout */}
+      <form onSubmit={handleCreateWorkOrder} className="space-y-8 flex-1 flex flex-col justify-between w-full">
+        <div className="space-y-8 w-full">
+          <div className="border-b border-zinc-900 pb-4">
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">Record Properties</h3>
+            <p className="text-[11px] text-zinc-555 mt-0.5">Define metadata associations for the logged task.</p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-2">
+              <label className="text-[10px] text-zinc-400 uppercase tracking-widest block font-bold">Case ID (Optional)</label>
+              <input
+                type="number"
+                value={caseId}
+                onChange={(e) => setCaseId(e.target.value)}
+                placeholder="1"
+                className="w-full rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3.5 text-xs text-white focus:outline-none focus:border-zinc-700 transition-all"
+              />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-[10px] text-zinc-555 uppercase tracking-widest block font-medium">Asset ID (Optional)</label>
-                <input
-                  type="number"
-                  value={assetId}
-                  onChange={(e) => setAssetId(e.target.value)}
-                  placeholder="1"
-                  className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] text-zinc-555 uppercase tracking-widest block font-medium">Work Type ID (Optional)</label>
-                <input
-                  type="number"
-                  value={workTypeId}
-                  onChange={(e) => setWorkTypeId(e.target.value)}
-                  placeholder="1"
-                  className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all"
-                />
-              </div>
+            <div className="space-y-2">
+              <label className="text-[10px] text-zinc-400 uppercase tracking-widest block font-bold">Contact ID (Optional)</label>
+              <input
+                type="number"
+                value={contactId}
+                onChange={(e) => setContactId(e.target.value)}
+                placeholder="1"
+                className="w-full rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3.5 text-xs text-white focus:outline-none focus:border-zinc-700 transition-all"
+              />
             </div>
-
-            <div className="space-y-1.5">
-              <label className="text-[10px] text-zinc-555 uppercase tracking-widest block font-medium">Status</label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all"
-              >
-                <option value="new">New</option>
-                <option value="in_progress">In Progress</option>
-                <option value="completed">Completed</option>
-                <option value="closed">Closed</option>
-              </select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-[10px] text-zinc-555 uppercase tracking-widest block font-medium">Priority Level</label>
-              <div className="grid grid-cols-3 gap-3">
-                {[1, 2, 3].map((level) => (
-                  <button
-                    key={level}
-                    type="button"
-                    onClick={() => setPriority(level)}
-                    className={`py-2.5 rounded-lg border text-xs cursor-pointer text-center font-medium transition-all duration-300 ${
-                      priority === level
-                        ? level === 3
-                          ? "border-red-500/40 bg-red-950/30 text-red-400 shadow-[0_0_12px_rgba(239,68,68,0.1)]"
-                          : level === 2
-                          ? "border-amber-500/40 bg-amber-950/30 text-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.1)]"
-                          : "border-blue-500/40 bg-blue-950/30 text-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.1)]"
-                        : "border-zinc-800 bg-zinc-900/40 text-zinc-500 hover:text-zinc-350 hover:border-zinc-700"
-                    }`}
-                  >
-                    {level === 3 ? "High" : level === 2 ? "Medium" : "Low"}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-6 border-t border-zinc-900">
-              <Link
-                href="/work-orders"
-                className="px-6 py-3 rounded-lg bg-zinc-900 border border-zinc-850 hover:bg-zinc-800 text-xs font-semibold cursor-pointer transition-all text-center"
-              >
-                Cancel
-              </Link>
-              <button
-                type="submit"
-                disabled={creating}
-                className="px-8 py-3 rounded-lg bg-white text-black hover:bg-zinc-150 hover:scale-[1.02] active:scale-[0.98] text-xs font-semibold flex items-center gap-2 disabled:opacity-50 cursor-pointer transition-all shadow-[0_4px_20px_rgba(255,255,255,0.08)]"
-              >
-                {creating && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
-                Register
-              </button>
-            </div>
-          </form>
-        </div>
-
-        {/* Right Side: Information / JSON preview (5 cols) */}
-        <div className="lg:col-span-5 flex flex-col gap-6">
-          <div className="rounded-xl border border-zinc-800/80 bg-zinc-950/20 backdrop-blur-md p-6 shadow-xl">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-4 flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
-              Field Guidelines
-            </h3>
-            <ul className="text-xs text-zinc-450 space-y-2.5 leading-relaxed">
-              <li className="flex items-start gap-2">
-                <span className="text-indigo-400 mt-0.5">•</span>
-                <span>Work Orders serve as the parent database entries linking specific cases to accounts and assets.</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-indigo-400 mt-0.5">•</span>
-                <span>When a Work Type is assigned, a matching <strong>Service Appointment</strong> will be generated automatically in the background.</span>
-              </li>
-            </ul>
           </div>
 
-          <div className="rounded-xl border border-zinc-800/80 bg-zinc-950/20 backdrop-blur-md p-6 flex-1 flex flex-col justify-between shadow-xl">
-            <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-3 flex items-center gap-1.5">
-                <Database className="h-3.5 w-3.5 text-indigo-400" />
-                WorkOrderRequest Payload (JSON)
-              </h3>
-              <div className="relative rounded-lg bg-zinc-900/80 border border-zinc-850 p-4 font-mono text-[10px] text-zinc-400 overflow-x-auto h-64">
-                <pre>{getGeneratedJSON()}</pre>
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-2">
+              <label className="text-[10px] text-zinc-400 uppercase tracking-widest block font-bold">Asset ID (Optional)</label>
+              <input
+                type="number"
+                value={assetId}
+                onChange={(e) => setAssetId(e.target.value)}
+                placeholder="1"
+                className="w-full rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3.5 text-xs text-white focus:outline-none focus:border-zinc-700 transition-all"
+              />
             </div>
-            <div className="text-[10px] text-zinc-550 mt-4 leading-normal flex items-start gap-2">
-              <Info className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
-              <span>
-                Dispatched API updates call <code>WorkOrderController</code> endpoints to map relationships inside JPA entities.
-              </span>
+
+            <div className="space-y-2">
+              <label className="text-[10px] text-zinc-400 uppercase tracking-widest block font-bold">Work Type ID</label>
+              <input
+                type="number"
+                value={workTypeId}
+                onChange={(e) => setWorkTypeId(e.target.value)}
+                placeholder="1"
+                required
+                className="w-full rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3.5 text-xs text-white focus:outline-none focus:border-zinc-700 transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] text-zinc-400 uppercase tracking-widest block font-bold">Status</label>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="w-full rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3.5 text-xs text-white focus:outline-none focus:border-zinc-700 transition-all"
+            >
+              <option value="new">New</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="closed">Closed</option>
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] text-zinc-400 uppercase tracking-widest block font-bold">Priority Level</label>
+            <div className="grid grid-cols-3 gap-4 max-w-xl">
+              {[1, 2, 3].map((level) => (
+                <button
+                  key={level}
+                  type="button"
+                  onClick={() => setPriority(level)}
+                  className={`py-3 rounded-lg border text-xs cursor-pointer text-center font-medium transition-all duration-300 ${
+                    priority === level
+                      ? level === 3
+                        ? "border-red-500/40 bg-red-950/30 text-red-400 shadow-[0_0_12px_rgba(239,68,68,0.1)]"
+                        : level === 2
+                        ? "border-amber-500/40 bg-amber-950/30 text-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.1)]"
+                        : "border-blue-500/40 bg-blue-950/30 text-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.1)]"
+                      : "border-zinc-850 bg-zinc-900/20 text-zinc-500 hover:text-zinc-350 hover:border-zinc-750"
+                  }`}
+                >
+                  {level === 3 ? "High" : level === 2 ? "Medium" : "Low"}
+                </button>
+              ))}
             </div>
           </div>
         </div>
 
-      </div>
+        <div className="flex justify-end gap-4 pt-8 mt-12 border-t border-zinc-900">
+          <Link
+            href="/work-orders"
+            className="px-8 py-3 rounded-lg bg-zinc-950 border border-zinc-850 hover:bg-zinc-900 text-xs font-semibold cursor-pointer transition-all text-center"
+          >
+            Cancel
+          </Link>
+          <button
+            type="submit"
+            disabled={creating}
+            className="px-10 py-3 rounded-lg bg-white text-black hover:bg-zinc-150 hover:scale-[1.02] active:scale-[0.98] text-xs font-semibold flex items-center gap-2 disabled:opacity-50 cursor-pointer transition-all shadow-[0_4px_20px_rgba(255,255,255,0.08)]"
+          >
+            {creating && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
+            Register
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

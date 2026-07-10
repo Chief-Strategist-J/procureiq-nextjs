@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { Menu, X, Home, Bell, Clock, Briefcase, FileText, Bot, Settings } from "lucide-react";
+import { Menu, X, Home, Bell, Clock, Briefcase, Bot } from "lucide-react";
 import { SidebarItem } from "./sidebarItem";
 
 const navItems = [
@@ -10,14 +10,30 @@ const navItems = [
   { label: "Notifications", href: "/notifications", icon: Bell },
   { label: "Reminders", href: "/reminders", icon: Clock },
   { label: "Work Orders", href: "/work-orders", icon: Briefcase },
-  { label: "Documentation", href: "/documentation", icon: FileText },
-  { label: "Agents", href: "/agents", icon: Bot },
-  { label: "Settings", href: "/settings", icon: Settings },
+  { label: "Agents", href: "/agent", icon: Bot },
 ];
+
+interface UserSession {
+  username?: string;
+  email?: string;
+  name?: string;
+}
 
 export function MobileSidebar() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const [user, setUser] = useState<UserSession | null>(null);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("procureiq_user");
+    if (stored && stored !== "undefined") {
+      try {
+        setUser(JSON.parse(stored));
+      } catch (err) {
+        console.error("Failed to parse user session", err);
+      }
+    }
+  }, []);
 
   // Close drawer on route change
   useEffect(() => {
@@ -82,7 +98,7 @@ export function MobileSidebar() {
                 icon={item.icon}
                 label={item.label}
                 href={item.href}
-                isActive={pathname === item.href}
+                isActive={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))}
                 onClick={() => setOpen(false)}
               />
             ))}
@@ -90,15 +106,15 @@ export function MobileSidebar() {
 
           <div className="px-4 py-4 border-t border-zinc-800 shrink-0">
             <div className="flex items-center gap-3 rounded-lg px-2 py-2">
-              <div className="h-8 w-8 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-medium text-zinc-300">
-                U
+              <div className="h-8 w-8 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-xs font-semibold text-zinc-350">
+                {user?.username ? user.username.charAt(0).toUpperCase() : "U"}
               </div>
               <div className="flex flex-col overflow-hidden">
                 <span className="text-xs font-medium text-white truncate">
-                  User
+                  {user?.username || "Guest User"}
                 </span>
-                <span className="text-[11px] text-zinc-500 truncate">
-                  user@example.com
+                <span className="text-[11px] text-zinc-550 truncate">
+                  {user?.email || "guest@procureiq.internal"}
                 </span>
               </div>
             </div>

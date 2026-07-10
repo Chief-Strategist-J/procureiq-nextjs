@@ -115,14 +115,14 @@ export default function WorkOrdersPage() {
 
     try {
       const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-      const requestPayload = {
-        caseId: caseId ? parseInt(caseId) : null,
-        contactId: contactId ? parseInt(contactId) : null,
-        assetId: assetId ? parseInt(assetId) : null,
-        workTypeId: workTypeId ? parseInt(workTypeId) : null,
+      const requestPayload: Record<string, any> = {
         status,
         priority,
       };
+      if (caseId) requestPayload.caseId = parseInt(caseId);
+      if (contactId) requestPayload.contactId = parseInt(contactId);
+      if (assetId) requestPayload.assetId = parseInt(assetId);
+      if (workTypeId) requestPayload.workTypeId = parseInt(workTypeId);
 
       const response = await fetch(`${backendUrl}/api/v1/fieldservice/work-orders`, {
         method: "POST",
@@ -438,12 +438,13 @@ export default function WorkOrdersPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] text-zinc-555 uppercase tracking-widest block font-medium">Work Type ID (Optional)</label>
+                  <label className="text-[10px] text-zinc-555 uppercase tracking-widest block font-medium">Work Type ID</label>
                   <input
                     type="number"
                     value={workTypeId}
                     onChange={(e) => setWorkTypeId(e.target.value)}
                     placeholder="1"
+                    required
                     className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 focus:border-zinc-700 transition-all duration-300"
                   />
                 </div>

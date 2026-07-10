@@ -30,7 +30,7 @@ export default function NotificationsPage() {
   
   // Creation modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [typeCode, setTypeCode] = useState("PO_CREATED");
+  const [typeCode, setTypeCode] = useState("system_alert");
   const [sourceService, setSourceService] = useState("procurement-service");
   const [targetScope, setTargetScope] = useState("USER");
   const [targetId, setTargetId] = useState("1");
@@ -503,11 +503,7 @@ export default function NotificationsPage() {
                     onChange={(e) => setTypeCode(e.target.value)}
                     className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 focus:border-zinc-700 transition-all duration-300"
                   >
-                    <option value="PO_CREATED">PO Created</option>
-                    <option value="ESC_TRIGGERED">Escalation Triggered</option>
-                    <option value="PAYMENT_DUE">Payment Due</option>
-                    <option value="BID_RECEIVED">Bid Received</option>
-                    <option value="APPROVAL_REQUIRED">Approval Required</option>
+                    <option value="system_alert">System Alert</option>
                   </select>
                 </div>
 
