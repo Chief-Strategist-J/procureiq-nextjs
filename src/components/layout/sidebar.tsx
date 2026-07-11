@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Home, Bell, Clock, Briefcase, Bot, Activity } from "lucide-react";
+import { Home, Bell, Clock, Briefcase, Bot, Activity, Megaphone, ListChecks, Workflow, Mail, GitBranch } from "lucide-react";
 import { SidebarItem } from "./sidebarItem";
 
 const navItems = [
@@ -11,6 +11,11 @@ const navItems = [
   { label: "Reminders", href: "/reminders", icon: Clock },
   { label: "Work Orders", href: "/work-orders", icon: Briefcase },
   { label: "Field Service", href: "/field-service", icon: Activity },
+  { label: "Campaigns", href: "/campaigns", icon: Megaphone },
+  { label: "Jobs", href: "/jobs", icon: ListChecks },
+  { label: "Workflows", href: "/workflows", icon: Workflow },
+  { label: "Email", href: "/email", icon: Mail },
+  { label: "GitHub", href: "/github", icon: GitBranch },
   { label: "Agents", href: "/agent", icon: Bot },
 ];
 
