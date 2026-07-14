@@ -1,8 +1,9 @@
 "use client";
 
+import { AppConfig } from "@/config/app-config";
 import { ActionTemplate, RepoInfo, WorkflowRun, CreateWorkflowResult } from "./types";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const BACKEND_URL = AppConfig.apiUrl;
 
 // Small illustrative sample only (not all 50) — the real catalog is seeded server-side
 // via database/seeds/0003_github_action_templates.sql, matching how other features in

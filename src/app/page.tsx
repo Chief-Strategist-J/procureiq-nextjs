@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Activity, Bot, Bell, DollarSign, Plus, ArrowUpRight, ShieldAlert, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
+import { AppConfig } from "@/config/app-config";
 
 interface StatCard {
   label: string;
@@ -31,7 +32,7 @@ export default function Home() {
   useEffect(() => {
     async function loadDashboardData() {
       try {
-        const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+        const backendUrl = AppConfig.apiUrl;
         
         // Fetch notifications
         const notifRes = await fetch(`${backendUrl}/api/v1/notifications?page=0&size=5`, {

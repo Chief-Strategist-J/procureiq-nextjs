@@ -1,8 +1,9 @@
 "use client";
 
+import { AppConfig } from "@/config/app-config";
 import { Workflow, WorkflowRun } from "./types";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const BACKEND_URL = AppConfig.apiUrl;
 
 const SEED_WORKFLOWS: Workflow[] = [
   { id: 1, orgId: 1, name: "Vendor Onboarding Approval Chain", status: "active" },

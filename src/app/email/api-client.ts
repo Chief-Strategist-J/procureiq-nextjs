@@ -1,8 +1,9 @@
 "use client";
 
+import { AppConfig } from "@/config/app-config";
 import { EmailSendRequest, EmailScheduleRequest, EmailResponse, EmailScheduleResponse } from "./types";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_PYTHON_API_URL || "http://localhost:8000";
+const BACKEND_URL = AppConfig.pythonApiUrl;
 
 const SEED_SCHEDULED: EmailScheduleResponse[] = [
   {

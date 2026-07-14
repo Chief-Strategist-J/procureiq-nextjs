@@ -1,8 +1,9 @@
 "use client";
 
+import { AppConfig } from "@/config/app-config";
 import { Job, JobRun } from "./types";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const BACKEND_URL = AppConfig.apiUrl;
 
 const SEED_JOBS: Job[] = [
   { id: 1, orgId: 1, name: "Nightly Vendor Sync", status: "active", config: { cron: "0 2 * * *" } },

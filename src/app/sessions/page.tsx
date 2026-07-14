@@ -6,6 +6,7 @@ import {
   Terminal, ShieldAlert, Wifi, Users, Copy, Sparkles, Monitor
 } from "lucide-react";
 import { WebRtcSignalingClient } from "@/lib/webrtc-helper";
+import { AppConfig } from "@/config/app-config";
 
 interface LogEntry {
   timestamp: string;
@@ -124,7 +125,7 @@ export default function VideoCallPage() {
     
     // Connect to WebRTC signaling server we built
     const client = new WebRtcSignalingClient(
-      process.env.NEXT_PUBLIC_WEBRTC_SIGNALING_URL || "ws://localhost:8082/api/v1/webrtc/signaling",
+      AppConfig.webrtcSignalingUrl,
       roomId,
       userId,
       async (message) => {
