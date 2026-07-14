@@ -124,7 +124,7 @@ export default function VideoCallPage() {
     
     // Connect to WebRTC signaling server we built
     const client = new WebRtcSignalingClient(
-      "ws://localhost:8082/api/v1/webrtc/signaling",
+      process.env.NEXT_PUBLIC_WEBRTC_SIGNALING_URL || "ws://localhost:8082/api/v1/webrtc/signaling",
       roomId,
       userId,
       async (message) => {
