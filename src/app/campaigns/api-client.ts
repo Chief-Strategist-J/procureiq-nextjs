@@ -28,7 +28,7 @@ export interface CampaignSchedule {
   status?: string;
 }
 
-const campaignsBase = createResourceApi<Campaign>({
+export const CampaignsApi = createResourceApi<Campaign>({
   endpoints: API_ENDPOINTS.campaigns as any,
   storageKey: 'piq_campaigns',
   label: 'campaign',
@@ -38,7 +38,7 @@ const campaignsBase = createResourceApi<Campaign>({
   ],
 });
 
-const recipientsBase = createResourceApi<Recipient>({
+export const RecipientsApi = createResourceApi<Recipient>({
   endpoints: API_ENDPOINTS.campaigns.recipients as any,
   storageKey: 'piq_recipients',
   label: 'recipient',
@@ -48,26 +48,9 @@ const recipientsBase = createResourceApi<Recipient>({
   ],
 });
 
-const schedulesBase = createResourceApi<CampaignSchedule>({
+export const SchedulesApi = createResourceApi<CampaignSchedule>({
   endpoints: API_ENDPOINTS.campaigns.schedules as any,
   storageKey: 'piq_schedules',
   label: 'schedule',
   seed: [],
 });
-
-export const CampaignsApi = {
-  listCampaigns: () => campaignsBase.list(),
-  createCampaign: (data: Omit<Campaign, 'id'>) => campaignsBase.create(data),
-  updateCampaign: (id: number, data: Omit<Campaign, 'id'>) => campaignsBase.update(id, data),
-  deleteCampaign: (id: number) => campaignsBase.remove(id),
-
-  listRecipients: () => recipientsBase.list(),
-  createRecipient: (data: Omit<Recipient, 'id'>) => recipientsBase.create(data),
-  updateRecipient: (id: number, data: Omit<Recipient, 'id'>) => recipientsBase.update(id, data),
-  deleteRecipient: (id: number) => recipientsBase.remove(id),
-
-  listSchedules: () => schedulesBase.list(),
-  createSchedule: (data: Omit<CampaignSchedule, 'id'>) => schedulesBase.create(data),
-  updateSchedule: (id: number, data: Omit<CampaignSchedule, 'id'>) => schedulesBase.update(id, data),
-  deleteSchedule: (id: number) => schedulesBase.remove(id),
-};

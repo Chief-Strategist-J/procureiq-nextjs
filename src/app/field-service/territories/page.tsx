@@ -6,11 +6,17 @@ import { Search, MapPin, Plus, RefreshCw, CheckCircle2, AlertCircle, X, Edit2, T
 import { FieldServiceApi } from "../api-client";
 import { ServiceTerritory, OperatingHours } from "../types";
 
+import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
+import { territoriesSlice, operatingHoursSlice } from "@/features/fieldService/fieldServiceSlice";
+
 export default function TerritoriesPage() {
   const router = useRouter();
-  const [items, setItems] = useState<ServiceTerritory[]>([]);
-  const [operatingHours, setOperatingHours] = useState<OperatingHours[]>([]);
-  const [loading, setLoading] = useState(false);
+  const dispatch = useAppDispatch();
+  const items = useAppSelector((s) => s.fieldService.territories.items.data) || [];
+  const operatingHours = useAppSelector((s) => s.fieldService.operatingHours.items.data) || [];
+  const loading = useAppSelector((s) => s.fieldService.territories.items.status === "loading");
+  const storeError = useAppSelector((s) => s.fieldService.territories.items.error);
+
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [query, setQuery] = useState("");
@@ -26,27 +32,18 @@ export default function TerritoriesPage() {
   const [isActive, setIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const fetchItems = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const territoryList = await FieldServiceApi.listTerritories();
-      const ohList = await FieldServiceApi.listOperatingHours();
-      setItems(territoryList);
-      setOperatingHours(ohList);
-      if (ohList.length > 0) {
-        setOperatingHoursId(ohList[0].id);
-      }
-    } catch (err: any) {
-      setError("Failed to load service territories data.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchItems = useCallback(() => {
+    dispatch(territoriesSlice.actions.fetchRequest(undefined));
+    dispatch(operatingHoursSlice.actions.fetchRequest(undefined));
+  }, [dispatch]);
 
   useEffect(() => {
     fetchItems();
   }, [fetchItems]);
+
+  useEffect(() => {
+    if (storeError) setError(storeError);
+  }, [storeError]);
 
   const openCreateModal = () => {
     setModalMode("create");
@@ -75,34 +72,23 @@ export default function TerritoriesPage() {
     setError("");
     setSuccess("");
 
-    try {
-      if (modalMode === "create") {
-        await FieldServiceApi.createTerritory({ name, operatingHoursId, isActive });
-        setSuccess("Service territory created successfully.");
-      } else if (modalMode === "edit" && editingId !== null) {
-        await FieldServiceApi.updateTerritory(editingId, { name, operatingHoursId, isActive });
-        setSuccess("Service territory updated successfully.");
-      }
-      setIsModalOpen(false);
-      fetchItems();
-    } catch (err: any) {
-      setError(err.message || "Failed to save territory details.");
-    } finally {
-      setSaving(false);
+    if (modalMode === "create") {
+      dispatch(territoriesSlice.actions.createRequest({ name, operatingHoursId, isActive }));
+      setSuccess("Service territory creation initiated.");
+    } else if (modalMode === "edit" && editingId !== null) {
+      dispatch(territoriesSlice.actions.updateRequest({ id: editingId, data: { name, operatingHoursId, isActive } }));
+      setSuccess("Service territory update initiated.");
     }
+    setIsModalOpen(false);
+    setSaving(false);
   };
 
   const handleDelete = async (id: number) => {
     if (!confirm("Are you sure you want to delete this service territory?")) return;
     setError("");
     setSuccess("");
-    try {
-      await FieldServiceApi.deleteTerritory(id);
-      setSuccess("Service territory deleted successfully.");
-      fetchItems();
-    } catch (err: any) {
-      setError("Failed to delete territory.");
-    }
+    dispatch(territoriesSlice.actions.deleteRequest(id));
+    setSuccess("Service territory deletion initiated.");
   };
 
   const getOperatingHoursName = (ohId: number) => {

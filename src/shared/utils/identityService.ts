@@ -19,7 +19,7 @@ export class IdentityService {
   }
 
   private validateRequest(req: AssignRoleRequest): void {
-    const errors: Record<string, String> = {};
+    const errors: Record<string, string> = {};
 
     if (!req.roleId) {
       errors.roleId = 'Role ID is required';

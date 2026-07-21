@@ -1,8 +1,9 @@
-import { createSlice, PayloadAction, SliceCaseReducers, CreateSliceOptions } from '@reduxjs/toolkit';
+import { createSlice, PayloadAction, SliceCaseReducers } from '@reduxjs/toolkit';
 import { AsyncState, createAsyncState } from '@/shared/types/asyncState';
 
 export interface ListState<T> {
   items: AsyncState<T[]>;
+  lastAction?: { type: 'create' | 'update' | 'delete'; status: 'success' | 'error'; message?: string };
 }
 
 export function createListSlice<T>(
@@ -13,52 +14,64 @@ export function createListSlice<T>(
     name,
     initialState: { items: createAsyncState<T[]>([]) } as ListState<T>,
     reducers: {
-      fetchRequest(state: ListState<T>) {
+      fetchRequest(state) {
         state.items.status = 'loading';
         state.items.error = null;
       },
-      fetchSuccess(state: ListState<T>, action: PayloadAction<T[]>) {
+      fetchSuccess(state, action: PayloadAction<T[]>) {
         state.items.status = 'succeeded';
-        state.items.data = action.payload;
+        state.items.data = action.payload as any;
       },
-      fetchFailure(state: ListState<T>, action: PayloadAction<string>) {
+      fetchFailure(state, action: PayloadAction<string>) {
         state.items.status = 'failed';
         state.items.error = action.payload;
       },
-      createRequest(state: ListState<T>, _action: PayloadAction<Omit<T, 'id'>>) {
+      createRequest(state, _action: PayloadAction<Omit<T, 'id'>>) {
         state.items.status = 'loading';
+        state.lastAction = undefined;
       },
-      createSuccess(state: ListState<T>, action: PayloadAction<T>) {
+      createSuccess(state, action: PayloadAction<T>) {
         state.items.status = 'succeeded';
         (state.items.data as any[]).push(action.payload);
+        state.lastAction = { type: 'create', status: 'success' };
       },
-      createFailure(state: ListState<T>, action: PayloadAction<string>) {
+      createFailure(state, action: PayloadAction<string>) {
         state.items.status = 'failed';
         state.items.error = action.payload;
+        state.lastAction = { type: 'create', status: 'error', message: action.payload };
       },
-      updateRequest(state: ListState<T>, _action: PayloadAction<{ id: number; data: Omit<T, 'id'> }>) {
+      updateRequest(state, _action: PayloadAction<{ id: number; data: Omit<T, 'id'> }>) {
         state.items.status = 'loading';
+        state.lastAction = undefined;
       },
-      updateSuccess(state: ListState<T>, action: PayloadAction<T & { id: number }>) {
+      updateSuccess(state, action: PayloadAction<T & { id: number }>) {
         state.items.status = 'succeeded';
         state.items.data = (state.items.data as any[]).map((item: any) =>
           item.id === action.payload.id ? action.payload : item
-        );
+        ) as any;
+        state.lastAction = { type: 'update', status: 'success' };
       },
-      updateFailure(state: ListState<T>, action: PayloadAction<string>) {
+      updateFailure(state, action: PayloadAction<string>) {
         state.items.status = 'failed';
         state.items.error = action.payload;
+        state.lastAction = { type: 'update', status: 'error', message: action.payload };
       },
-      deleteRequest(state: ListState<T>, _action: PayloadAction<number>) {
+      deleteRequest(state, _action: PayloadAction<number>) {
         state.items.status = 'loading';
+        state.lastAction = undefined;
       },
-      deleteSuccess(state: ListState<T>, action: PayloadAction<number>) {
+      deleteSuccess(state, action: PayloadAction<number>) {
         state.items.status = 'succeeded';
-        state.items.data = (state.items.data as any[]).filter((item: any) => item.id !== action.payload);
+        state.items.data = (state.items.data as any[]).filter((item: any) => item.id !== action.payload) as any;
+        state.lastAction = { type: 'delete', status: 'success' };
       },
-      deleteFailure(state: ListState<T>, action: PayloadAction<string>) {
+      deleteFailure(state, action: PayloadAction<string>) {
         state.items.status = 'failed';
         state.items.error = action.payload;
+        state.lastAction = { type: 'delete', status: 'error', message: action.payload };
+      },
+      resetLastAction(state) {
+        state.lastAction = undefined;
       },
       ...extraReducers,
     },

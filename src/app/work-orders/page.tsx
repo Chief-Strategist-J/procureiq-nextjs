@@ -3,186 +3,29 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Briefcase, Plus, RefreshCw, CheckCircle2, AlertCircle, X, Send, Calendar, Clock } from "lucide-react";
-
-interface WorkOrderResponse {
-  id: number;
-  parentWorkOrderId?: number;
-  caseId?: number;
-  accountId: number;
-  entitlementId?: number;
-  contactId?: number;
-  assetId?: number;
-  workTypeId?: number;
-  priceBookId?: number;
-  status: string;
-  priority: number;
-  createdAt: string;
-}
+import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
+import { workOrdersActions } from "@/features/workOrders/workOrdersSlice";
 
 export default function WorkOrdersPage() {
   const router = useRouter();
-  const [workOrders, setWorkOrders] = useState<WorkOrderResponse[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState("");
+  const dispatch = useAppDispatch();
+  
+  const { data: workOrders = [], status: listStatus, error } = useAppSelector((state) => state.workOrders.items);
+  const loading = listStatus === 'loading';
+  const refreshing = loading;
+
   const [success, setSuccess] = useState("");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  // Creation modal state
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [caseId, setCaseId] = useState("");
-  const [contactId, setContactId] = useState("");
-  const [assetId, setAssetId] = useState("");
-  const [workTypeId, setWorkTypeId] = useState("");
-  const [status, setStatus] = useState("new");
-  const [priority, setPriority] = useState(2);
-  const [creating, setCreating] = useState(false);
-
-  const getMockWorkOrders = useCallback(() => {
-    const stored = localStorage.getItem("procureiq_mock_work_orders");
-    if (stored) {
-      return JSON.parse(stored);
-    }
-    const seed = [
-      {
-        id: 1001,
-        accountId: 1,
-        caseId: 50,
-        workTypeId: 10,
-        priority: 2,
-        status: "new",
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: 1002,
-        accountId: 1,
-        caseId: 52,
-        workTypeId: 12,
-        priority: 3,
-        status: "in_progress",
-        createdAt: new Date(Date.now() - 7200000).toISOString(),
-      }
-    ];
-    localStorage.setItem("procureiq_mock_work_orders", JSON.stringify(seed));
-    return seed;
-  }, []);
-
-  const fetchWorkOrders = useCallback(async (isRefresh = false) => {
-    if (isRefresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
-    setError("");
-
-    try {
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-      const response = await fetch(`${backendUrl}/api/v1/fieldservice/work-orders`);
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch work orders: ${response.statusText}`);
-      }
-
-      const resData = await response.json();
-      if (resData.status === "success" && resData.data) {
-        setWorkOrders(resData.data || []);
-      } else {
-        throw new Error(resData.error?.message || "Failed to load work orders");
-      }
-    } catch (err: any) {
-      console.warn("Backend offline. Falling back to local storage work orders database.", err);
-      // Fallback
-      setWorkOrders(getMockWorkOrders());
-      setError("Notice: Backend service is currently unreachable. Operating in local sandbox mode.");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [getMockWorkOrders]);
+  const fetchWorkOrders = useCallback((isRefresh = false) => {
+    dispatch(workOrdersActions.fetchRequest());
+  }, [dispatch]);
 
   // Load initial data
   useEffect(() => {
     fetchWorkOrders();
   }, [fetchWorkOrders]);
-
-  // Handle Create Work Order
-  const handleCreateWorkOrder = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setCreating(true);
-    setError("");
-    setSuccess("");
-
-    try {
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-      const requestPayload: Record<string, any> = {
-        status,
-        priority,
-      };
-      if (caseId) requestPayload.caseId = parseInt(caseId);
-      if (contactId) requestPayload.contactId = parseInt(contactId);
-      if (assetId) requestPayload.assetId = parseInt(assetId);
-      if (workTypeId) requestPayload.workTypeId = parseInt(workTypeId);
-
-      const response = await fetch(`${backendUrl}/api/v1/fieldservice/work-orders`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestPayload),
-      });
-
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(errText || "Failed to create work order");
-      }
-
-      setSuccess("Work order registered successfully!");
-      setIsModalOpen(false);
-      
-      // Reset form
-      setCaseId("");
-      setContactId("");
-      setAssetId("");
-      setWorkTypeId("");
-      setStatus("new");
-      setPriority(2);
-      
-      // Reload work orders list
-      fetchWorkOrders();
-    } catch (err: any) {
-      console.warn("Creating work order in offline fallback mode", err);
-      const mockList = getMockWorkOrders();
-      const newWO = {
-        id: mockList.length > 0 ? Math.max(...mockList.map((w: any) => w.id)) + 1 : 1001,
-        accountId: 1,
-        caseId: caseId ? parseInt(caseId) : undefined,
-        contactId: contactId ? parseInt(contactId) : undefined,
-        assetId: assetId ? parseInt(assetId) : undefined,
-        workTypeId: workTypeId ? parseInt(workTypeId) : undefined,
-        priority,
-        status,
-        createdAt: new Date().toISOString(),
-      };
-      const updatedList = [newWO, ...mockList];
-      localStorage.setItem("procureiq_mock_work_orders", JSON.stringify(updatedList));
-
-      setSuccess("[Offline Sandbox] Work order registered successfully!");
-      setIsModalOpen(false);
-      
-      // Reset form
-      setCaseId("");
-      setContactId("");
-      setAssetId("");
-      setWorkTypeId("");
-      setStatus("new");
-      setPriority(2);
-      
-      fetchWorkOrders();
-    } finally {
-      setCreating(false);
-    }
-  };
 
   // Filter local state by query string search or status
   const filteredWorkOrders = workOrders.filter((w) => {
@@ -312,7 +155,7 @@ export default function WorkOrdersPage() {
       {/* Table Container */}
       <div className="rounded-xl border border-zinc-800/80 bg-zinc-950/40 backdrop-blur-md overflow-hidden shadow-2xl shadow-black/80">
         <div className="overflow-x-auto">
-          {loading && !refreshing ? (
+          {loading && !refreshing && workOrders.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 text-zinc-500">
               <RefreshCw className="h-8 w-8 animate-spin text-zinc-600 mb-3" />
               <p className="text-xs tracking-wider">Syncing database work orders...</p>
@@ -381,134 +224,6 @@ export default function WorkOrdersPage() {
           )}
         </div>
       </div>
-
-      {/* Creation Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity duration-300" onClick={() => setIsModalOpen(false)} />
-          
-          <div className="relative w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-2xl shadow-black/90 text-white animate-scaleIn">
-            <button
-              onClick={() => setIsModalOpen(false)}
-              className="absolute right-5 top-5 p-1 rounded-full text-zinc-555 hover:text-white hover:bg-zinc-900 transition-all duration-300 cursor-pointer"
-            >
-              <X className="h-4 w-4" />
-            </button>
-
-            <h2 className="text-lg font-light tracking-tight mb-5 flex items-center gap-2">
-              <Briefcase className="h-4.5 w-4.5 text-indigo-400" />
-              New Work Order Registry
-            </h2>
-
-            <form onSubmit={handleCreateWorkOrder} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] text-zinc-555 uppercase tracking-widest block font-medium">Case ID (Optional)</label>
-                  <input
-                    type="number"
-                    value={caseId}
-                    onChange={(e) => setCaseId(e.target.value)}
-                    placeholder="1"
-                    className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 focus:border-zinc-700 transition-all duration-300"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] text-zinc-555 uppercase tracking-widest block font-medium">Contact ID (Optional)</label>
-                  <input
-                    type="number"
-                    value={contactId}
-                    onChange={(e) => setContactId(e.target.value)}
-                    placeholder="1"
-                    className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 focus:border-zinc-700 transition-all duration-300"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] text-zinc-555 uppercase tracking-widest block font-medium">Asset ID (Optional)</label>
-                  <input
-                    type="number"
-                    value={assetId}
-                    onChange={(e) => setAssetId(e.target.value)}
-                    placeholder="1"
-                    className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 focus:border-zinc-700 transition-all duration-300"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] text-zinc-555 uppercase tracking-widest block font-medium">Work Type ID</label>
-                  <input
-                    type="number"
-                    value={workTypeId}
-                    onChange={(e) => setWorkTypeId(e.target.value)}
-                    placeholder="1"
-                    required
-                    className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 focus:border-zinc-700 transition-all duration-300"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] text-zinc-555 uppercase tracking-widest block font-medium">Status</label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 focus:border-zinc-700 transition-all duration-300"
-                >
-                  <option value="new">New</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="completed">Completed</option>
-                  <option value="closed">Closed</option>
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] text-zinc-555 uppercase tracking-widest block font-medium">Priority Level</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[1, 2, 3].map((level) => (
-                    <button
-                      key={level}
-                      type="button"
-                      onClick={() => setPriority(level)}
-                      className={`py-2 rounded-lg border text-xs cursor-pointer text-center font-medium transition-all duration-300 ${
-                        priority === level
-                          ? level === 3
-                            ? "border-red-500/40 bg-red-950/30 text-red-400 shadow-[0_0_12px_rgba(239,68,68,0.1)]"
-                            : level === 2
-                            ? "border-amber-500/40 bg-amber-950/30 text-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.1)]"
-                            : "border-blue-500/40 bg-blue-950/30 text-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.1)]"
-                          : "border-zinc-800 bg-zinc-900/40 text-zinc-500 hover:text-zinc-350 hover:border-zinc-700"
-                      }`}
-                    >
-                      {level === 3 ? "High" : level === 2 ? "Medium" : "Low"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3.5 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 hover:bg-zinc-850 text-xs font-semibold cursor-pointer transition-all duration-300"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={creating}
-                  className="px-5 py-2.5 rounded-lg bg-white text-black hover:bg-zinc-100 hover:scale-[1.02] active:scale-[0.98] text-xs font-semibold flex items-center gap-2 disabled:opacity-50 cursor-pointer transition-all duration-300"
-                >
-                  {creating && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
-                  Register
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

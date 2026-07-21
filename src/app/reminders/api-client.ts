@@ -14,17 +14,9 @@ export interface Reminder {
   channel?: 'CALL' | 'SMS' | 'SLACK';
 }
 
-const base = createResourceApi<Reminder>({
+export const RemindersApi = createResourceApi<Reminder>({
   endpoints: API_ENDPOINTS.reminders as any,
   storageKey: 'procureiq_reminders',
   label: 'reminder',
   seed: [],
 });
-
-export const RemindersApi = {
-  listReminders: () => base.list(),
-  createReminder: (data: Omit<Reminder, 'id'>) => base.create(data),
-  updateReminder: (id: number, data: Partial<Omit<Reminder, 'id'>>) =>
-    base.update(id, data as Omit<Reminder, 'id'>),
-  deleteReminder: (id: number) => base.remove(id),
-};

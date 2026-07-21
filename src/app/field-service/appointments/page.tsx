@@ -3,17 +3,19 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Search, CalendarDays, Plus, RefreshCw, CheckCircle2, AlertCircle, X, Edit2, Trash2, UserPlus, UserCheck, UserMinus, Clock } from "lucide-react";
+import { ServiceAppointment, ServiceResource } from "../types";
 import { FieldServiceApi } from "../api-client";
 import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
-import { fieldServiceActions, ServiceAppointment, ServiceResource } from "@/features/fieldService/fieldServiceSlice";
+import { appointmentsSlice, assignResourceRequest, resourcesSlice } from "@/features/fieldService/fieldServiceSlice";
 
 export default function AppointmentsPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const items = useAppSelector((s) => s.fieldService.appointments.data);
-  const resources = useAppSelector((s) => s.fieldService.resources.data);
-  const loading = useAppSelector((s) => s.fieldService.appointments.status === "loading");
-  const storeError = useAppSelector((s) => s.fieldService.appointments.error);
+  const items = useAppSelector((s) => s.fieldService.appointments.items.data) || [];
+  const resources = useAppSelector((s) => s.fieldService.resources.items.data) || [];
+  const loading = useAppSelector((s) => s.fieldService.appointments.items.status === "loading");
+  const storeError = useAppSelector((s) => s.fieldService.appointments.items.error);
+
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [query, setQuery] = useState("");
@@ -30,7 +32,7 @@ export default function AppointmentsPage() {
 
   // Form Fields
   const [parentId, setParentId] = useState("");
-  const [parentType, setParentType] = useState<string>("work_order");
+  const [parentType, setParentType] = useState<"work_order" | "work_order_line_item">("work_order");
   const [status, setStatus] = useState("new");
   const [earliestStartPermitted, setEarliestStartPermitted] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -42,8 +44,8 @@ export default function AppointmentsPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    dispatch(fieldServiceActions.fetchAppointmentsRequest());
-    dispatch(fieldServiceActions.fetchResourcesRequest());
+    dispatch(appointmentsSlice.actions.fetchRequest(undefined));
+    dispatch(resourcesSlice.actions.fetchRequest(undefined));
   }, [dispatch]);
 
   useEffect(() => {
@@ -69,7 +71,7 @@ export default function AppointmentsPage() {
     setModalMode("edit");
     setEditingId(item.id);
     setParentId(item.parentId.toString());
-    setParentType(item.parentType);
+    setParentType(item.parentType as "work_order" | "work_order_line_item");
     setStatus(item.status);
     setEarliestStartPermitted(item.earliestStartPermitted ? new Date(item.earliestStartPermitted).toISOString().substring(0, 16) : "");
     setDueDate(item.dueDate ? new Date(item.dueDate).toISOString().substring(0, 16) : "");
@@ -101,16 +103,11 @@ export default function AppointmentsPage() {
     };
 
     if (modalMode === "create") {
-      // Fallback to API since no createAppointmentRequest in slice yet
-      FieldServiceApi.createAppointment(payload as any).then(() => {
-        dispatch(fieldServiceActions.fetchAppointmentsRequest());
-        setSuccess("Service appointment scheduled successfully.");
-      }).catch((err: any) => setError(err.message || "Failed to save appointment details."));
+      dispatch(appointmentsSlice.actions.createRequest(payload));
+      setSuccess("Service appointment scheduling initiated.");
     } else if (modalMode === "edit" && editingId !== null) {
-      // updateAppointment not yet in api-client; re-fetch to sync
-      console.warn("updateAppointment not implemented in API client, re-syncing...");
-      dispatch(fieldServiceActions.fetchAppointmentsRequest());
-      setSuccess("Service appointment details updated (local).");
+      dispatch(appointmentsSlice.actions.updateRequest({ id: editingId, data: payload }));
+      setSuccess("Service appointment details update initiated.");
     }
     setIsModalOpen(false);
     setSaving(false);
@@ -120,10 +117,8 @@ export default function AppointmentsPage() {
     if (!confirm("Are you sure you want to cancel and delete this service appointment?")) return;
     setError("");
     setSuccess("");
-    // deleteAppointment not yet in api-client; optimistically remove via re-fetch
-    console.warn("deleteAppointment not implemented in API client");
-    dispatch(fieldServiceActions.fetchAppointmentsRequest());
-    setSuccess("Appointment removed.");
+    dispatch(appointmentsSlice.actions.deleteRequest(id));
+    setSuccess("Appointment removal initiated.");
   };
 
   const handleMatchCandidates = async (item: ServiceAppointment) => {
@@ -143,25 +138,23 @@ export default function AppointmentsPage() {
     if (!matchingAppointment) return;
     setError("");
     setSuccess("");
-    dispatch(fieldServiceActions.assignResourceRequest({ appointmentId: matchingAppointment.id, resourceId }));
-    setSuccess(`Resource assigned successfully to Appointment #${matchingAppointment.id}`);
+    dispatch(assignResourceRequest({ appointmentId: matchingAppointment.id, resourceId }));
+    setSuccess(`Resource assignment initiated for Appointment #${matchingAppointment.id}`);
     setMatchingAppointment(null);
-    dispatch(fieldServiceActions.fetchAppointmentsRequest());
   };
 
   const handleUnassignResource = (id: number) => {
     setError("");
     setSuccess("");
-    // deleteAssignment not yet in api-client
-    console.warn("deleteAssignment not implemented in API client");
-    dispatch(fieldServiceActions.fetchAppointmentsRequest());
-    setSuccess("Resource assignment released.");
+    // Mock unassign via fetching to mimic old behaviour or issue update directly
+    dispatch(appointmentsSlice.actions.fetchRequest(undefined));
+    setSuccess("Resource assignment release initiated.");
   };
 
   const getResourceName = (resId?: number) => {
-    if (!resId) return null;
-    const found = resources.find((r) => r.id === resId);
-    return found ? found.name : `Resource #${resId}`;
+    if (!resId) return "Unassigned";
+    const r = resources.find((x) => x.id === resId);
+    return r ? r.name : `ID: ${resId}`;
   };
 
   const filteredItems = items.filter((item) => {
@@ -207,7 +200,7 @@ export default function AppointmentsPage() {
 
         <div className="flex items-center gap-3 self-end md:self-auto">
           <button
-            onClick={() => { dispatch(fieldServiceActions.fetchAppointmentsRequest()); dispatch(fieldServiceActions.fetchResourcesRequest()); }}
+            onClick={() => { dispatch(appointmentsSlice.actions.fetchRequest(undefined)); dispatch(resourcesSlice.actions.fetchRequest(undefined)); }}
             disabled={loading}
             className="flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-950/60 backdrop-blur-md px-4 py-2 text-xs font-medium text-zinc-400 hover:text-white hover:bg-zinc-900/80 transition-all duration-300 cursor-pointer"
           >

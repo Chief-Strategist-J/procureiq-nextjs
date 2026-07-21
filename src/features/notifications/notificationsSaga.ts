@@ -40,7 +40,7 @@ function* dispatchNotificationSaga(action: ReturnType<typeof notificationsAction
 }
 
 export function* notificationsSaga() {
-  yield takeLatest(notificationsActions.fetchNotificationsRequest.type, fetchNotificationsSaga);
-  yield takeLatest(notificationsActions.updateStatusRequest.type, updateStatusSaga);
-  yield takeLatest(notificationsActions.dispatchNotificationRequest.type, dispatchNotificationSaga);
+  yield takeLatest(notificationsActions.fetchNotificationsRequest.type as any, fetchNotificationsSaga);
+  yield takeLatest(notificationsActions.updateStatusRequest.type as any, updateStatusSaga);
+  yield takeLatest(notificationsActions.dispatchNotificationRequest.type as any, dispatchNotificationSaga);
 }

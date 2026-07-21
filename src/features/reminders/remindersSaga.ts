@@ -31,8 +31,8 @@ function* deleteSaga(action: ReturnType<typeof remindersActions.deleteRequest>) 
 }
 
 export function* remindersSaga() {
-  yield takeLatest(remindersActions.fetchRequest.type, fetchSaga);
-  yield takeLatest(remindersActions.createRequest.type, createSaga);
-  yield takeLatest(remindersActions.updateRequest.type, updateSaga);
-  yield takeLatest(remindersActions.deleteRequest.type, deleteSaga);
+  yield takeLatest(remindersActions.fetchRequest.type as any, fetchSaga);
+  yield takeLatest(remindersActions.createRequest.type as any, createSaga);
+  yield takeLatest(remindersActions.updateRequest.type as any, updateSaga);
+  yield takeLatest(remindersActions.deleteRequest.type as any, deleteSaga);
 }

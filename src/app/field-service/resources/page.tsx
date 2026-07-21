@@ -6,10 +6,16 @@ import { Search, Users, Plus, RefreshCw, CheckCircle2, AlertCircle, X, Edit2, Tr
 import { FieldServiceApi } from "../api-client";
 import { ServiceResource } from "../types";
 
+import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
+import { resourcesSlice } from "@/features/fieldService/fieldServiceSlice";
+
 export default function ResourcesPage() {
   const router = useRouter();
-  const [items, setItems] = useState<ServiceResource[]>([]);
-  const [loading, setLoading] = useState(false);
+  const dispatch = useAppDispatch();
+  const items = useAppSelector((s) => s.fieldService.resources.items.data) || [];
+  const loading = useAppSelector((s) => s.fieldService.resources.items.status === "loading");
+  const storeError = useAppSelector((s) => s.fieldService.resources.items.error);
+  
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [query, setQuery] = useState("");
@@ -25,22 +31,17 @@ export default function ResourcesPage() {
   const [isActive, setIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const fetchItems = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const data = await FieldServiceApi.listResources();
-      setItems(data);
-    } catch (err: any) {
-      setError("Failed to load service resources.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchItems = useCallback(() => {
+    dispatch(resourcesSlice.actions.fetchRequest(undefined));
+  }, [dispatch]);
 
   useEffect(() => {
     fetchItems();
   }, [fetchItems]);
+
+  useEffect(() => {
+    if (storeError) setError(storeError);
+  }, [storeError]);
 
   const openCreateModal = () => {
     setModalMode("create");
@@ -54,7 +55,7 @@ export default function ResourcesPage() {
     setModalMode("edit");
     setEditingId(item.id);
     setName(item.name);
-    setResourceType(item.resourceType);
+    setResourceType(item.resourceType as any);
     setIsActive(item.isActive);
     setIsModalOpen(true);
   };
@@ -67,34 +68,23 @@ export default function ResourcesPage() {
     setError("");
     setSuccess("");
 
-    try {
-      if (modalMode === "create") {
-        await FieldServiceApi.createResource({ name, resourceType, isActive });
-        setSuccess("Service resource created successfully.");
-      } else if (modalMode === "edit" && editingId !== null) {
-        await FieldServiceApi.updateResource(editingId, { name, resourceType, isActive });
-        setSuccess("Service resource updated successfully.");
-      }
-      setIsModalOpen(false);
-      fetchItems();
-    } catch (err: any) {
-      setError(err.message || "Failed to save service resource.");
-    } finally {
-      setSaving(false);
+    if (modalMode === "create") {
+      dispatch(resourcesSlice.actions.createRequest({ name, resourceType, isActive }));
+      setSuccess("Service resource creation initiated.");
+    } else if (modalMode === "edit" && editingId !== null) {
+      dispatch(resourcesSlice.actions.updateRequest({ id: editingId, data: { name, resourceType, isActive } }));
+      setSuccess("Service resource update initiated.");
     }
+    setIsModalOpen(false);
+    setSaving(false);
   };
 
   const handleDelete = async (id: number) => {
     if (!confirm("Are you sure you want to delete this service resource?")) return;
     setError("");
     setSuccess("");
-    try {
-      await FieldServiceApi.deleteResource(id);
-      setSuccess("Service resource deleted successfully.");
-      fetchItems();
-    } catch (err: any) {
-      setError("Failed to delete service resource.");
-    }
+    dispatch(resourcesSlice.actions.deleteRequest(id));
+    setSuccess("Service resource deletion initiated.");
   };
 
   const filteredItems = items.filter((item) => {

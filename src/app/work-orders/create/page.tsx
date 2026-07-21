@@ -1,100 +1,65 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
+import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
+import { workOrdersActions } from "@/features/workOrders/workOrdersSlice";
 
 export default function CreateWorkOrderPage() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
+
   const [caseId, setCaseId] = useState("");
   const [contactId, setContactId] = useState("");
   const [assetId, setAssetId] = useState("");
   const [workTypeId, setWorkTypeId] = useState("");
   const [status, setStatus] = useState("new");
   const [priority, setPriority] = useState(2);
-  const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  const { lastAction, items } = useAppSelector((state) => state.workOrders);
+  const creating = items.status === 'loading';
+
   const handleCreateWorkOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    setCreating(true);
     setError("");
     setSuccess("");
 
-    try {
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-      const requestPayload: Record<string, any> = {
-        status,
-        priority,
-      };
-      if (caseId) requestPayload.caseId = parseInt(caseId);
-      if (contactId) requestPayload.contactId = parseInt(contactId);
-      if (assetId) requestPayload.assetId = parseInt(assetId);
-      if (workTypeId) requestPayload.workTypeId = parseInt(workTypeId);
+    const requestPayload: Record<string, any> = {
+      status,
+      priority,
+    };
+    if (caseId) requestPayload.caseId = parseInt(caseId);
+    if (contactId) requestPayload.contactId = parseInt(contactId);
+    if (assetId) requestPayload.assetId = parseInt(assetId);
+    if (workTypeId) requestPayload.workTypeId = parseInt(workTypeId);
 
-      const response = await fetch(`${backendUrl}/api/v1/fieldservice/work-orders`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestPayload),
-      });
-
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(errText || "Failed to create work order");
-      }
-
-      setSuccess("Work order registered successfully!");
-      
-      // Reset form
-      setCaseId("");
-      setContactId("");
-      setAssetId("");
-      setWorkTypeId("");
-      setStatus("new");
-      setPriority(2);
-      
-      setTimeout(() => {
-        router.push("/work-orders");
-      }, 1500);
-    } catch (err: any) {
-      console.warn("Creating work order in offline fallback mode", err);
-      // Fallback local storage
-      const stored = localStorage.getItem("procureiq_mock_work_orders");
-      const mockList = stored ? JSON.parse(stored) : [];
-      const newWO = {
-        id: mockList.length > 0 ? Math.max(...mockList.map((w: any) => w.id)) + 1 : 1001,
-        accountId: 1,
-        caseId: caseId ? parseInt(caseId) : undefined,
-        contactId: contactId ? parseInt(contactId) : undefined,
-        assetId: assetId ? parseInt(assetId) : undefined,
-        workTypeId: workTypeId ? parseInt(workTypeId) : undefined,
-        priority,
-        status,
-        createdAt: new Date().toISOString(),
-      };
-      const updatedList = [newWO, ...mockList];
-      localStorage.setItem("procureiq_mock_work_orders", JSON.stringify(updatedList));
-
-      setSuccess("[Offline Sandbox] Work order registered successfully!");
-      
-      setCaseId("");
-      setContactId("");
-      setAssetId("");
-      setWorkTypeId("");
-      setStatus("new");
-      setPriority(2);
-
-      setTimeout(() => {
-        router.push("/work-orders");
-      }, 1500);
-    } finally {
-      setCreating(false);
-    }
+    dispatch(workOrdersActions.createRequest(requestPayload as any));
   };
+
+  useEffect(() => {
+    if (lastAction?.type === 'create') {
+      if (lastAction.status === 'success') {
+        setSuccess("Work order registered successfully!");
+        setCaseId("");
+        setContactId("");
+        setAssetId("");
+        setWorkTypeId("");
+        setStatus("new");
+        setPriority(2);
+        
+        setTimeout(() => {
+          dispatch(workOrdersActions.resetLastAction());
+          router.push("/work-orders");
+        }, 1500);
+      } else if (lastAction.status === 'error') {
+        setError(lastAction.message || "Failed to create work order");
+      }
+    }
+  }, [lastAction, router, dispatch]);
 
   return (
     <div className="min-h-screen bg-black text-white p-4 sm:p-8 font-sans relative flex flex-col">

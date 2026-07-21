@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
@@ -8,49 +8,53 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RefreshCw, User, Mail, KeyRound, ChevronRight } from "lucide-react";
+import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
+import {
+  createRequest,
+  selectSignupStatus,
+  selectSignupLastAction,
+  resetLastAction,
+} from "@/features/signup/signupSlice";
 
 export default function SignupPage() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [localError, setLocalError] = useState("");
   const router = useRouter();
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!username || !email || !password) {
-      setError("Please fill in all fields");
-      return;
-    }
+  const dispatch = useAppDispatch();
+  const status = useAppSelector(selectSignupStatus);
+  const lastAction = useAppSelector(selectSignupLastAction);
 
-    setLoading(true);
-    setError("");
-    setSuccess("");
+  const loading = status === "loading";
+  const error = localError || (lastAction?.status === "error" ? lastAction.message : "");
+  const success = lastAction?.status === "success" ? "Account created successfully! Redirecting to login..." : "";
 
-    try {
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-      const res = await fetch(`${backendUrl}/api/v1/auth/signup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, email, password }),
-      });
-
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(errText || "Registration failed");
-      }
-
-      setSuccess("Account created successfully! Redirecting to login...");
-      setTimeout(() => {
+  useEffect(() => {
+    if (lastAction?.status === "success") {
+      const timer = setTimeout(() => {
+        dispatch(resetLastAction());
         router.push("/login");
       }, 1500);
-    } catch (err: any) {
-      setError(err.message || "Registration failed. Please try again.");
-    } finally {
-      setLoading(false);
+      return () => clearTimeout(timer);
     }
+  }, [lastAction, router, dispatch]);
+
+  useEffect(() => {
+    return () => {
+      dispatch(resetLastAction());
+    };
+  }, [dispatch]);
+
+  const handleSignup = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!username || !email || !password) {
+      setLocalError("Please fill in all fields");
+      return;
+    }
+    setLocalError("");
+    dispatch(createRequest({ username, email, password }));
   };
 
   return (

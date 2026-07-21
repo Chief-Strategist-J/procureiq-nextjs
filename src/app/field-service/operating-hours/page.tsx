@@ -6,10 +6,16 @@ import { Search, Clock, Plus, RefreshCw, CheckCircle2, AlertCircle, X, Edit2, Tr
 import { FieldServiceApi } from "../api-client";
 import { OperatingHours } from "../types";
 
+import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
+import { operatingHoursSlice } from "@/features/fieldService/fieldServiceSlice";
+
 export default function OperatingHoursPage() {
   const router = useRouter();
-  const [items, setItems] = useState<OperatingHours[]>([]);
-  const [loading, setLoading] = useState(false);
+  const dispatch = useAppDispatch();
+  const items = useAppSelector((s) => s.fieldService.operatingHours.items.data) || [];
+  const loading = useAppSelector((s) => s.fieldService.operatingHours.items.status === "loading");
+  const storeError = useAppSelector((s) => s.fieldService.operatingHours.items.error);
+
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [query, setQuery] = useState("");
@@ -24,22 +30,17 @@ export default function OperatingHoursPage() {
   const [timezone, setTimezone] = useState("America/New_York");
   const [saving, setSaving] = useState(false);
 
-  const fetchItems = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const data = await FieldServiceApi.listOperatingHours();
-      setItems(data);
-    } catch (err: any) {
-      setError("Failed to load operating hours.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchItems = useCallback(() => {
+    dispatch(operatingHoursSlice.actions.fetchRequest(undefined));
+  }, [dispatch]);
 
   useEffect(() => {
     fetchItems();
   }, [fetchItems]);
+
+  useEffect(() => {
+    if (storeError) setError(storeError);
+  }, [storeError]);
 
   const openCreateModal = () => {
     setModalMode("create");
@@ -64,34 +65,23 @@ export default function OperatingHoursPage() {
     setError("");
     setSuccess("");
 
-    try {
-      if (modalMode === "create") {
-        await FieldServiceApi.createOperatingHours({ name, timezone });
-        setSuccess("Operating hours created successfully.");
-      } else if (modalMode === "edit" && editingId !== null) {
-        await FieldServiceApi.updateOperatingHours(editingId, { name, timezone });
-        setSuccess("Operating hours updated successfully.");
-      }
-      setIsModalOpen(false);
-      fetchItems();
-    } catch (err: any) {
-      setError(err.message || "Failed to save operating hours.");
-    } finally {
-      setSaving(false);
+    if (modalMode === "create") {
+      dispatch(operatingHoursSlice.actions.createRequest({ name, timezone }));
+      setSuccess("Operating hours creation initiated.");
+    } else if (modalMode === "edit" && editingId !== null) {
+      dispatch(operatingHoursSlice.actions.updateRequest({ id: editingId, data: { name, timezone } }));
+      setSuccess("Operating hours update initiated.");
     }
+    setIsModalOpen(false);
+    setSaving(false);
   };
 
   const handleDelete = async (id: number) => {
     if (!confirm("Are you sure you want to delete these operating hours?")) return;
     setError("");
     setSuccess("");
-    try {
-      await FieldServiceApi.deleteOperatingHours(id);
-      setSuccess("Operating hours deleted successfully.");
-      fetchItems();
-    } catch (err: any) {
-      setError("Failed to delete operating hours.");
-    }
+    dispatch(operatingHoursSlice.actions.deleteRequest(id));
+    setSuccess("Operating hours deletion initiated.");
   };
 
   const filteredItems = items.filter((item) => {

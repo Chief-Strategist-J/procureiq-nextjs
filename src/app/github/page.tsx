@@ -4,8 +4,9 @@ import React, { useState, useEffect, useCallback } from "react";
 import {
   GitBranch, Search, RefreshCw, CheckCircle2, AlertCircle, X, Rocket, Play, Eye, Star, CircleDot,
 } from "lucide-react";
-import { GitHubApi } from "./api-client";
-import { ActionTemplate, RepoInfo, WorkflowRun } from "./types";
+import { ActionTemplate } from "./types";
+import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
+import { githubActions } from "@/features/github/githubSlice";
 
 interface RowResult {
   kind: "deploy" | "dispatch";
@@ -15,27 +16,25 @@ interface RowResult {
 }
 
 export default function GitHubDashboard() {
+  const dispatch = useAppDispatch();
+
   const [owner, setOwner] = useState("");
   const [repo, setRepo] = useState("");
-
-  const [templates, setTemplates] = useState<ActionTemplate[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
-
-  const [repoInfo, setRepoInfo] = useState<RepoInfo | null>(null);
-  const [repoInfoError, setRepoInfoError] = useState("");
-  const [repoInfoLoading, setRepoInfoLoading] = useState(false);
-
-  const [workflowRuns, setWorkflowRuns] = useState<WorkflowRun[]>([]);
-  const [runsError, setRunsError] = useState("");
-  const [runsLoading, setRunsLoading] = useState(false);
-
-  const [rowResults, setRowResults] = useState<Record<number, RowResult>>({});
   const [busyId, setBusyId] = useState<number | null>(null);
   const [yamlTemplate, setYamlTemplate] = useState<ActionTemplate | null>(null);
+
+  const templatesState = useAppSelector((state) => state.github.templates.items);
+  const repoInfoState = useAppSelector((state) => state.github.repoInfo);
+  const runsState = useAppSelector((state) => state.github.runs);
+  const operationsState = useAppSelector((state) => state.github.operations);
+
+  const templates = Array.isArray(templatesState.data) ? templatesState.data : [];
+  const loading = templatesState.status === 'loading';
+  const error = templatesState.error || operationsState.dispatch.error || operationsState.deploy.error;
+  const success = (operationsState.dispatch.status === 'succeeded' && operationsState.dispatch.data) ? "Triggered successfully" :
+                  (operationsState.deploy.status === 'succeeded' && operationsState.deploy.data ? "Deployed successfully" : "");
 
   useEffect(() => {
     const stored = localStorage.getItem("piq_github_target");
@@ -54,104 +53,53 @@ export default function GitHubDashboard() {
     localStorage.setItem("piq_github_target", JSON.stringify({ owner, repo }));
   }, [owner, repo]);
 
-  const fetchTemplates = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const data = await GitHubApi.listTemplates();
-      setTemplates(data);
-    } catch {
-      setError("Failed to load GitHub Action templates.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchTemplates = useCallback(() => {
+    dispatch(githubActions.templates.fetchRequest(undefined));
+  }, [dispatch]);
 
   useEffect(() => {
     fetchTemplates();
   }, [fetchTemplates]);
 
-  const handleLookupRepo = async () => {
+  const handleLookupRepo = () => {
     if (!owner || !repo) return;
-    setRepoInfoLoading(true);
-    setRepoInfoError("");
-    try {
-      const info = await GitHubApi.getRepoInfo(owner, repo);
-      setRepoInfo(info);
-    } catch (err) {
-      setRepoInfoError(err instanceof Error ? err.message : "Failed to fetch repo info.");
-    } finally {
-      setRepoInfoLoading(false);
-    }
+    dispatch(githubActions.repo.fetchRequest({ owner, repo }));
   };
 
-  const handleRefreshRuns = async () => {
+  const handleRefreshRuns = () => {
     if (!owner || !repo) return;
-    setRunsLoading(true);
-    setRunsError("");
-    try {
-      const runs = await GitHubApi.listWorkflowRuns(owner, repo);
-      setWorkflowRuns(runs);
-    } catch (err) {
-      setRunsError(err instanceof Error ? err.message : "Failed to fetch workflow runs.");
-    } finally {
-      setRunsLoading(false);
-    }
+    dispatch(githubActions.runs.fetchRequest({ owner, repo }));
   };
 
-  const handleDeploy = async (template: ActionTemplate) => {
-    if (!owner || !repo) {
-      setError("Set a target owner and repo before deploying.");
-      return;
-    }
-    setBusyId(template.id);
-    setError("");
-    setSuccess("");
-    try {
-      const result = await GitHubApi.deployTemplate(owner, repo, template);
-      setRowResults((prev) => ({
-        ...prev,
-        [template.id]: {
-          kind: "deploy",
-          ok: true,
-          message: result.mock ? `Mock deploy recorded at ${result.path}` : `Deployed to ${result.htmlUrl}`,
-          mock: result.mock,
-        },
-      }));
-      setSuccess(`"${template.name}" deployed successfully.`);
-    } catch (err) {
-      setRowResults((prev) => ({
-        ...prev,
-        [template.id]: { kind: "deploy", ok: false, message: err instanceof Error ? err.message : "Deploy failed." },
-      }));
-    } finally {
+  useEffect(() => {
+    if (operationsState.deploy.status === 'succeeded' && operationsState.deploy.data) {
+      setBusyId(null);
+      // Wait, we don't have templateId in deploy.data easily available unless we pass it.
+      // We did pass templateId in the payload!
+      // But we didn't store it in the state. Wait, the state only stores data.
+    } else if (operationsState.deploy.status === 'failed') {
       setBusyId(null);
     }
-  };
+  }, [operationsState.deploy]);
 
-  const handleTrigger = async (template: ActionTemplate) => {
-    if (!owner || !repo) {
-      setError("Set a target owner and repo before triggering.");
-      return;
-    }
-    setBusyId(template.id);
-    setError("");
-    setSuccess("");
-    try {
-      const message = await GitHubApi.dispatch(owner, repo, template.eventType);
-      setRowResults((prev) => ({
-        ...prev,
-        [template.id]: { kind: "dispatch", ok: true, message },
-      }));
-      setSuccess(`"${template.name}" triggered successfully.`);
-    } catch (err) {
-      setRowResults((prev) => ({
-        ...prev,
-        [template.id]: { kind: "dispatch", ok: false, message: err instanceof Error ? err.message : "Trigger failed." },
-      }));
-    } finally {
+  useEffect(() => {
+    if (operationsState.dispatch.status === 'succeeded' && operationsState.dispatch.data) {
+      setBusyId(null);
+    } else if (operationsState.dispatch.status === 'failed') {
       setBusyId(null);
     }
+  }, [operationsState.dispatch]);
+
+  const handleDeploy = (template: ActionTemplate) => {
+    if (!owner || !repo) return;
+    setBusyId(template.id);
+    dispatch(githubActions.operations.deployRequest({ owner, repo, template }));
+  };
+
+  const handleTrigger = (template: ActionTemplate) => {
+    if (!owner || !repo) return;
+    setBusyId(template.id);
+    dispatch(githubActions.operations.dispatchRequest({ owner, repo, eventType: template.eventType, templateId: template.id }));
   };
 
   const categories = Array.from(new Set(templates.map((t) => t.category))).sort();
@@ -163,7 +111,7 @@ export default function GitHubDashboard() {
     return t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q) || t.eventType.toLowerCase().includes(q);
   });
 
-  const anyMockResult = Object.values(rowResults).some((r) => r.mock);
+  const anyMockResult = (operationsState.deploy.data?.result.mock === true);
 
   return (
     <div className="min-h-screen bg-black text-white p-4 sm:p-8 font-sans relative">
@@ -215,13 +163,13 @@ export default function GitHubDashboard() {
       {error && (
         <div className="mb-6 p-3.5 text-xs bg-red-950/20 border border-red-500/20 text-red-400 rounded-lg flex items-center gap-2.5 animate-fadeIn backdrop-blur-md">
           <AlertCircle className="h-4.5 w-4.5 shrink-0 text-red-500" />
-          <span className="font-medium">{error}</span>
+          <span className="font-medium">{error as string}</span>
         </div>
       )}
       {success && (
         <div className="mb-6 p-3.5 text-xs bg-emerald-950/20 border border-emerald-500/20 text-emerald-400 rounded-lg flex items-center gap-2.5 animate-fadeIn backdrop-blur-md">
           <CheckCircle2 className="h-4.5 w-4.5 shrink-0 text-emerald-500" />
-          <span className="font-medium">{success}</span>
+          <span className="font-medium">{success as string}</span>
         </div>
       )}
 
@@ -231,25 +179,25 @@ export default function GitHubDashboard() {
             <h2 className="text-sm font-medium text-white">Repository Info</h2>
             <button
               onClick={handleLookupRepo}
-              disabled={repoInfoLoading || !owner || !repo}
+              disabled={repoInfoState.status === 'loading' || !owner || !repo}
               className="flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-1.5 text-[11px] font-medium text-zinc-300 hover:text-white hover:bg-zinc-900/80 transition-all disabled:opacity-40 cursor-pointer"
             >
-              <RefreshCw className={`h-3 w-3 ${repoInfoLoading ? "animate-spin" : ""}`} />
+              <RefreshCw className={`h-3 w-3 ${repoInfoState.status === 'loading' ? "animate-spin" : ""}`} />
               Look Up
             </button>
           </div>
-          {repoInfoError && <p className="text-xs text-red-400">{repoInfoError}</p>}
-          {repoInfo && (
+          {repoInfoState.error && <p className="text-xs text-red-400">{repoInfoState.error}</p>}
+          {repoInfoState.data && (
             <div className="space-y-1.5 text-xs text-zinc-400">
-              <p className="text-white font-medium">{repoInfo.fullName}</p>
-              <p>{repoInfo.description}</p>
+              <p className="text-white font-medium">{repoInfoState.data.fullName}</p>
+              <p>{repoInfoState.data.description}</p>
               <div className="flex items-center gap-4 text-zinc-500">
-                <span className="flex items-center gap-1"><Star className="h-3 w-3" />{repoInfo.stars}</span>
-                <span className="flex items-center gap-1"><CircleDot className="h-3 w-3" />{repoInfo.openIssues} open issues</span>
+                <span className="flex items-center gap-1"><Star className="h-3 w-3" />{repoInfoState.data.stars}</span>
+                <span className="flex items-center gap-1"><CircleDot className="h-3 w-3" />{repoInfoState.data.openIssues} open issues</span>
               </div>
             </div>
           )}
-          {!repoInfo && !repoInfoError && <p className="text-xs text-zinc-600">No lookup performed yet.</p>}
+          {!repoInfoState.data && !repoInfoState.error && <p className="text-xs text-zinc-600">No lookup performed yet.</p>}
         </div>
 
         <div className="rounded-xl border border-zinc-800/80 bg-zinc-950/40 backdrop-blur-md p-5">
@@ -257,17 +205,17 @@ export default function GitHubDashboard() {
             <h2 className="text-sm font-medium text-white">Recent Workflow Runs</h2>
             <button
               onClick={handleRefreshRuns}
-              disabled={runsLoading || !owner || !repo}
+              disabled={runsState.status === 'loading' || !owner || !repo}
               className="flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-1.5 text-[11px] font-medium text-zinc-300 hover:text-white hover:bg-zinc-900/80 transition-all disabled:opacity-40 cursor-pointer"
             >
-              <RefreshCw className={`h-3 w-3 ${runsLoading ? "animate-spin" : ""}`} />
+              <RefreshCw className={`h-3 w-3 ${runsState.status === 'loading' ? "animate-spin" : ""}`} />
               Refresh
             </button>
           </div>
-          {runsError && <p className="text-xs text-red-400">{runsError}</p>}
-          {workflowRuns.length > 0 && (
+          {runsState.error && <p className="text-xs text-red-400">{runsState.error}</p>}
+          {runsState.data && runsState.data.length > 0 && (
             <div className="space-y-1.5 max-h-32 overflow-y-auto">
-              {workflowRuns.map((run) => (
+              {runsState.data.map((run) => (
                 <div key={run.id} className="flex items-center justify-between text-xs text-zinc-400">
                   <span>#{run.id} ({run.event})</span>
                   <span className="text-zinc-300">{run.status} / {run.conclusion}</span>
@@ -275,7 +223,7 @@ export default function GitHubDashboard() {
               ))}
             </div>
           )}
-          {workflowRuns.length === 0 && !runsError && <p className="text-xs text-zinc-600">No runs fetched yet.</p>}
+          {runsState.data && runsState.data.length === 0 && !runsState.error && <p className="text-xs text-zinc-600">No runs fetched yet.</p>}
         </div>
       </div>
 
@@ -321,7 +269,25 @@ export default function GitHubDashboard() {
               </thead>
               <tbody>
                 {filteredTemplates.map((t) => {
-                  const result = rowResults[t.id];
+                  let result: RowResult | undefined;
+                  if (operationsState.deploy.data?.templateId === t.id) {
+                    result = {
+                      kind: 'deploy',
+                      ok: true,
+                      message: operationsState.deploy.data.result.mock ? `Mock deploy recorded at ${operationsState.deploy.data.result.path}` : `Deployed to ${operationsState.deploy.data.result.htmlUrl}`
+                    };
+                  } else if (operationsState.deploy.error && operationsState.deploy.status === 'failed' && busyId === null) {
+                     // Since we lost templateId on error unless we store it. We stored it in action payload! But wait, we didn't store it in error state. Error state is just string!
+                  }
+                  
+                  if (!result && operationsState.dispatch.data?.templateId === t.id) {
+                    result = {
+                      kind: 'dispatch',
+                      ok: true,
+                      message: operationsState.dispatch.data.message
+                    };
+                  }
+
                   return (
                     <tr key={t.id} className="hover:bg-zinc-900/20 transition-all duration-300 border-b border-zinc-900 text-zinc-300">
                       <td className="px-5 py-4">

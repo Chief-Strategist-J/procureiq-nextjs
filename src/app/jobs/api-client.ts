@@ -10,6 +10,7 @@ export interface Job {
   name: string;
   status: string;
   config: Record<string, any>;
+  categoryId?: number;
 }
 
 export interface JobRun {
@@ -31,13 +32,9 @@ const base = createResourceApi<Job>({
   ],
 });
 
-export const JobsApi = {
-  listJobs: () => base.list(),
-  createJob: (data: Omit<Job, 'id'>) => base.create(data),
-  updateJob: (id: number, data: Omit<Job, 'id'>) => base.update(id, data),
-  deleteJob: (id: number) => base.remove(id),
+export const JobsApi = Object.assign(base, {
   listRuns: (jobId: number) =>
     base.get<JobRun[]>(API_ENDPOINTS.jobs.runs(String(jobId)), 'list job runs'),
   triggerRun: (jobId: number) =>
     base.post<JobRun>(API_ENDPOINTS.jobs.trigger(String(jobId)), {}, 'trigger job run'),
-};
+});

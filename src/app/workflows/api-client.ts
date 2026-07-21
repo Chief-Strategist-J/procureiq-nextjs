@@ -1,6 +1,5 @@
 /**
  * Workflows API — built on the shared createResourceApi factory.
- * No repeated headers, no duplicated fetch logic.
  */
 import { API_ENDPOINTS } from '@/config/api-endpoints';
 import { createResourceApi } from '@/shared/utils/resourceApi';
@@ -27,13 +26,9 @@ const base = createResourceApi<Workflow>({
   seed: [],
 });
 
-export const WorkflowsApi = {
-  listWorkflows: () => base.list(),
-  createWorkflow: (data: Omit<Workflow, 'id'>) => base.create(data),
-  updateWorkflow: (id: number, data: Omit<Workflow, 'id'>) => base.update(id, data),
-  deleteWorkflow: (id: number) => base.remove(id),
+export const WorkflowsApi = Object.assign(base, {
   listRuns: (workflowId: number) =>
     base.get<WorkflowRun[]>(API_ENDPOINTS.workflows.runs(String(workflowId)), 'list workflow runs'),
   triggerRun: (workflowId: number) =>
     base.post<WorkflowRun>(API_ENDPOINTS.workflows.trigger(String(workflowId)), {}, 'trigger workflow run'),
-};
+});

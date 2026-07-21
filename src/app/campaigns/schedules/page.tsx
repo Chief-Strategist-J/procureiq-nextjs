@@ -3,7 +3,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Search, CalendarClock, Plus, RefreshCw, CheckCircle2, AlertCircle, X, Edit2, Trash2 } from "lucide-react";
-import { CampaignsApi } from "../api-client";
+import { useAppSelector, useAppDispatch } from "@/shared/store/hooks";
+import { schedulesActions } from "@/features/campaigns/campaignsSlice";
+// import { CampaignsApi } from "../api-client";
 import { CampaignSchedule } from "../types";
 
 function toDateTimeLocal(iso: string): string {
@@ -16,9 +18,10 @@ function toDateTimeLocal(iso: string): string {
 
 export default function CampaignSchedulesPage() {
   const router = useRouter();
-  const [items, setItems] = useState<CampaignSchedule[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const dispatch = useAppDispatch();
+  const { data: items = [], status: fetchStatus, error: stateError } = useAppSelector(state => state.campaigns.schedules.items);
+  const loading = fetchStatus === "loading";
+  const error = stateError || "";
   const [success, setSuccess] = useState("");
   const [query, setQuery] = useState("");
 
@@ -34,18 +37,9 @@ export default function CampaignSchedulesPage() {
   const [status, setStatus] = useState("pending");
   const [saving, setSaving] = useState(false);
 
-  const fetchItems = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const data = await CampaignsApi.listSchedules();
-      setItems(data as any);
-    } catch {
-      setError("Failed to load campaign schedules.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchItems = useCallback(() => {
+    dispatch(schedulesActions.fetchRequest());
+  }, [dispatch]);
 
   useEffect(() => {
     fetchItems();
@@ -93,10 +87,10 @@ export default function CampaignSchedulesPage() {
 
     try {
       if (modalMode === "create") {
-        await CampaignsApi.createSchedule(payload);
+        dispatch(schedulesActions.createRequest(payload));
         setSuccess("Schedule created successfully.");
       } else if (modalMode === "edit" && editingId !== null) {
-        await CampaignsApi.updateSchedule(editingId, payload);
+        dispatch(schedulesActions.updateRequest({ id: editingId, data: payload }));
         setSuccess("Schedule updated successfully.");
       }
       setIsModalOpen(false);
@@ -113,7 +107,7 @@ export default function CampaignSchedulesPage() {
     setError("");
     setSuccess("");
     try {
-      await CampaignsApi.deleteSchedule(id);
+      dispatch(schedulesActions.deleteRequest(id));
       setSuccess("Schedule deleted successfully.");
       fetchItems();
     } catch {

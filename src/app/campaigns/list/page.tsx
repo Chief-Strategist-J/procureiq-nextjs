@@ -3,14 +3,17 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Megaphone, Plus, RefreshCw, CheckCircle2, AlertCircle, X, Edit2, Trash2 } from "lucide-react";
-import { CampaignsApi } from "../api-client";
+import { useAppSelector, useAppDispatch } from "@/shared/store/hooks";
+import { campaignsActions } from "@/features/campaigns/campaignsSlice";
+// import { CampaignsApi } from "../api-client";
 import { Campaign } from "../types";
 
 export default function CampaignListPage() {
   const router = useRouter();
-  const [items, setItems] = useState<Campaign[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const dispatch = useAppDispatch();
+  const { data: items = [], status: fetchStatus, error: stateError } = useAppSelector(state => state.campaigns.list.items);
+  const loading = fetchStatus === "loading";
+  const error = stateError || "";
   const [success, setSuccess] = useState("");
   const [query, setQuery] = useState("");
 
@@ -23,18 +26,9 @@ export default function CampaignListPage() {
   const [status, setStatus] = useState("draft");
   const [saving, setSaving] = useState(false);
 
-  const fetchItems = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const data = await CampaignsApi.listCampaigns();
-      setItems(data);
-    } catch {
-      setError("Failed to load campaigns.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchItems = useCallback(() => {
+    dispatch(campaignsActions.fetchRequest());
+  }, [dispatch]);
 
   useEffect(() => {
     fetchItems();
@@ -69,10 +63,10 @@ export default function CampaignListPage() {
 
     try {
       if (modalMode === "create") {
-        await CampaignsApi.createCampaign(payload);
+        dispatch(campaignsActions.createRequest(payload));
         setSuccess("Campaign created successfully.");
       } else if (modalMode === "edit" && editingId !== null) {
-        await CampaignsApi.updateCampaign(editingId, payload);
+        dispatch(campaignsActions.updateRequest({ id: editingId, data: payload }));
         setSuccess("Campaign updated successfully.");
       }
       setIsModalOpen(false);
@@ -89,7 +83,7 @@ export default function CampaignListPage() {
     setError("");
     setSuccess("");
     try {
-      await CampaignsApi.deleteCampaign(id);
+      dispatch(campaignsActions.deleteRequest(id));
       setSuccess("Campaign deleted successfully.");
       fetchItems();
     } catch {

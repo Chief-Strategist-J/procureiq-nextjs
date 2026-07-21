@@ -48,9 +48,9 @@ function* triggerSaga(action: ReturnType<typeof workflowsActions.triggerRequest>
 }
 
 export function* workflowsSaga() {
-  yield takeLatest(workflowsActions.fetchRequest.type, fetchSaga);
-  yield takeLatest(workflowsActions.createRequest.type, createSaga);
-  yield takeLatest(workflowsActions.updateRequest.type, updateSaga);
-  yield takeLatest(workflowsActions.deleteRequest.type, deleteSaga);
-  yield takeLatest(workflowsActions.triggerRequest.type, triggerSaga);
+  yield takeLatest(workflowsActions.fetchRequest.type as any, fetchSaga);
+  yield takeLatest(workflowsActions.createRequest.type as any, createSaga);
+  yield takeLatest(workflowsActions.updateRequest.type as any, updateSaga);
+  yield takeLatest(workflowsActions.deleteRequest.type as any, deleteSaga);
+  yield takeLatest(workflowsActions.triggerRequest.type as any, triggerSaga);
 }

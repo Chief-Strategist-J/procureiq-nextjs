@@ -1,57 +1,94 @@
 import { call, put, takeLatest } from 'redux-saga/effects';
-import { fieldServiceActions } from './fieldServiceSlice';
-import { FieldServiceApi } from '@/app/field-service/api-client';
+import { createFetchSaga, createMutateSaga } from '@/shared/store/sagaHelpers';
+import {
+  operatingHoursApi,
+  territoriesApi,
+  resourcesApi,
+  appointmentsApi,
+  FieldServiceApi,
+} from '@/app/field-service/api-client';
+import {
+  operatingHoursSlice,
+  territoriesSlice,
+  resourcesSlice,
+  appointmentsSlice,
+  assignResourceRequest,
+  assignResourceSuccess,
+  assignResourceFailure,
+} from './fieldServiceSlice';
 
-function* fetchOperatingHoursSaga() {
-  try {
-    const data: Awaited<ReturnType<typeof FieldServiceApi.listOperatingHours>> = yield call([FieldServiceApi, FieldServiceApi.listOperatingHours]);
-    yield put(fieldServiceActions.fetchOperatingHoursSuccess(data));
-  } catch (e: any) {
-    yield put(fieldServiceActions.fetchOperatingHoursFailure(e.message));
-  }
-}
+import {
+  OperatingHours,
+  ServiceTerritory,
+  ServiceResource,
+  ServiceAppointment,
+} from '@/app/field-service/types';
 
-function* fetchTerritoriesSaga() {
-  try {
-    const data: Awaited<ReturnType<typeof FieldServiceApi.listTerritories>> = yield call([FieldServiceApi, FieldServiceApi.listTerritories]);
-    yield put(fieldServiceActions.fetchTerritoriesSuccess(data));
-  } catch (e: any) {
-    yield put(fieldServiceActions.fetchTerritoriesFailure(e.message));
-  }
-}
+const fetchOperatingHoursSaga = createFetchSaga<OperatingHours>(
+  operatingHoursApi.list,
+  operatingHoursSlice.actions.fetchSuccess as any,
+  operatingHoursSlice.actions.fetchFailure as any
+);
+const createOperatingHoursSaga = createMutateSaga<Omit<OperatingHours, 'id'>, OperatingHours>(
+  operatingHoursApi.create,
+  operatingHoursSlice.actions.createSuccess as any,
+  operatingHoursSlice.actions.createFailure as any
+);
 
-function* fetchResourcesSaga() {
-  try {
-    const data: Awaited<ReturnType<typeof FieldServiceApi.listResources>> = yield call([FieldServiceApi, FieldServiceApi.listResources]);
-    yield put(fieldServiceActions.fetchResourcesSuccess(data));
-  } catch (e: any) {
-    yield put(fieldServiceActions.fetchResourcesFailure(e.message));
-  }
-}
+const fetchTerritoriesSaga = createFetchSaga<ServiceTerritory>(
+  territoriesApi.list,
+  territoriesSlice.actions.fetchSuccess as any,
+  territoriesSlice.actions.fetchFailure as any
+);
+const createTerritorySaga = createMutateSaga<Omit<ServiceTerritory, 'id'>, ServiceTerritory>(
+  territoriesApi.create,
+  territoriesSlice.actions.createSuccess as any,
+  territoriesSlice.actions.createFailure as any
+);
 
-function* fetchAppointmentsSaga() {
-  try {
-    const data: Awaited<ReturnType<typeof FieldServiceApi.listAppointments>> = yield call([FieldServiceApi, FieldServiceApi.listAppointments]);
-    yield put(fieldServiceActions.fetchAppointmentsSuccess(data));
-  } catch (e: any) {
-    yield put(fieldServiceActions.fetchAppointmentsFailure(e.message));
-  }
-}
+const fetchResourcesSaga = createFetchSaga<ServiceResource>(
+  resourcesApi.list,
+  resourcesSlice.actions.fetchSuccess as any,
+  resourcesSlice.actions.fetchFailure as any
+);
+const createResourceSaga = createMutateSaga<Omit<ServiceResource, 'id'>, ServiceResource>(
+  resourcesApi.create,
+  resourcesSlice.actions.createSuccess as any,
+  resourcesSlice.actions.createFailure as any
+);
 
-function* assignResourceSaga(action: ReturnType<typeof fieldServiceActions.assignResourceRequest>) {
+const fetchAppointmentsSaga = createFetchSaga<ServiceAppointment>(
+  appointmentsApi.list,
+  appointmentsSlice.actions.fetchSuccess as any,
+  appointmentsSlice.actions.fetchFailure as any
+);
+const createAppointmentSaga = createMutateSaga<Omit<ServiceAppointment, 'id'>, ServiceAppointment>(
+  appointmentsApi.create,
+  appointmentsSlice.actions.createSuccess as any,
+  appointmentsSlice.actions.createFailure as any
+);
+
+function* assignResourceSaga(action: ReturnType<typeof assignResourceRequest>) {
   try {
     yield call([FieldServiceApi, FieldServiceApi.assignResource], action.payload.appointmentId, action.payload.resourceId);
-    yield put(fieldServiceActions.assignResourceSuccess());
-    yield put(fieldServiceActions.fetchAppointmentsRequest());
+    yield put(assignResourceSuccess());
+    yield put(appointmentsSlice.actions.fetchRequest(undefined));
   } catch (e: any) {
-    yield put(fieldServiceActions.assignResourceFailure(e.message));
+    yield put(assignResourceFailure(e.message));
   }
 }
 
 export function* fieldServiceSaga() {
-  yield takeLatest(fieldServiceActions.fetchOperatingHoursRequest.type, fetchOperatingHoursSaga);
-  yield takeLatest(fieldServiceActions.fetchTerritoriesRequest.type, fetchTerritoriesSaga);
-  yield takeLatest(fieldServiceActions.fetchResourcesRequest.type, fetchResourcesSaga);
-  yield takeLatest(fieldServiceActions.fetchAppointmentsRequest.type, fetchAppointmentsSaga);
-  yield takeLatest(fieldServiceActions.assignResourceRequest.type, assignResourceSaga);
+  yield takeLatest(operatingHoursSlice.actions.fetchRequest.type as any, fetchOperatingHoursSaga);
+  yield takeLatest(operatingHoursSlice.actions.createRequest.type as any, createOperatingHoursSaga);
+
+  yield takeLatest(territoriesSlice.actions.fetchRequest.type as any, fetchTerritoriesSaga);
+  yield takeLatest(territoriesSlice.actions.createRequest.type as any, createTerritorySaga);
+
+  yield takeLatest(resourcesSlice.actions.fetchRequest.type as any, fetchResourcesSaga);
+  yield takeLatest(resourcesSlice.actions.createRequest.type as any, createResourceSaga);
+
+  yield takeLatest(appointmentsSlice.actions.fetchRequest.type as any, fetchAppointmentsSaga);
+  yield takeLatest(appointmentsSlice.actions.createRequest.type as any, createAppointmentSaga);
+  yield takeLatest(assignResourceRequest.type as any, assignResourceSaga);
 }

@@ -5,6 +5,11 @@ import jobsReducer from '@/features/jobs/jobsSlice';
 import fieldServiceReducer from '@/features/fieldService/fieldServiceSlice';
 import remindersReducer from '@/features/reminders/remindersSlice';
 import workflowsReducer from '@/features/workflows/workflowsSlice';
+import emailReducer from '@/features/email/emailSlice';
+import githubReducer from '@/features/github/githubSlice';
+import sessionsReducer from '@/features/sessions/sessionsSlice';
+import workOrdersReducer from '@/features/workOrders/workOrdersSlice';
+import signupReducer from '@/features/signup/signupSlice';
 
 export const rootReducer = combineReducers({
   campaigns: campaignsReducer,
@@ -13,6 +18,11 @@ export const rootReducer = combineReducers({
   fieldService: fieldServiceReducer,
   reminders: remindersReducer,
   workflows: workflowsReducer,
+  email: emailReducer,
+  github: githubReducer,
+  sessions: sessionsReducer,
+  workOrders: workOrdersReducer,
+  signup: signupReducer,
 });
 
 export type RootState = ReturnType<typeof rootReducer>;

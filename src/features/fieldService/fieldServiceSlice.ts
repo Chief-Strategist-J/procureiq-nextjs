@@ -1,80 +1,37 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { AsyncState, createAsyncState } from '@/shared/types/asyncState';
+import { createAction, combineReducers, PayloadAction } from '@reduxjs/toolkit';
+import { createListSlice, ListState } from '@/shared/store/createListSlice';
+import { OperatingHours, ServiceTerritory, ServiceResource, ServiceAppointment } from '@/app/field-service/types';
 
-export interface OperatingHours {
-  id: number;
-  name: string;
-  timezone: string;
-}
+export const operatingHoursSlice = createListSlice<OperatingHours>('operatingHours');
+export const territoriesSlice = createListSlice<ServiceTerritory>('territories');
+export const resourcesSlice = createListSlice<ServiceResource>('resources');
 
-export interface ServiceTerritory {
-  id: number;
-  name: string;
-  operatingHoursId: number;
-  isActive: boolean;
-}
 
-export interface ServiceResource {
-  id: number;
-  name: string;
-  resourceType: string;
-  isActive: boolean;
-}
+export const assignResourceRequest = createAction<{ appointmentId: number; resourceId: number }>('appointments/assignResourceRequest');
+export const assignResourceSuccess = createAction('appointments/assignResourceSuccess');
+export const assignResourceFailure = createAction<string>('appointments/assignResourceFailure');
 
-export interface ServiceAppointment {
-  id: number;
-  parentId: number;
-  parentType: string;
-  status: string;
-  earliestStartPermitted?: string;
-  dueDate?: string;
-  duration?: number;
-  arrivalWindowStart?: string;
-  arrivalWindowEnd?: string;
-  scheduledStart?: string;
-  scheduledEnd?: string;
-  assignedResourceId?: number;
-}
-
-export interface FieldServiceState {
-  operatingHours: AsyncState<OperatingHours[]>;
-  territories: AsyncState<ServiceTerritory[]>;
-  resources: AsyncState<ServiceResource[]>;
-  appointments: AsyncState<ServiceAppointment[]>;
-}
-
-const initialState: FieldServiceState = {
-  operatingHours: createAsyncState([]),
-  territories: createAsyncState([]),
-  resources: createAsyncState([]),
-  appointments: createAsyncState([]),
-};
-
-const fieldServiceSlice = createSlice({
-  name: 'fieldService',
-  initialState,
-  reducers: {
-    fetchOperatingHoursRequest(state) { state.operatingHours.status = 'loading'; state.operatingHours.error = null; },
-    fetchOperatingHoursSuccess(state, action: PayloadAction<OperatingHours[]>) { state.operatingHours.status = 'succeeded'; state.operatingHours.data = action.payload; },
-    fetchOperatingHoursFailure(state, action: PayloadAction<string>) { state.operatingHours.status = 'failed'; state.operatingHours.error = action.payload; },
-
-    fetchTerritoriesRequest(state) { state.territories.status = 'loading'; state.territories.error = null; },
-    fetchTerritoriesSuccess(state, action: PayloadAction<ServiceTerritory[]>) { state.territories.status = 'succeeded'; state.territories.data = action.payload; },
-    fetchTerritoriesFailure(state, action: PayloadAction<string>) { state.territories.status = 'failed'; state.territories.error = action.payload; },
-
-    fetchResourcesRequest(state) { state.resources.status = 'loading'; state.resources.error = null; },
-    fetchResourcesSuccess(state, action: PayloadAction<ServiceResource[]>) { state.resources.status = 'succeeded'; state.resources.data = action.payload; },
-    fetchResourcesFailure(state, action: PayloadAction<string>) { state.resources.status = 'failed'; state.resources.error = action.payload; },
-
-    fetchAppointmentsRequest(state) { state.appointments.status = 'loading'; state.appointments.error = null; },
-    fetchAppointmentsSuccess(state, action: PayloadAction<ServiceAppointment[]>) { state.appointments.status = 'succeeded'; state.appointments.data = action.payload; },
-    fetchAppointmentsFailure(state, action: PayloadAction<string>) { state.appointments.status = 'failed'; state.appointments.error = action.payload; },
-
-    assignResourceRequest(state, _action: PayloadAction<{ appointmentId: number; resourceId: number }>) { state.appointments.status = 'loading'; },
-    assignResourceSuccess(state) { state.appointments.status = 'succeeded'; },
-    assignResourceFailure(state, action: PayloadAction<string>) { state.appointments.status = 'failed'; state.appointments.error = action.payload; },
+export const appointmentsSlice = createListSlice<ServiceAppointment>('appointments', {
+  assignResourceRequest(state, _action: PayloadAction<{ appointmentId: number; resourceId: number }>) {
+    state.items.status = 'loading';
+    state.lastAction = undefined;
+  },
+  assignResourceSuccess(state) {
+    state.items.status = 'succeeded';
+    state.lastAction = { type: 'update', status: 'success' };
+  },
+  assignResourceFailure(state, action: PayloadAction<string>) {
+    state.items.status = 'failed';
+    state.items.error = action.payload;
+    state.lastAction = { type: 'update', status: 'error', message: action.payload };
   },
 });
 
-export const fieldServiceActions = fieldServiceSlice.actions;
-export default fieldServiceSlice.reducer;
+export const fieldServiceReducer = combineReducers({
+  operatingHours: operatingHoursSlice.reducer,
+  territories: territoriesSlice.reducer,
+  resources: resourcesSlice.reducer,
+  appointments: appointmentsSlice.reducer,
+});
+
+export default fieldServiceReducer;

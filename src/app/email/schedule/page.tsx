@@ -1,46 +1,56 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, RefreshCw, CheckCircle2, AlertCircle, CalendarClock } from "lucide-react";
-import { EmailApi } from "../api-client";
+import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
+import { createRequest, selectEmailState, resetLastAction } from "@/features/email/emailSlice";
 
 export default function ScheduleEmailPage() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
+  const emailState = useAppSelector(selectEmailState);
+
   const [recipients, setRecipients] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [scheduledFor, setScheduledFor] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
 
-  const handleSchedule = async (e: React.FormEvent) => {
+  const saving = emailState.items.status === "loading";
+  const error = emailState.lastAction?.status === "error" ? emailState.lastAction.message : "";
+  const success = emailState.lastAction?.status === "success" && emailState.lastAction?.type === "create" ? "Email scheduled successfully." : "";
+
+  useEffect(() => {
+    return () => {
+      dispatch(resetLastAction());
+    };
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => {
+        router.push("/email");
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [success, router]);
+
+  const handleSchedule = (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
-    setError("");
-    setSuccess("");
-
     const recipientList = recipients
       .split(",")
       .map((r) => r.trim())
       .filter((r) => r.length > 0);
 
-    try {
-      await EmailApi.scheduleEmail({
-        recipients: recipientList,
-        subject,
-        body,
-        scheduled_for: new Date(scheduledFor).toISOString(),
-      });
-      setSuccess("Email scheduled successfully.");
-      setTimeout(() => router.push("/email"), 1500);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to schedule email.");
-    } finally {
-      setSaving(false);
-    }
+    dispatch(createRequest({
+      recipients: recipientList,
+      subject,
+      body,
+      scheduled_for: new Date(scheduledFor).toISOString(),
+      status: "pending",
+      created_at: new Date().toISOString()
+    }));
   };
 
   return (

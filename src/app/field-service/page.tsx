@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Clock, MapPin, Users, CalendarDays, ArrowRight, ShieldCheck, Settings, Activity } from "lucide-react";
-import { FieldServiceApi } from "./api-client";
+import { operatingHoursApi, territoriesApi, resourcesApi, appointmentsApi } from "./api-client";
 
 export default function FieldServiceDashboard() {
   const router = useRouter();
@@ -16,10 +16,10 @@ export default function FieldServiceDashboard() {
 
   useEffect(() => {
     async function loadStats() {
-      const oh = await FieldServiceApi.listOperatingHours();
-      const t = await FieldServiceApi.listTerritories();
-      const r = await FieldServiceApi.listResources();
-      const a = await FieldServiceApi.listAppointments();
+      const oh = await operatingHoursApi.list();
+      const t = await territoriesApi.list();
+      const r = await resourcesApi.list();
+      const a = await appointmentsApi.list();
       setStats({
         operatingHours: oh.length,
         territories: t.length,

@@ -3,14 +3,17 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Users, Plus, RefreshCw, CheckCircle2, AlertCircle, X, Edit2, Trash2 } from "lucide-react";
-import { CampaignsApi } from "../api-client";
+import { useAppSelector, useAppDispatch } from "@/shared/store/hooks";
+import { recipientsActions } from "@/features/campaigns/campaignsSlice";
+// import { CampaignsApi } from "../api-client";
 import { Recipient } from "../types";
 
 export default function RecipientsPage() {
   const router = useRouter();
-  const [items, setItems] = useState<Recipient[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const dispatch = useAppDispatch();
+  const { data: items = [], status: fetchStatus, error: stateError } = useAppSelector(state => state.campaigns.recipients.items);
+  const loading = fetchStatus === "loading";
+  const error = stateError || "";
   const [success, setSuccess] = useState("");
   const [query, setQuery] = useState("");
 
@@ -24,18 +27,9 @@ export default function RecipientsPage() {
   const [phone, setPhone] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const fetchItems = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const data = await CampaignsApi.listRecipients();
-      setItems(data);
-    } catch {
-      setError("Failed to load recipients.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchItems = useCallback(() => {
+    dispatch(recipientsActions.fetchRequest());
+  }, [dispatch]);
 
   useEffect(() => {
     fetchItems();
@@ -74,10 +68,10 @@ export default function RecipientsPage() {
 
     try {
       if (modalMode === "create") {
-        await CampaignsApi.createRecipient(payload);
+        dispatch(recipientsActions.createRequest(payload));
         setSuccess("Recipient created successfully.");
       } else if (modalMode === "edit" && editingId !== null) {
-        await CampaignsApi.updateRecipient(editingId, payload);
+        dispatch(recipientsActions.updateRequest({ id: editingId, data: payload }));
         setSuccess("Recipient updated successfully.");
       }
       setIsModalOpen(false);
@@ -94,7 +88,7 @@ export default function RecipientsPage() {
     setError("");
     setSuccess("");
     try {
-      await CampaignsApi.deleteRecipient(id);
+      dispatch(recipientsActions.deleteRequest(id));
       setSuccess("Recipient deleted successfully.");
       fetchItems();
     } catch {

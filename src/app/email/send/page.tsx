@@ -1,40 +1,48 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, RefreshCw, CheckCircle2, AlertCircle, Send } from "lucide-react";
-import { EmailApi } from "../api-client";
+import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
+import { sendRequest, selectEmailSendState, resetSendState } from "@/features/email/emailSlice";
+import { selectEmailState } from "@/features/email/emailSlice";
 
 export default function SendEmailPage() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
+  const sendState = useAppSelector(selectEmailSendState);
+  const emailState = useAppSelector(selectEmailState);
+
   const [recipients, setRecipients] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
 
-  const handleSend = async (e: React.FormEvent) => {
+  const sending = sendState.status === "loading";
+  const error = sendState.error;
+  const success = emailState.lastAction?.status === "success" && emailState.lastAction?.type === "create" ? emailState.lastAction.message : "";
+
+  useEffect(() => {
+    return () => {
+      dispatch(resetSendState());
+    };
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (sendState.status === "succeeded") {
+      const timer = setTimeout(() => router.push("/email"), 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [sendState.status, router]);
+
+  const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
-    setSending(true);
-    setError("");
-    setSuccess("");
-
     const recipientList = recipients
       .split(",")
       .map((r) => r.trim())
       .filter((r) => r.length > 0);
 
-    try {
-      const result = await EmailApi.sendNow({ recipients: recipientList, subject, body });
-      setSuccess(result.message || "Email sent successfully.");
-      setTimeout(() => router.push("/email"), 1500);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to send email.");
-    } finally {
-      setSending(false);
-    }
+    dispatch(sendRequest({ recipients: recipientList, subject, body }));
   };
 
   return (

@@ -42,7 +42,7 @@ export function createResourceApi<T extends { id: number }>(opts: ResourceApiOpt
     return JSON.parse(localStorage.getItem(storageKey) || '[]');
   }
 
-  return {
+  const api = {
     init,
 
     async list(): Promise<T[]> {
@@ -109,4 +109,23 @@ export function createResourceApi<T extends { id: number }>(opts: ResourceApiOpt
       return (await request<R>(`${BASE}${url}`, { method: 'POST', body: JSON.stringify(body) }, context)) as R;
     },
   };
+
+  // Provide alias interfaces for CRUD matching exactly what the old files exported
+  // directly on the returned object.
+  return Object.assign(api, {
+    listWorkflows: api.list,
+    createWorkflow: api.create,
+    updateWorkflow: api.update,
+    deleteWorkflow: api.remove,
+
+    listJobs: api.list,
+    createJob: api.create,
+    updateJob: api.update,
+    deleteJob: api.remove,
+
+    listReminders: api.list,
+    createReminder: api.create,
+    updateReminder: api.update,
+    deleteReminder: api.remove,
+  });
 }

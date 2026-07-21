@@ -57,10 +57,10 @@ function* fetchRunsSaga(action: ReturnType<typeof jobsActions.fetchRunsRequest>)
 }
 
 export function* jobsSaga() {
-  yield takeLatest(jobsActions.fetchJobsRequest.type, fetchJobsSaga);
-  yield takeLatest(jobsActions.createJobRequest.type, createJobSaga);
-  yield takeLatest(jobsActions.updateJobRequest.type, updateJobSaga);
-  yield takeLatest(jobsActions.deleteJobRequest.type, deleteJobSaga);
-  yield takeLatest(jobsActions.triggerJobRequest.type, triggerJobSaga);
-  yield takeLatest(jobsActions.fetchRunsRequest.type, fetchRunsSaga);
+  yield takeLatest(jobsActions.fetchJobsRequest.type as any, fetchJobsSaga);
+  yield takeLatest(jobsActions.createJobRequest.type as any, createJobSaga);
+  yield takeLatest(jobsActions.updateJobRequest.type as any, updateJobSaga);
+  yield takeLatest(jobsActions.deleteJobRequest.type as any, deleteJobSaga);
+  yield takeLatest(jobsActions.triggerJobRequest.type as any, triggerJobSaga);
+  yield takeLatest(jobsActions.fetchRunsRequest.type as any, fetchRunsSaga);
 }

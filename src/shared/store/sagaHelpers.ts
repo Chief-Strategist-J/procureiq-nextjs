@@ -29,3 +29,15 @@ export function createMutateSaga<TPayload, TResult>(
     }
   };
 }
+
+export function createSagaHandlers<T, A extends { fetchRequest: any, fetchSuccess: any, fetchFailure: any, createRequest: any, createSuccess: any, createFailure: any, updateRequest: any, updateSuccess: any, updateFailure: any, deleteRequest: any, deleteSuccess: any, deleteFailure: any }>(
+  actions: A,
+  api: any
+) {
+  return {
+    fetchSaga: createFetchSaga(api.list || api.get || api.fetch, actions.fetchSuccess, actions.fetchFailure),
+    createSaga: createMutateSaga(api.create || api.post, actions.createSuccess, actions.createFailure),
+    updateSaga: createMutateSaga(api.update || api.put, actions.updateSuccess, actions.updateFailure),
+    deleteSaga: createMutateSaga(api.delete || api.remove, actions.deleteSuccess, actions.deleteFailure)
+  };
+}

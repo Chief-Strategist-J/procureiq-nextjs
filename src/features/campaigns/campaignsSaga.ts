@@ -1,66 +1,28 @@
-import { call, put, takeLatest } from 'redux-saga/effects';
-import { campaignsActions } from './campaignsSlice';
-import { CampaignsApi } from '@/app/campaigns/api-client';
+import { takeLatest } from 'redux-saga/effects';
+import { campaignsActions, recipientsActions, schedulesActions } from './campaignsSlice';
+import { CampaignsApi, RecipientsApi, SchedulesApi } from '@/app/campaigns/api-client';
+import { createSagaHandlers } from '@/shared/store/sagaHelpers';
 
-function* fetchCampaignsSaga() {
-  try {
-    const data: Awaited<ReturnType<typeof CampaignsApi.listCampaigns>> = yield call([CampaignsApi, CampaignsApi.listCampaigns]);
-    yield put(campaignsActions.fetchCampaignsSuccess(data));
-  } catch (e: any) {
-    yield put(campaignsActions.fetchCampaignsFailure(e.message));
-  }
-}
-
-function* createCampaignSaga(action: ReturnType<typeof campaignsActions.createCampaignRequest>) {
-  try {
-    const data: Awaited<ReturnType<typeof CampaignsApi.createCampaign>> = yield call([CampaignsApi, CampaignsApi.createCampaign], action.payload);
-    yield put(campaignsActions.createCampaignSuccess(data));
-  } catch (e: any) {
-    yield put(campaignsActions.createCampaignFailure(e.message));
-  }
-}
-
-function* updateCampaignSaga(action: ReturnType<typeof campaignsActions.updateCampaignRequest>) {
-  try {
-    const data: Awaited<ReturnType<typeof CampaignsApi.updateCampaign>> = yield call([CampaignsApi, CampaignsApi.updateCampaign], action.payload.id, action.payload.data);
-    yield put(campaignsActions.updateCampaignSuccess(data));
-  } catch (e: any) {
-    yield put(campaignsActions.updateCampaignFailure(e.message));
-  }
-}
-
-function* deleteCampaignSaga(action: ReturnType<typeof campaignsActions.deleteCampaignRequest>) {
-  try {
-    yield call([CampaignsApi, CampaignsApi.deleteCampaign], action.payload);
-    yield put(campaignsActions.deleteCampaignSuccess(action.payload));
-  } catch (e: any) {
-    yield put(campaignsActions.deleteCampaignFailure(e.message));
-  }
-}
-
-function* fetchRecipientsSaga() {
-  try {
-    const data: Awaited<ReturnType<typeof CampaignsApi.listRecipients>> = yield call([CampaignsApi, CampaignsApi.listRecipients]);
-    yield put(campaignsActions.fetchRecipientsSuccess(data));
-  } catch (e: any) {
-    yield put(campaignsActions.fetchRecipientsFailure(e.message));
-  }
-}
-
-function* fetchSchedulesSaga() {
-  try {
-    const data: Awaited<ReturnType<typeof CampaignsApi.listSchedules>> = yield call([CampaignsApi, CampaignsApi.listSchedules]);
-    yield put(campaignsActions.fetchSchedulesSuccess(data));
-  } catch (e: any) {
-    yield put(campaignsActions.fetchSchedulesFailure(e.message));
-  }
-}
+const campaignsHandlers = createSagaHandlers(campaignsActions, CampaignsApi);
+const recipientsHandlers = createSagaHandlers(recipientsActions, RecipientsApi);
+const schedulesHandlers = createSagaHandlers(schedulesActions, SchedulesApi);
 
 export function* campaignsSaga() {
-  yield takeLatest(campaignsActions.fetchCampaignsRequest.type, fetchCampaignsSaga);
-  yield takeLatest(campaignsActions.createCampaignRequest.type, createCampaignSaga);
-  yield takeLatest(campaignsActions.updateCampaignRequest.type, updateCampaignSaga);
-  yield takeLatest(campaignsActions.deleteCampaignRequest.type, deleteCampaignSaga);
-  yield takeLatest(campaignsActions.fetchRecipientsRequest.type, fetchRecipientsSaga);
-  yield takeLatest(campaignsActions.fetchSchedulesRequest.type, fetchSchedulesSaga);
+  // Campaigns
+  yield takeLatest(campaignsActions.fetchRequest.type as any, campaignsHandlers.fetchSaga);
+  yield takeLatest(campaignsActions.createRequest.type as any, campaignsHandlers.createSaga);
+  yield takeLatest(campaignsActions.updateRequest.type as any, campaignsHandlers.updateSaga);
+  yield takeLatest(campaignsActions.deleteRequest.type as any, campaignsHandlers.deleteSaga);
+
+  // Recipients
+  yield takeLatest(recipientsActions.fetchRequest.type as any, recipientsHandlers.fetchSaga);
+  yield takeLatest(recipientsActions.createRequest.type as any, recipientsHandlers.createSaga);
+  yield takeLatest(recipientsActions.updateRequest.type as any, recipientsHandlers.updateSaga);
+  yield takeLatest(recipientsActions.deleteRequest.type as any, recipientsHandlers.deleteSaga);
+
+  // Schedules
+  yield takeLatest(schedulesActions.fetchRequest.type as any, schedulesHandlers.fetchSaga);
+  yield takeLatest(schedulesActions.createRequest.type as any, schedulesHandlers.createSaga);
+  yield takeLatest(schedulesActions.updateRequest.type as any, schedulesHandlers.updateSaga);
+  yield takeLatest(schedulesActions.deleteRequest.type as any, schedulesHandlers.deleteSaga);
 }

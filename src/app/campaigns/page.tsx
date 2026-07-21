@@ -9,9 +9,9 @@ import { campaignsActions } from "@/features/campaigns/campaignsSlice";
 export default function CampaignsHub() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const campaigns = useAppSelector((s) => s.campaigns.campaigns.data);
-  const recipients = useAppSelector((s) => s.campaigns.recipients.data);
-  const schedules = useAppSelector((s) => s.campaigns.schedules.data);
+  const campaigns = useAppSelector((s) => s.campaigns.list.items.data || []);
+  const recipients = useAppSelector((s) => s.campaigns.recipients.items.data || []);
+  const schedules = useAppSelector((s) => s.campaigns.schedules.items.data || []);
 
   useEffect(() => {
     dispatch(campaignsActions.fetchCampaignsRequest());

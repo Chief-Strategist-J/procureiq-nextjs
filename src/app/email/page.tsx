@@ -1,33 +1,29 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Mail, Send, CalendarClock, RefreshCw, AlertCircle } from "lucide-react";
-import { EmailApi } from "./api-client";
-import { EmailScheduleResponse } from "./types";
+import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
+import { fetchRequest, selectEmailState } from "@/features/email/emailSlice";
 
 export default function EmailPage() {
   const router = useRouter();
-  const [items, setItems] = useState<EmailScheduleResponse[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const dispatch = useAppDispatch();
+  const emailState = useAppSelector(selectEmailState);
 
-  const fetchItems = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const data = await EmailApi.listScheduled();
-      setItems(data);
-    } catch {
-      setError("Failed to load scheduled emails.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const items = emailState.items.data || [];
+  const loading = emailState.items.status === "loading";
+  const error = emailState.items.error;
+
+  const fetchItems = useCallback(() => {
+    dispatch(fetchRequest());
+  }, [dispatch]);
 
   useEffect(() => {
-    fetchItems();
-  }, [fetchItems]);
+    if (emailState.items.status === "idle") {
+      fetchItems();
+    }
+  }, [emailState.items.status, fetchItems]);
 
   return (
     <div className="min-h-screen bg-black text-white p-4 sm:p-8 font-sans relative">

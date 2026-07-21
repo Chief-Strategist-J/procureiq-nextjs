@@ -5,6 +5,8 @@ import {
   Video, VideoOff, Mic, MicOff, PhoneOff, 
   Terminal, ShieldAlert, Wifi, Users, Copy, Sparkles, Monitor
 } from "lucide-react";
+import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
+import { sessionsActions } from "@/features/sessions/sessionsSlice";
 import { WebRtcSignalingClient } from "@/lib/webrtc-helper";
 import { AppConfig } from "@/config/app-config";
 
@@ -15,6 +17,13 @@ interface LogEntry {
 }
 
 export default function VideoCallPage() {
+  const dispatch = useAppDispatch();
+  const { data: items, status, error } = useAppSelector((state) => state.sessions.items);
+
+  useEffect(() => {
+    dispatch(sessionsActions.fetchRequest(undefined as any));
+  }, [dispatch]);
+
   // Connection states
   const [joined, setJoined] = useState(false);
   const [roomId, setRoomId] = useState("procureiq-session-1");
