@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { 
   Bell, Phone, MessageSquare, AlertCircle, Plus, Check, Clock, User, 
@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
+import { remindersActions } from "@/features/reminders/remindersSlice";
 
 interface TaskReminder {
   id: string | number;
@@ -35,110 +37,57 @@ interface DispatchLog {
 
 export default function RemindersPage() {
   const router = useRouter();
-  const [reminders, setReminders] = useState<TaskReminder[]>([]);
-  const [logs, setLogs] = useState<DispatchLog[]>([]);
+  const dispatch = useAppDispatch();
+
+  // Redux state for reminders list
+  const reduxReminders = useAppSelector((s) => s.reminders.items.data);
+  const reduxLoading = useAppSelector((s) => s.reminders.items.status === "loading");
+  const reduxError = useAppSelector((s) => s.reminders.items.error);
+
+  // Map redux Reminder -> local TaskReminder shape (the page uses a richer local interface)
+  const reminders: TaskReminder[] = reduxReminders.map((r) => ({
+    id: r.id,
+    title: r.title,
+    description: r.message,
+    dueAt: r.scheduledAt,
+    recurrence: "NONE",
+    priority: "MEDIUM" as const,
+    contactPreference: "SMS" as const,
+    assigneeName: "Assignee",
+    assigneeContact: "",
+    status: (r.status?.toUpperCase() as TaskReminder["status"]) || "PENDING",
+    snoozeCount: 0,
+  }));
+  const loading = reduxLoading;
   const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
-
-  const loadData = useCallback(async (isRefresh = false) => {
-    if (isRefresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
-    setError("");
-
-    try {
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-      const response = await fetch(`${backendUrl}/api/v1/reminders`);
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch reminders from API");
-      }
-
-      const resData = await response.json();
-      if (resData.status === "success" && resData.data) {
-        setReminders(resData.data || []);
-      } else {
-        throw new Error(resData.error?.message || "Failed to load data");
-      }
-    } catch (err: any) {
-      console.warn("Backend offline. Loading reminders from local storage fallback.", err);
-      setError("Notice: Backend service is currently unreachable. Operating in local sandbox mode.");
-      
-      const storedReminders = localStorage.getItem("procureiq_reminders");
-      if (storedReminders) {
-        setReminders(JSON.parse(storedReminders));
-      } else {
-        const seedReminders: TaskReminder[] = [
-          {
-            id: "1",
-            title: "Verify Vendor Insurance Certificates",
-            description: "Follow up on the expired general liability certificate for Acme Corp.",
-            dueAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
-            recurrence: "NONE",
-            priority: "HIGH",
-            contactPreference: "CALL",
-            assigneeName: "John Doe (Project Lead)",
-            assigneeContact: "+15550199",
-            status: "PENDING",
-            snoozeCount: 0
-          }
-        ];
-        setReminders(seedReminders);
-        localStorage.setItem("procureiq_reminders", JSON.stringify(seedReminders));
-      }
-    } finally {
-      // Load logs locally
-      const storedLogs = localStorage.getItem("procureiq_reminder_logs");
-      if (storedLogs) {
-        setLogs(JSON.parse(storedLogs));
-      }
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+  const [logs, setLogs] = useState<DispatchLog[]>([]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    dispatch(remindersActions.fetchRequest());
+    const storedLogs = localStorage.getItem("procureiq_reminder_logs");
+    if (storedLogs) setLogs(JSON.parse(storedLogs));
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (reduxError) setError(reduxError);
+  }, [reduxError]);
 
   const handleRefresh = () => {
-    loadData(true);
+    setRefreshing(true);
+    dispatch(remindersActions.fetchRequest());
+    setTimeout(() => setRefreshing(false), 800);
   };
 
-  const saveToStorage = (newReminders: TaskReminder[]) => {
-    setReminders(newReminders);
-    localStorage.setItem("procureiq_reminders", JSON.stringify(newReminders));
-  };
-
-  const handleDelete = async (id: string | number) => {
-    try {
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-      const response = await fetch(`${backendUrl}/api/v1/reminders/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete reminder");
-      }
-
-      setReminders(prev => prev.filter(r => r.id !== id));
-      setSuccess("Reminder deleted successfully");
-      setTimeout(() => setSuccess(""), 3000);
-    } catch (err: any) {
-      console.warn("Deleting in sandbox mode", err);
-      const updated = reminders.filter(r => r.id !== id);
-      saveToStorage(updated);
-      setSuccess("[Offline Sandbox] Reminder deleted successfully");
-      setTimeout(() => setSuccess(""), 3000);
-    }
+  const handleDelete = (id: string | number) => {
+    dispatch(remindersActions.deleteRequest(Number(id)));
+    setSuccess("Reminder deleted successfully.");
+    setTimeout(() => setSuccess(""), 3000);
   };
 
   const addLogEntry = (
-    taskTitle: string, 
+    taskTitle: string,
     assigneeName: string, 
     channel: "CALL" | "SMS" | "SLACK", 
     status: DispatchLog["status"], 
@@ -158,7 +107,7 @@ export default function RemindersPage() {
     localStorage.setItem("procureiq_reminder_logs", JSON.stringify(updatedLogs));
   };
 
-  const triggerCallSimulation = async (reminder: TaskReminder) => {
+  const triggerCallSimulation = (reminder: TaskReminder) => {
     addLogEntry(
       reminder.title, 
       reminder.assigneeName.split(" ")[0], 
@@ -167,32 +116,18 @@ export default function RemindersPage() {
       `AI Dispatch: Initiating communication channel...`
     );
 
-    setTimeout(async () => {
-      try {
-        const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-        const response = await fetch(`${backendUrl}/api/v1/reminders/${reminder.id}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ status: "COMPLETED" }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to update status");
-        }
-
-        setReminders(prev => prev.map(r => r.id === reminder.id ? { ...r, status: "COMPLETED" as const } : r));
-      } catch (err) {
-        console.warn("Updating status in sandbox fallback simulation", err);
-        const updated = reminders.map(r => {
-          if (r.id === reminder.id) {
-            return { ...r, status: "COMPLETED" as const };
-          }
-          return r;
-        });
-        saveToStorage(updated);
-      }
+    setTimeout(() => {
+      // Optimistically mark completed via Redux update
+      dispatch(remindersActions.updateRequest({
+        id: Number(reminder.id),
+        data: {
+          userId: 1, // Default userId required by Reminder
+          title: reminder.title,
+          message: reminder.description,
+          scheduledAt: reminder.dueAt,
+          status: "completed",
+        },
+      }));
 
       addLogEntry(
         reminder.title, 

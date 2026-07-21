@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ForgotPasswordDialog } from "@/components/forgot-password-dialog";
 import { RefreshCw, KeyRound, User, ChevronRight } from "lucide-react";
+import { AuthApi } from "./api-client";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -29,22 +30,9 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-      const res = await fetch(`${backendUrl}/api/v1/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      });
-
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(errText || "Invalid credentials");
-      }
-
-      const data = await res.json();
+      const data = await AuthApi.login({ username, password });
       localStorage.setItem("procureiq_token", data.token);
       localStorage.setItem("procureiq_user", JSON.stringify(data.user));
-
       router.push("/");
     } catch (err: any) {
       setError(err.message || "Something went wrong. Please try again.");

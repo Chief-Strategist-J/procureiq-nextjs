@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
+import { DispatchApi } from "./api-client";
 
 export default function DispatchNotificationPage() {
   const router = useRouter();
@@ -30,36 +31,15 @@ export default function DispatchNotificationPage() {
     setSuccess("");
 
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-      const requestPayload = {
+      await DispatchApi.dispatch({
         typeCode,
         sourceService,
         targetScope,
         targetId: targetId ? parseInt(targetId) : null,
         priority,
-        payload: {
-          title,
-          message,
-        },
-        metadata: {
-          timestamp: new Date().toISOString(),
-          environment: "production",
-          dispatchMethod: "full_page_dispatcher",
-        },
-      };
-
-      const response = await fetch(`${backendUrl}/api/v1/notifications`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestPayload),
+        title,
+        message,
       });
-
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(errText || "Failed to dispatch notification");
-      }
 
       setSuccess("Notification event dispatched successfully!");
       setTitle("");

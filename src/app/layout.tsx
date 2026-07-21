@@ -18,6 +18,7 @@ export const metadata: Metadata = {
 };
 
 import { ClientLayout } from "@/components/layout/client-layout";
+import { ReduxProvider } from "@/shared/store/ReduxProvider";
 
 export default function RootLayout({
   children,
@@ -27,7 +28,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body className="bg-black antialiased">
-        <ClientLayout>{children}</ClientLayout>
+        <ReduxProvider>
+          <ClientLayout>{children}</ClientLayout>
+        </ReduxProvider>
       </body>
     </html>
   );

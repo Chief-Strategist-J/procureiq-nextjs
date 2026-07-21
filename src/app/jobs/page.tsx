@@ -1,19 +1,26 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Search, ListChecks, Plus, RefreshCw, CheckCircle2, AlertCircle, X, Edit2, Trash2, Play, History,
 } from "lucide-react";
-import { JobsApi } from "./api-client";
-import { Job, JobRun } from "./types";
+import { Job } from "./types";
+import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
+import { jobsActions } from "@/features/jobs/jobsSlice";
 
 export default function JobsPage() {
-  const [items, setItems] = useState<Job[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [query, setQuery] = useState("");
+  const dispatch = useAppDispatch();
+  const items = useAppSelector((s) => s.jobs.jobs.data) as Job[];
+  const loading = useAppSelector((s) => s.jobs.jobs.status === "loading");
+  const error = useAppSelector((s) => s.jobs.jobs.error);
+  const success = useAppSelector((s) => s.jobs.jobs.lastAction);
 
+  const runs = useAppSelector((s) => s.jobs.runs.data);
+  const runsLoading = useAppSelector((s) => s.jobs.runs.status === "loading");
+  const runsError = useAppSelector((s) => s.jobs.runs.error);
+  const triggerSuccess = useAppSelector((s) => s.jobs.runs.lastAction);
+
+  const [query, setQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -24,30 +31,13 @@ export default function JobsPage() {
   const [status, setStatus] = useState("active");
   const [configText, setConfigText] = useState("{}");
   const [configError, setConfigError] = useState("");
-  const [saving, setSaving] = useState(false);
 
   const [isRunsModalOpen, setIsRunsModalOpen] = useState(false);
   const [runsJob, setRunsJob] = useState<Job | null>(null);
-  const [runs, setRuns] = useState<JobRun[]>([]);
-  const [runsLoading, setRunsLoading] = useState(false);
-  const [triggering, setTriggering] = useState(false);
-
-  const fetchItems = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const data = await JobsApi.listJobs();
-      setItems(data);
-    } catch {
-      setError("Failed to load jobs.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   useEffect(() => {
-    fetchItems();
-  }, [fetchItems]);
+    dispatch(jobsActions.fetchJobsRequest());
+  }, [dispatch]);
 
   const openCreateModal = () => {
     setModalMode("create");
@@ -72,7 +62,7 @@ export default function JobsPage() {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
@@ -85,69 +75,30 @@ export default function JobsPage() {
     }
     setConfigError("");
 
-    setSaving(true);
-    setError("");
-    setSuccess("");
-
     const payload: Omit<Job, "id"> = { orgId: parseInt(orgId) || 1, name, status, config };
-    if (categoryId) payload.categoryId = parseInt(categoryId);
+    if (categoryId) (payload as any).categoryId = parseInt(categoryId);
 
-    try {
-      if (modalMode === "create") {
-        await JobsApi.createJob(payload);
-        setSuccess("Job created successfully.");
-      } else if (modalMode === "edit" && editingId !== null) {
-        await JobsApi.updateJob(editingId, payload);
-        setSuccess("Job updated successfully.");
-      }
-      setIsModalOpen(false);
-      fetchItems();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save job.");
-    } finally {
-      setSaving(false);
+    if (modalMode === "create") {
+      dispatch(jobsActions.createJobRequest(payload));
+    } else if (modalMode === "edit" && editingId !== null) {
+      dispatch(jobsActions.updateJobRequest({ id: editingId, data: payload }));
     }
+    setIsModalOpen(false);
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = (id: number) => {
     if (!confirm("Are you sure you want to delete this job?")) return;
-    setError("");
-    setSuccess("");
-    try {
-      await JobsApi.deleteJob(id);
-      setSuccess("Job deleted successfully.");
-      fetchItems();
-    } catch {
-      setError("Failed to delete job.");
-    }
+    dispatch(jobsActions.deleteJobRequest(id));
   };
 
-  const openRunsModal = async (job: Job) => {
+  const openRunsModal = (job: Job) => {
     setRunsJob(job);
     setIsRunsModalOpen(true);
-    setRunsLoading(true);
-    try {
-      const data = await JobsApi.listRuns(job.id);
-      setRuns(data);
-    } catch {
-      setRuns([]);
-    } finally {
-      setRunsLoading(false);
-    }
+    dispatch(jobsActions.fetchRunsRequest(job.id));
   };
 
-  const handleTriggerRun = async (jobId: number) => {
-    setTriggering(true);
-    try {
-      await JobsApi.triggerRun(jobId);
-      const data = await JobsApi.listRuns(jobId);
-      setRuns(data);
-      setSuccess("Job run triggered successfully.");
-    } catch {
-      setError("Failed to trigger job run.");
-    } finally {
-      setTriggering(false);
-    }
+  const handleTriggerRun = (jobId: number) => {
+    dispatch(jobsActions.triggerJobRequest(jobId));
   };
 
   const filteredItems = items.filter((item) => {
@@ -171,7 +122,7 @@ export default function JobsPage() {
                 Job Scheduler
               </h1>
               <p className="text-xs text-zinc-500 mt-1">
-                Configure background jobs, categories, and trigger/inspect execution runs.
+                Trigger runs, configure category tasks, and adjust offline schedule configurations.
               </p>
             </div>
           </div>
@@ -179,17 +130,16 @@ export default function JobsPage() {
 
         <div className="flex items-center gap-3 self-end md:self-auto">
           <button
-            onClick={fetchItems}
+            onClick={() => dispatch(jobsActions.fetchJobsRequest())}
             disabled={loading}
             className="flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-950/60 backdrop-blur-md px-4 py-2 text-xs font-medium text-zinc-400 hover:text-white hover:bg-zinc-900/80 transition-all duration-300 cursor-pointer"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </button>
-
           <button
             onClick={openCreateModal}
-            className="flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-xs font-semibold text-black hover:bg-zinc-100 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 cursor-pointer shadow-[0_4px_20px_rgba(255,255,255,0.08)]"
+            className="flex items-center gap-1.5 rounded-lg bg-indigo-650 hover:bg-indigo-600 active:scale-[0.98] px-4 py-2 text-xs font-semibold shadow-[0_0_15px_rgba(79,70,229,0.25)] transition-all cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             New Job
@@ -197,75 +147,98 @@ export default function JobsPage() {
         </div>
       </div>
 
-      {error && (
-        <div className="mb-6 p-3.5 text-xs bg-red-950/20 border border-red-500/20 text-red-400 rounded-lg flex items-center gap-2.5 animate-fadeIn backdrop-blur-md">
-          <AlertCircle className="h-4.5 w-4.5 shrink-0 text-red-500" />
-          <span className="font-medium">{error}</span>
-        </div>
-      )}
       {success && (
-        <div className="mb-6 p-3.5 text-xs bg-emerald-950/20 border border-emerald-500/20 text-emerald-400 rounded-lg flex items-center gap-2.5 animate-fadeIn backdrop-blur-md">
-          <CheckCircle2 className="h-4.5 w-4.5 shrink-0 text-emerald-500" />
-          <span className="font-medium">{success}</span>
+        <div className="mb-6 flex items-center gap-2.5 rounded-lg border border-emerald-950 bg-emerald-950/30 px-4 py-3.5 text-xs text-emerald-400 animate-slideDown">
+          <CheckCircle2 className="h-4.5 w-4.5 shrink-0" />
+          <span>{success}</span>
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-6">
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+      {triggerSuccess && (
+        <div className="mb-6 flex items-center gap-2.5 rounded-lg border border-emerald-950 bg-emerald-950/30 px-4 py-3.5 text-xs text-emerald-400 animate-slideDown">
+          <CheckCircle2 className="h-4.5 w-4.5 shrink-0" />
+          <span>{triggerSuccess}</span>
+        </div>
+      )}
+
+      {error && (
+        <div className="mb-6 flex items-center gap-2.5 rounded-lg border border-red-950 bg-red-950/30 px-4 py-3.5 text-xs text-red-400 animate-slideDown">
+          <AlertCircle className="h-4.5 w-4.5 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {runsError && (
+        <div className="mb-6 flex items-center gap-2.5 rounded-lg border border-red-950 bg-red-950/30 px-4 py-3.5 text-xs text-red-400 animate-slideDown">
+          <AlertCircle className="h-4.5 w-4.5 shrink-0" />
+          <span>{runsError}</span>
+        </div>
+      )}
+
+      <div className="mb-6 flex flex-col sm:flex-row items-center gap-3">
+        <div className="relative w-full sm:max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
           <input
             type="text"
-            placeholder="Search by name, status or ID..."
+            placeholder="Search jobs by name, status, or ID..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 pl-9 pr-4 py-2 text-xs text-white placeholder-zinc-500"
+            className="w-full rounded-lg bg-zinc-950/60 border border-zinc-850 py-2.5 pl-10 pr-4 text-xs text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all duration-300"
           />
         </div>
       </div>
 
-      <div className="rounded-xl border border-zinc-800/80 bg-zinc-950/40 backdrop-blur-md overflow-hidden shadow-2xl shadow-black/80">
+      <div className="w-full overflow-hidden rounded-xl border border-zinc-900 bg-zinc-950/20 backdrop-blur-md">
         <div className="overflow-x-auto">
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-24 text-zinc-500">
-              <RefreshCw className="h-8 w-8 animate-spin text-zinc-600 mb-3" />
-              <p className="text-xs tracking-wider">Syncing job scheduler...</p>
-            </div>
-          ) : (
-            <table className="w-full min-w-[750px] text-sm text-left">
-              <thead>
-                <tr className="bg-zinc-950/80 text-left text-[11px] text-zinc-400 uppercase tracking-wider border-b border-zinc-800">
-                  <th className="px-5 py-4 font-medium w-20">ID</th>
-                  <th className="px-5 py-4 font-medium w-64">Name</th>
-                  <th className="px-5 py-4 font-medium w-32">Category</th>
-                  <th className="px-5 py-4 font-medium w-32">Status</th>
-                  <th className="px-5 py-4 font-medium text-right pr-6">Actions</th>
+          <table className="w-full border-collapse text-left">
+            <thead>
+              <tr className="border-b border-zinc-900 bg-zinc-950/50 text-[10px] uppercase tracking-widest text-zinc-500 font-semibold">
+                <th className="px-5 py-4 w-20 text-center">ID</th>
+                <th className="px-5 py-4 w-28 text-center">Org ID</th>
+                <th className="px-5 py-4">Job Name</th>
+                <th className="px-5 py-4 w-32">Status</th>
+                <th className="px-5 py-4 max-w-xs">Configuration</th>
+                <th className="px-5 py-4 w-36 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredItems.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-5 py-12 text-center text-xs text-zinc-500">
+                    {loading ? "Syncing scheduler details..." : "No scheduled jobs match the filter criteria."}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {filteredItems.map((item) => (
-                  <tr key={item.id} className="hover:bg-zinc-900/20 transition-all duration-300 border-b border-zinc-900 text-zinc-300">
-                    <td className="px-5 py-4 text-xs font-mono font-semibold text-white">#{item.id}</td>
-                    <td className="px-5 py-4 text-xs font-medium text-zinc-200">{item.name}</td>
-                    <td className="px-5 py-4 text-xs font-mono text-zinc-400">{item.categoryId ?? "—"}</td>
+              ) : (
+                filteredItems.map((item) => (
+                  <tr key={item.id} className="group hover:bg-zinc-900/10 transition-all duration-300 border-b border-zinc-900">
+                    <td className="px-5 py-4 text-xs font-mono text-zinc-500 text-center">{item.id}</td>
+                    <td className="px-5 py-4 text-xs font-mono text-zinc-500 text-center">{item.orgId}</td>
+                    <td className="px-5 py-4 font-medium text-xs text-zinc-200">{item.name}</td>
                     <td className="px-5 py-4">
-                      <span className="inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase bg-zinc-900 text-zinc-400 border-zinc-800">
+                      <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-mono font-medium uppercase ${
+                        item.status === "active" ? "bg-emerald-950/40 text-emerald-400 border-emerald-900/30" : "bg-zinc-900 text-zinc-400 border-zinc-800"
+                      }`}>
                         {item.status}
                       </span>
                     </td>
-                    <td className="px-5 py-4 text-right pr-6">
-                      <div className="flex items-center justify-end gap-2.5">
-                        <button
-                          onClick={() => handleTriggerRun(item.id)}
-                          className="px-2.5 py-1.5 rounded-lg border border-emerald-500/20 text-emerald-400 bg-emerald-950/20 hover:bg-emerald-950/50 hover:border-emerald-500/40 text-[10px] uppercase font-semibold tracking-wider transition-all duration-300 cursor-pointer flex items-center gap-1"
-                        >
-                          <Play className="w-3 h-3" />
-                          Trigger Run
-                        </button>
+                    <td className="px-5 py-4 text-xs font-mono text-zinc-500 max-w-xs truncate">
+                      {JSON.stringify(item.config)}
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => openRunsModal(item)}
+                          title="View Run History"
                           className="p-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-zinc-950/60 hover:text-white transition-all text-zinc-400 cursor-pointer"
                         >
                           <History className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleTriggerRun(item.id)}
+                          title="Trigger Run Now"
+                          className="p-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-zinc-950/60 hover:text-white transition-all text-zinc-400 cursor-pointer"
+                        >
+                          <Play className="h-3.5 w-3.5 text-emerald-400" />
                         </button>
                         <button
                           onClick={() => openEditModal(item)}
@@ -275,33 +248,26 @@ export default function JobsPage() {
                         </button>
                         <button
                           onClick={() => handleDelete(item.id)}
-                          className="p-1.5 rounded-lg border border-zinc-800 hover:border-red-900/50 hover:bg-red-950/20 bg-zinc-950/60 hover:text-red-400 transition-all text-zinc-400 cursor-pointer"
+                          className="p-1.5 rounded-lg border border-zinc-800 hover:border-zinc-750 hover:bg-red-950/20 hover:text-red-400 transition-all text-zinc-400 cursor-pointer"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
                     </td>
                   </tr>
-                ))}
-                {filteredItems.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="px-5 py-16 text-center text-zinc-500 text-xs">
-                      No jobs found in scheduler.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          )}
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      {/* Create / Edit Modal */}
+      {/* Edit/Create Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity duration-300" onClick={() => setIsModalOpen(false)} />
 
-          <div className="relative w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-2xl shadow-black/90 text-white animate-scaleIn">
+          <div className="relative w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-2xl shadow-black/90 text-white animate-scaleIn">
             <button
               onClick={() => setIsModalOpen(false)}
               className="absolute right-5 top-5 p-1 rounded-full text-zinc-500 hover:text-white hover:bg-zinc-900 transition-all duration-300 cursor-pointer"
@@ -309,13 +275,12 @@ export default function JobsPage() {
               <X className="h-4 w-4" />
             </button>
 
-            <h2 className="text-lg font-light tracking-tight mb-5 flex items-center gap-2">
-              <ListChecks className="h-4.5 w-4.5 text-indigo-400" />
-              {modalMode === "create" ? "New Job" : "Edit Job"}
+            <h2 className="text-lg font-light tracking-tight mb-6">
+              {modalMode === "create" ? "Schedule New Job" : "Edit Job Configuration"}
             </h2>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3.5">
                 <div className="space-y-1">
                   <label className="text-[10px] text-zinc-500 uppercase tracking-widest block font-medium">Org ID</label>
                   <input
@@ -384,10 +349,8 @@ export default function JobsPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={saving}
-                  className="px-5 py-2.5 rounded-lg bg-white text-black hover:bg-zinc-100 hover:scale-[1.02] active:scale-[0.98] text-xs font-semibold flex items-center gap-2 disabled:opacity-50 cursor-pointer transition-all duration-300"
+                  className="px-5 py-2.5 rounded-lg bg-white text-black hover:bg-zinc-100 hover:scale-[1.02] active:scale-[0.98] text-xs font-semibold flex items-center gap-2 cursor-pointer transition-all duration-300"
                 >
-                  {saving && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
                   Save Changes
                 </button>
               </div>
@@ -417,10 +380,9 @@ export default function JobsPage() {
 
             <button
               onClick={() => handleTriggerRun(runsJob.id)}
-              disabled={triggering}
-              className="mb-4 flex items-center gap-1.5 rounded-lg border border-emerald-500/20 text-emerald-400 bg-emerald-950/20 hover:bg-emerald-950/50 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider transition-all duration-300 cursor-pointer disabled:opacity-50"
+              className="mb-4 flex items-center gap-1.5 rounded-lg border border-emerald-500/20 text-emerald-400 bg-emerald-950/20 hover:bg-emerald-950/50 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider transition-all duration-300 cursor-pointer"
             >
-              {triggering ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+              <Play className="h-3.5 w-3.5" />
               Trigger New Run
             </button>
 

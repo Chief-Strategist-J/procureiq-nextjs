@@ -1,8 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Bell, Plus, RefreshCw, CheckCircle2, AlertTriangle, Info, Clock, AlertCircle, X, ShieldAlert, Send } from "lucide-react";
+import { NotificationsApi } from "./api-client";
+import { DispatchApi } from "./dispatch/api-client";
+import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
+import { notificationsActions } from "@/features/notifications/notificationsSlice";
 
 interface NotificationResponse {
   id: number;
@@ -18,15 +22,18 @@ interface NotificationResponse {
 
 export default function NotificationsPage() {
   const router = useRouter();
-  const [notifications, setNotifications] = useState<NotificationResponse[]>([]);
-  const [loading, setLoading] = useState(false);
+  const dispatch = useAppDispatch();
+  const notifications = useAppSelector((s) => s.notifications.notifications.data);
+  const loading = useAppSelector((s) => s.notifications.notifications.status === "loading");
+  const storeError = useAppSelector((s) => s.notifications.notifications.error);
+
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(0);
-  const [totalElements, setTotalElements] = useState(0);
+  const [totalElements] = useState(0);
   
   // Creation modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -39,136 +46,20 @@ export default function NotificationsPage() {
   const [message, setMessage] = useState("");
   const [creating, setCreating] = useState(false);
 
-  const getMockNotifications = useCallback(() => {
-    const stored = localStorage.getItem("procureiq_mock_notifications");
-    if (stored) {
-      return JSON.parse(stored);
-    }
-    const seed = [
-      {
-        id: 101,
-        typeCode: "PO_CREATED",
-        sourceService: "procurement-service",
-        payload: {
-          title: "Purchase Order PO-2026-001 Logged",
-          message: "New procurement order ready for vendor Acme Corp signature.",
-        },
-        metadata: { env: "mock" },
-        priority: 2,
-        targetScope: "USER",
-        status: "UNREAD",
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: 102,
-        typeCode: "ESC_TRIGGERED",
-        sourceService: "system-orchestrator",
-        payload: {
-          title: "Contract Compliance Alert",
-          message: "Escalation triggered: General Liability certificate missing for vendor.",
-        },
-        metadata: { env: "mock" },
-        priority: 3,
-        targetScope: "SYSTEM",
-        status: "UNREAD",
-        createdAt: new Date(Date.now() - 3600000).toISOString(),
-      }
-    ];
-    localStorage.setItem("procureiq_mock_notifications", JSON.stringify(seed));
-    return seed;
-  }, []);
-
-  const fetchNotifications = useCallback(async (isRefresh = false) => {
-    if (isRefresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
-    setError("");
-
-    try {
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-      const response = await fetch(
-        `${backendUrl}/api/v1/notifications?page=${page}&size=20&status=${statusFilter}`,
-        {
-          headers: {
-            "X-User-Id": "1",
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch notifications: ${response.statusText}`);
-      }
-
-      const resData = await response.json();
-      if (resData.status === "success" && resData.data) {
-        setNotifications(resData.data.content || []);
-        setTotalElements(resData.data.totalElements || 0);
-      } else {
-        throw new Error(resData.error?.message || "Failed to load data");
-      }
-    } catch (err: any) {
-      console.warn("Backend offline. Falling back to local storage notifications database.", err);
-      // Fallback
-      const mockList = getMockNotifications();
-      const filteredMock = mockList.filter((n: any) => {
-        if (statusFilter === "all") return true;
-        return n.status === statusFilter;
-      });
-      setNotifications(filteredMock);
-      setTotalElements(mockList.length);
-      setError("Notice: Backend service is currently unreachable. Operating in local sandbox mode.");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [page, statusFilter, getMockNotifications]);
-
-  // Load initial data
   useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
+    dispatch(notificationsActions.fetchNotificationsRequest({ page, statusFilter }));
+  }, [dispatch, page, statusFilter]);
+
+  useEffect(() => {
+    if (storeError) setError(storeError);
+  }, [storeError]);
 
   // Handle Mark as Read
-  const handleToggleRead = async (notificationId: number, currentStatus: string) => {
+  const handleToggleRead = (notificationId: number, currentStatus: string) => {
     const newStatus = currentStatus === "READ" ? "UNREAD" : "READ";
-    try {
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-      
-      const response = await fetch(`${backendUrl}/api/v1/notifications/${notificationId}/status`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "X-User-Id": "1",
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to update status");
-      }
-
-      // Update locally
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === notificationId ? { ...n, status: newStatus } : n))
-      );
-      
-      setSuccess(`Notification marked as ${newStatus.toLowerCase()}`);
-      setTimeout(() => setSuccess(""), 3000);
-    } catch (err: any) {
-      console.warn("Updating status in offline fallback mode", err);
-      // Fallback update
-      const mockList = getMockNotifications();
-      const updatedMock = mockList.map((n: any) => n.id === notificationId ? { ...n, status: newStatus } : n);
-      localStorage.setItem("procureiq_mock_notifications", JSON.stringify(updatedMock));
-      
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === notificationId ? { ...n, status: newStatus } : n))
-      );
-      setSuccess(`[Offline Sandbox] Notification marked as ${newStatus.toLowerCase()}`);
-      setTimeout(() => setSuccess(""), 3000);
-    }
+    dispatch(notificationsActions.updateStatusRequest({ id: notificationId, status: newStatus as "READ" | "UNREAD" }));
+    setSuccess(`Notification marked as ${newStatus.toLowerCase()}`);
+    setTimeout(() => setSuccess(""), 3000);
   };
 
   // Handle Send Notification
@@ -183,62 +74,29 @@ export default function NotificationsPage() {
     setError("");
     setSuccess("");
 
-    try {
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-      const requestPayload = {
-        typeCode,
-        sourceService,
-        targetScope,
-        targetId: targetId ? parseInt(targetId) : null,
-        priority,
-        payload: {
-          title,
-          message,
-        },
-        metadata: {
-          timestamp: new Date().toISOString(),
-          environment: "production",
-        },
-      };
+    dispatch(notificationsActions.dispatchNotificationRequest({
+      userId: targetId ? parseInt(targetId) : 1,
+      title,
+      message,
+      channels: ["EMAIL"],
+    }));
 
-      const response = await fetch(`${backendUrl}/api/v1/notifications`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestPayload),
-      });
-
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(errText || "Failed to send notification");
-      }
-
-      setSuccess("Notification created and sent successfully!");
-      setIsModalOpen(false);
-      
-      // Reset form
-      setTitle("");
-      setMessage("");
-      
-      // Reload notifications list
-      fetchNotifications();
-    } catch (err: any) {
-      setError(err.message || "Failed to create notification.");
-    } finally {
-      setCreating(false);
-    }
+    setSuccess("Notification created and sent successfully!");
+    setIsModalOpen(false);
+    setTitle("");
+    setMessage("");
+    setCreating(false);
   };
 
   // Filter local state by query string search
   const filteredNotifications = notifications.filter((n) => {
     if (!query) return true;
     const q = query.toLowerCase();
-    const titleVal = n.payload?.title || "";
-    const msgVal = n.payload?.message || "";
+    const titleVal = n.payload?.title || n.title || "";
+    const msgVal = n.payload?.message || n.message || "";
     return (
-      n.typeCode.toLowerCase().includes(q) ||
-      n.sourceService.toLowerCase().includes(q) ||
+      (n.typeCode ?? "").toLowerCase().includes(q) ||
+      (n.sourceService ?? "").toLowerCase().includes(q) ||
       titleVal.toLowerCase().includes(q) ||
       msgVal.toLowerCase().includes(q)
     );
@@ -283,7 +141,7 @@ export default function NotificationsPage() {
 
         <div className="flex items-center gap-3 self-end md:self-auto">
           <button
-            onClick={() => fetchNotifications(true)}
+            onClick={() => { setRefreshing(true); dispatch(notificationsActions.fetchNotificationsRequest({ page, statusFilter })); setTimeout(() => setRefreshing(false), 800); }}
             disabled={refreshing || loading}
             className="flex items-center gap-1.5 rounded-lg border border-zinc-850 bg-zinc-950/60 backdrop-blur-md px-4 py-2 text-xs font-medium text-zinc-400 hover:text-white hover:bg-zinc-900/80 hover:border-zinc-800 transition-all duration-300 cursor-pointer disabled:opacity-50"
           >
@@ -406,8 +264,8 @@ export default function NotificationsPage() {
                       </div>
                     </td>
                     <td className="px-5 py-4">
-                      <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-medium transition-all ${getPriorityStyles(notification.priority)}`}>
-                        {getPriorityLabel(notification.priority)}
+                      <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-medium transition-all ${getPriorityStyles(notification.priority ?? 1)}`}>
+                        {getPriorityLabel(notification.priority ?? 1)}
                       </span>
                     </td>
                     <td className="px-5 py-4 text-xs text-center font-medium">

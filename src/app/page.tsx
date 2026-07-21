@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Activity, Bot, Bell, DollarSign, Plus, ArrowUpRight, ShieldAlert, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
-import { AppConfig } from "@/config/app-config";
+import { DashboardApi } from "./api-client";
 
 interface StatCard {
   label: string;
@@ -32,36 +32,15 @@ export default function Home() {
   useEffect(() => {
     async function loadDashboardData() {
       try {
-        const backendUrl = AppConfig.apiUrl;
-        
-        // Fetch notifications
-        const notifRes = await fetch(`${backendUrl}/api/v1/notifications?page=0&size=5`, {
-          headers: { "X-User-Id": "1" }
-        });
-        if (notifRes.ok) {
-          const res = await notifRes.json();
-          if (res.status === "success" && res.data) {
-            setNotifications(res.data.content || []);
-          }
-        }
-
-        // Fetch unread count
-        const countRes = await fetch(`${backendUrl}/api/v1/notifications/unread-count`, {
-          headers: { "X-User-Id": "1" }
-        });
-        if (countRes.ok) {
-          const res = await countRes.json();
-          if (res.status === "success" && res.data) {
-            setUnreadCount(res.data.unreadCount || 0);
-          }
-        }
+        const data = await DashboardApi.loadDashboardData();
+        setNotifications(data.notifications);
+        setUnreadCount(data.unreadCount);
       } catch (err) {
         console.error("Error loading dashboard data:", err);
       } finally {
         setLoading(false);
       }
     }
-
     loadDashboardData();
   }, []);
 

@@ -39,7 +39,7 @@ export default function CampaignSchedulesPage() {
     setError("");
     try {
       const data = await CampaignsApi.listSchedules();
-      setItems(data);
+      setItems(data as any);
     } catch {
       setError("Failed to load campaign schedules.");
     } finally {

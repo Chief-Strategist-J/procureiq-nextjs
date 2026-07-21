@@ -1,37 +1,29 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Megaphone, Users, CalendarClock, ArrowRight, ShieldCheck, Settings } from "lucide-react";
-import { CampaignsApi } from "./api-client";
+import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
+import { campaignsActions } from "@/features/campaigns/campaignsSlice";
 
 export default function CampaignsHub() {
   const router = useRouter();
-  const [stats, setStats] = useState({
-    campaigns: 0,
-    recipients: 0,
-    schedules: 0,
-  });
+  const dispatch = useAppDispatch();
+  const campaigns = useAppSelector((s) => s.campaigns.campaigns.data);
+  const recipients = useAppSelector((s) => s.campaigns.recipients.data);
+  const schedules = useAppSelector((s) => s.campaigns.schedules.data);
 
   useEffect(() => {
-    async function loadStats() {
-      const c = await CampaignsApi.listCampaigns();
-      const r = await CampaignsApi.listRecipients();
-      const s = await CampaignsApi.listSchedules();
-      setStats({
-        campaigns: c.length,
-        recipients: r.length,
-        schedules: s.length,
-      });
-    }
-    loadStats();
-  }, []);
+    dispatch(campaignsActions.fetchCampaignsRequest());
+    dispatch(campaignsActions.fetchRecipientsRequest());
+    dispatch(campaignsActions.fetchSchedulesRequest());
+  }, [dispatch]);
 
   const sections = [
     {
       title: "Campaigns",
       description: "Create and manage outbound vendor/supplier communication campaigns.",
-      count: stats.campaigns,
+      count: campaigns.length,
       icon: Megaphone,
       href: "/campaigns/list",
       color: "text-indigo-400 border-indigo-500/20 bg-indigo-950/20",
@@ -39,7 +31,7 @@ export default function CampaignsHub() {
     {
       title: "Recipients",
       description: "Administer the contact directory targeted by campaign sends.",
-      count: stats.recipients,
+      count: recipients.length,
       icon: Users,
       href: "/campaigns/recipients",
       color: "text-amber-400 border-amber-500/20 bg-amber-950/20",
@@ -47,7 +39,7 @@ export default function CampaignsHub() {
     {
       title: "Schedules",
       description: "Queue and track scheduled campaign email dispatches.",
-      count: stats.schedules,
+      count: schedules.length,
       icon: CalendarClock,
       href: "/campaigns/schedules",
       color: "text-emerald-400 border-emerald-500/20 bg-emerald-950/20",

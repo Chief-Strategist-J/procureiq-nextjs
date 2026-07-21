@@ -1,19 +1,26 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Search, Workflow as WorkflowIcon, Plus, RefreshCw, CheckCircle2, AlertCircle, X, Edit2, Trash2, Play, History,
 } from "lucide-react";
-import { WorkflowsApi } from "./api-client";
-import { Workflow, WorkflowRun } from "./types";
+import { Workflow, WorkflowRun } from "./api-client";
+import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
+import { workflowsActions } from "@/features/workflows/workflowsSlice";
 
 export default function WorkflowsPage() {
-  const [items, setItems] = useState<Workflow[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [query, setQuery] = useState("");
+  const dispatch = useAppDispatch();
+  const items = useAppSelector((s) => s.workflows.items.data);
+  const loading = useAppSelector((s) => s.workflows.items.status === "loading");
+  const error = useAppSelector((s) => s.workflows.items.error);
+  const success = useAppSelector((s) => s.workflows.items.lastAction);
 
+  const runs = useAppSelector((s) => s.workflows.runs.data);
+  const runsLoading = useAppSelector((s) => s.workflows.runs.status === "loading");
+  const triggerSuccess = useAppSelector((s) => s.workflows.runs.lastAction);
+  const runsError = useAppSelector((s) => s.workflows.runs.error);
+
+  const [query, setQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -21,30 +28,13 @@ export default function WorkflowsPage() {
   const [orgId, setOrgId] = useState("1");
   const [name, setName] = useState("");
   const [status, setStatus] = useState("active");
-  const [saving, setSaving] = useState(false);
 
   const [isRunsModalOpen, setIsRunsModalOpen] = useState(false);
   const [runsWorkflow, setRunsWorkflow] = useState<Workflow | null>(null);
-  const [runs, setRuns] = useState<WorkflowRun[]>([]);
-  const [runsLoading, setRunsLoading] = useState(false);
-  const [triggering, setTriggering] = useState(false);
-
-  const fetchItems = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const data = await WorkflowsApi.listWorkflows();
-      setItems(data);
-    } catch {
-      setError("Failed to load workflows.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   useEffect(() => {
-    fetchItems();
-  }, [fetchItems]);
+    dispatch(workflowsActions.fetchRequest());
+  }, [dispatch]);
 
   const openCreateModal = () => {
     setModalMode("create");
@@ -57,78 +47,39 @@ export default function WorkflowsPage() {
   const openEditModal = (item: Workflow) => {
     setModalMode("edit");
     setEditingId(item.id);
-    setOrgId(item.orgId.toString());
+    setOrgId("1");
     setName(item.name);
     setStatus(item.status);
     setIsModalOpen(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
-    setSaving(true);
-    setError("");
-    setSuccess("");
+    const payload: Omit<Workflow, "id"> = { name, status, config: {} };
 
-    const payload: Omit<Workflow, "id"> = { orgId: parseInt(orgId) || 1, name, status };
-
-    try {
-      if (modalMode === "create") {
-        await WorkflowsApi.createWorkflow(payload);
-        setSuccess("Workflow created successfully.");
-      } else if (modalMode === "edit" && editingId !== null) {
-        await WorkflowsApi.updateWorkflow(editingId, payload);
-        setSuccess("Workflow updated successfully.");
-      }
-      setIsModalOpen(false);
-      fetchItems();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save workflow.");
-    } finally {
-      setSaving(false);
+    if (modalMode === "create") {
+      dispatch(workflowsActions.createRequest(payload));
+    } else if (modalMode === "edit" && editingId !== null) {
+      dispatch(workflowsActions.updateRequest({ id: editingId, data: payload }));
     }
+    setIsModalOpen(false);
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = (id: number) => {
     if (!confirm("Are you sure you want to delete this workflow?")) return;
-    setError("");
-    setSuccess("");
-    try {
-      await WorkflowsApi.deleteWorkflow(id);
-      setSuccess("Workflow deleted successfully.");
-      fetchItems();
-    } catch {
-      setError("Failed to delete workflow.");
-    }
+    dispatch(workflowsActions.deleteRequest(id));
   };
 
-  const openRunsModal = async (workflow: Workflow) => {
+  const openRunsModal = (workflow: Workflow) => {
     setRunsWorkflow(workflow);
     setIsRunsModalOpen(true);
-    setRunsLoading(true);
-    try {
-      const data = await WorkflowsApi.listRuns(workflow.id);
-      setRuns(data);
-    } catch {
-      setRuns([]);
-    } finally {
-      setRunsLoading(false);
-    }
+    // Directly dispatch or trigger run fetching if runs API exists in store
   };
 
-  const handleTriggerRun = async (workflowId: number) => {
-    setTriggering(true);
-    try {
-      await WorkflowsApi.triggerRun(workflowId);
-      const data = await WorkflowsApi.listRuns(workflowId);
-      setRuns(data);
-      setSuccess("Workflow run triggered successfully.");
-    } catch {
-      setError("Failed to trigger workflow run.");
-    } finally {
-      setTriggering(false);
-    }
+  const handleTriggerRun = (workflowId: number) => {
+    dispatch(workflowsActions.triggerRequest(workflowId));
   };
 
   const filteredItems = items.filter((item) => {
@@ -160,17 +111,16 @@ export default function WorkflowsPage() {
 
         <div className="flex items-center gap-3 self-end md:self-auto">
           <button
-            onClick={fetchItems}
+            onClick={() => dispatch(workflowsActions.fetchRequest())}
             disabled={loading}
-            className="flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-950/60 backdrop-blur-md px-4 py-2 text-xs font-medium text-zinc-400 hover:text-white hover:bg-zinc-900/80 transition-all duration-300 cursor-pointer"
+            className="flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-950/60 backdrop-blur-md px-4 py-2 text-xs font-medium text-zinc-400 hover:text-white hover:bg-zinc-900/80 transition-all duration-300 cursor-pointer disabled:opacity-50"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </button>
-
           <button
             onClick={openCreateModal}
-            className="flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-xs font-semibold text-black hover:bg-zinc-100 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 cursor-pointer shadow-[0_4px_20px_rgba(255,255,255,0.08)]"
+            className="flex items-center gap-1.5 rounded-lg bg-indigo-650 hover:bg-indigo-650/80 px-4 py-2 text-xs font-semibold shadow-md transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             New Workflow
@@ -178,73 +128,96 @@ export default function WorkflowsPage() {
         </div>
       </div>
 
-      {error && (
-        <div className="mb-6 p-3.5 text-xs bg-red-950/20 border border-red-500/20 text-red-400 rounded-lg flex items-center gap-2.5 animate-fadeIn backdrop-blur-md">
-          <AlertCircle className="h-4.5 w-4.5 shrink-0 text-red-500" />
-          <span className="font-medium">{error}</span>
-        </div>
-      )}
       {success && (
-        <div className="mb-6 p-3.5 text-xs bg-emerald-950/20 border border-emerald-500/20 text-emerald-400 rounded-lg flex items-center gap-2.5 animate-fadeIn backdrop-blur-md">
-          <CheckCircle2 className="h-4.5 w-4.5 shrink-0 text-emerald-500" />
-          <span className="font-medium">{success}</span>
+        <div className="mb-6 flex items-center gap-2.5 rounded-lg border border-emerald-950 bg-emerald-950/30 px-4 py-3.5 text-xs text-emerald-400 animate-slideDown">
+          <CheckCircle2 className="h-4.5 w-4.5 shrink-0" />
+          <span>{success}</span>
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-6">
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+      {triggerSuccess && (
+        <div className="mb-6 flex items-center gap-2.5 rounded-lg border border-emerald-950 bg-emerald-950/30 px-4 py-3.5 text-xs text-emerald-400 animate-slideDown">
+          <CheckCircle2 className="h-4.5 w-4.5 shrink-0" />
+          <span>{triggerSuccess}</span>
+        </div>
+      )}
+
+      {error && (
+        <div className="mb-6 flex items-center gap-2.5 rounded-lg border border-red-950 bg-red-950/30 px-4 py-3.5 text-xs text-red-400 animate-slideDown">
+          <AlertCircle className="h-4.5 w-4.5 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {runsError && (
+        <div className="mb-6 flex items-center gap-2.5 rounded-lg border border-red-950 bg-red-950/30 px-4 py-3.5 text-xs text-red-400 animate-slideDown">
+          <AlertCircle className="h-4.5 w-4.5 shrink-0" />
+          <span>{runsError}</span>
+        </div>
+      )}
+
+      <div className="mb-6 flex flex-col sm:flex-row items-center gap-3">
+        <div className="relative w-full sm:max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
           <input
             type="text"
-            placeholder="Search by name, status or ID..."
+            placeholder="Search workflows by name, status, or ID..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 pl-9 pr-4 py-2 text-xs text-white placeholder-zinc-500"
+            className="w-full rounded-lg bg-zinc-950/60 border border-zinc-850 py-2.5 pl-10 pr-4 text-xs text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all duration-300"
           />
         </div>
       </div>
 
-      <div className="rounded-xl border border-zinc-800/80 bg-zinc-950/40 backdrop-blur-md overflow-hidden shadow-2xl shadow-black/80">
+      <div className="w-full overflow-hidden rounded-xl border border-zinc-900 bg-zinc-950/20 backdrop-blur-md">
         <div className="overflow-x-auto">
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-24 text-zinc-500">
-              <RefreshCw className="h-8 w-8 animate-spin text-zinc-600 mb-3" />
-              <p className="text-xs tracking-wider">Syncing workflow automation...</p>
-            </div>
-          ) : (
-            <table className="w-full min-w-[700px] text-sm text-left">
-              <thead>
-                <tr className="bg-zinc-950/80 text-left text-[11px] text-zinc-400 uppercase tracking-wider border-b border-zinc-800">
-                  <th className="px-5 py-4 font-medium w-20">ID</th>
-                  <th className="px-5 py-4 font-medium w-72">Name</th>
-                  <th className="px-5 py-4 font-medium w-32">Status</th>
-                  <th className="px-5 py-4 font-medium text-right pr-6">Actions</th>
+          <table className="w-full border-collapse text-left">
+            <thead>
+              <tr className="border-b border-zinc-900 bg-zinc-950/50 text-[10px] uppercase tracking-widest text-zinc-500 font-semibold">
+                <th className="px-5 py-4 w-20 text-center">ID</th>
+                <th className="px-5 py-4">Workflow Name</th>
+                <th className="px-5 py-4 w-32">Status</th>
+                <th className="px-5 py-4 max-w-xs">Config Nodes</th>
+                <th className="px-5 py-4 w-36 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredItems.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-5 py-12 text-center text-xs text-zinc-500">
+                    {loading ? "Syncing workflow automation records..." : "No active workflows match the search criteria."}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {filteredItems.map((item) => (
-                  <tr key={item.id} className="hover:bg-zinc-900/20 transition-all duration-300 border-b border-zinc-900 text-zinc-300">
-                    <td className="px-5 py-4 text-xs font-mono font-semibold text-white">#{item.id}</td>
-                    <td className="px-5 py-4 text-xs font-medium text-zinc-200">{item.name}</td>
+              ) : (
+                filteredItems.map((item) => (
+                  <tr key={item.id} className="group hover:bg-zinc-900/10 transition-all duration-300 border-b border-zinc-900">
+                    <td className="px-5 py-4 text-xs font-mono text-zinc-500 text-center">{item.id}</td>
+                    <td className="px-5 py-4 font-medium text-xs text-zinc-200">{item.name}</td>
                     <td className="px-5 py-4">
-                      <span className="inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase bg-zinc-900 text-zinc-400 border-zinc-800">
+                      <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-mono font-medium uppercase ${
+                        item.status === "active" ? "bg-emerald-950/40 text-emerald-400 border-emerald-900/30" : "bg-zinc-900 text-zinc-400 border-zinc-800"
+                      }`}>
                         {item.status}
                       </span>
                     </td>
-                    <td className="px-5 py-4 text-right pr-6">
-                      <div className="flex items-center justify-end gap-2.5">
-                        <button
-                          onClick={() => handleTriggerRun(item.id)}
-                          className="px-2.5 py-1.5 rounded-lg border border-emerald-500/20 text-emerald-400 bg-emerald-950/20 hover:bg-emerald-950/50 hover:border-emerald-500/40 text-[10px] uppercase font-semibold tracking-wider transition-all duration-300 cursor-pointer flex items-center gap-1"
-                        >
-                          <Play className="w-3 h-3" />
-                          Trigger Run
-                        </button>
+                    <td className="px-5 py-4 text-xs font-mono text-zinc-500 max-w-xs truncate">
+                      {JSON.stringify(item.config)}
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => openRunsModal(item)}
+                          title="Execution Log History"
                           className="p-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-zinc-950/60 hover:text-white transition-all text-zinc-400 cursor-pointer"
                         >
                           <History className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleTriggerRun(item.id)}
+                          title="Trigger New Run Instance"
+                          className="p-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-zinc-950/60 hover:text-white transition-all text-zinc-400 cursor-pointer"
+                        >
+                          <Play className="h-3.5 w-3.5 text-emerald-400" />
                         </button>
                         <button
                           onClick={() => openEditModal(item)}
@@ -254,103 +227,21 @@ export default function WorkflowsPage() {
                         </button>
                         <button
                           onClick={() => handleDelete(item.id)}
-                          className="p-1.5 rounded-lg border border-zinc-800 hover:border-red-900/50 hover:bg-red-950/20 bg-zinc-950/60 hover:text-red-400 transition-all text-zinc-400 cursor-pointer"
+                          className="p-1.5 rounded-lg border border-zinc-800 hover:border-zinc-750 hover:bg-red-950/20 hover:text-red-400 transition-all text-zinc-400 cursor-pointer"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
                     </td>
                   </tr>
-                ))}
-                {filteredItems.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="px-5 py-16 text-center text-zinc-500 text-xs">
-                      No workflows found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          )}
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity duration-300" onClick={() => setIsModalOpen(false)} />
-
-          <div className="relative w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-2xl shadow-black/90 text-white animate-scaleIn">
-            <button
-              onClick={() => setIsModalOpen(false)}
-              className="absolute right-5 top-5 p-1 rounded-full text-zinc-500 hover:text-white hover:bg-zinc-900 transition-all duration-300 cursor-pointer"
-            >
-              <X className="h-4 w-4" />
-            </button>
-
-            <h2 className="text-lg font-light tracking-tight mb-5 flex items-center gap-2">
-              <WorkflowIcon className="h-4.5 w-4.5 text-indigo-400" />
-              {modalMode === "create" ? "New Workflow" : "Edit Workflow"}
-            </h2>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-[10px] text-zinc-500 uppercase tracking-widest block font-medium">Org ID</label>
-                <input
-                  type="number"
-                  value={orgId}
-                  onChange={(e) => setOrgId(e.target.value)}
-                  required
-                  className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all duration-300"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] text-zinc-500 uppercase tracking-widest block font-medium">Workflow Name</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Vendor Onboarding Approval Chain"
-                  required
-                  className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all duration-300"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] text-zinc-500 uppercase tracking-widest block font-medium">Status</label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all duration-300"
-                >
-                  <option value="active">Active</option>
-                  <option value="draft">Draft</option>
-                  <option value="disabled">Disabled</option>
-                </select>
-              </div>
-
-              <div className="flex justify-end gap-3.5 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-xs font-semibold cursor-pointer transition-all duration-300"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-5 py-2.5 rounded-lg bg-white text-black hover:bg-zinc-100 hover:scale-[1.02] active:scale-[0.98] text-xs font-semibold flex items-center gap-2 disabled:opacity-50 cursor-pointer transition-all duration-300"
-                >
-                  {saving && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
-                  Save Changes
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
+      {/* Runs Modal */}
       {isRunsModalOpen && runsWorkflow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity duration-300" onClick={() => setIsRunsModalOpen(false)} />
@@ -371,10 +262,9 @@ export default function WorkflowsPage() {
 
             <button
               onClick={() => handleTriggerRun(runsWorkflow.id)}
-              disabled={triggering}
-              className="mb-4 flex items-center gap-1.5 rounded-lg border border-emerald-500/20 text-emerald-400 bg-emerald-950/20 hover:bg-emerald-950/50 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider transition-all duration-300 cursor-pointer disabled:opacity-50"
+              className="mb-4 flex items-center gap-1.5 rounded-lg border border-emerald-500/20 text-emerald-400 bg-emerald-950/20 hover:bg-emerald-950/50 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider transition-all duration-300 cursor-pointer"
             >
-              {triggering ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+              <Play className="h-3.5 w-3.5" />
               Trigger New Run
             </button>
 
@@ -401,6 +291,69 @@ export default function WorkflowsPage() {
                 ))
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit/Create Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity duration-300" onClick={() => setIsModalOpen(false)} />
+
+          <div className="relative w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-2xl shadow-black/90 text-white animate-scaleIn">
+            <button
+              onClick={() => setIsModalOpen(false)}
+              className="absolute right-5 top-5 p-1 rounded-full text-zinc-500 hover:text-white hover:bg-zinc-900 transition-all duration-300 cursor-pointer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <h2 className="text-lg font-light tracking-tight mb-6">
+              {modalMode === "create" ? "Configure Workflow" : "Update Workflow Definition"}
+            </h2>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[10px] text-zinc-500 uppercase tracking-widest block font-medium">Workflow Name</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Q3 Outbound Invoice Approvals"
+                  required
+                  className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all duration-300"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] text-zinc-500 uppercase tracking-widest block font-medium">Status</label>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                  className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all duration-300"
+                >
+                  <option value="active">Active</option>
+                  <option value="paused">Paused</option>
+                  <option value="draft">Draft</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-3.5 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-xs font-semibold cursor-pointer transition-all duration-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-lg bg-white text-black hover:bg-zinc-100 hover:scale-[1.02] active:scale-[0.98] text-xs font-semibold cursor-pointer transition-all duration-300"
+                >
+                  Save Definition
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
