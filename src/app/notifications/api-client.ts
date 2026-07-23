@@ -7,7 +7,9 @@ import { createResourceApi } from '@/shared/utils/resourceApi';
 import { request } from '@/shared/utils/apiClient';
 import { fetchWithFallback, mutateWithFallback } from '@/shared/utils/fallbackClient';
 
-const BASE = AppConfig.apiUrl;
+function getBaseUrl(): string {
+  return AppConfig.apiUrl;
+}
 
 export interface NotificationItem {
   id: number;
@@ -49,7 +51,7 @@ const base = createResourceApi<NotificationItem>({
 export const NotificationsApi = {
   listNotifications: (page = 0, statusFilter = 'all') =>
     fetchWithFallback<NotificationItem[]>(
-      `${BASE}${API_ENDPOINTS.notifications.list}?page=${page}&size=20&status=${statusFilter}`,
+      `${getBaseUrl()}${API_ENDPOINTS.notifications.list}?page=${page}&size=20&status=${statusFilter}`,
       { method: 'GET', headers: { 'X-User-Id': '1' } },
       'piq_notifications',
       'list notifications',
@@ -61,14 +63,14 @@ export const NotificationsApi = {
 
   updateStatus: (id: number, status: 'READ' | 'UNREAD') =>
     request<void>(
-      `${BASE}${API_ENDPOINTS.notifications.updateStatus(String(id))}`,
+      `${getBaseUrl()}${API_ENDPOINTS.notifications.updateStatus(String(id))}`,
       { method: 'PUT', headers: { 'X-User-Id': '1' }, body: JSON.stringify({ status }) },
       'update notification status'
     ),
 
   dispatch: (userId: number, title: string, message: string, channels: string[]) =>
     mutateWithFallback<NotificationItem>(
-      `${BASE}${API_ENDPOINTS.notifications.create}`,
+      `${getBaseUrl()}${API_ENDPOINTS.notifications.create}`,
       { method: 'POST', headers: { 'X-User-Id': String(userId) }, body: JSON.stringify({ userId, title, message, channels, payload: {} }) },
       'piq_notifications',
       'dispatch notification',
