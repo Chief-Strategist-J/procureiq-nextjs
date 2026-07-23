@@ -53,11 +53,15 @@ const notificationsSlice = createSlice({
     fetchNotificationsSuccess(state, action: PayloadAction<any>) {
       state.notifications.status = 'succeeded';
       const payload = action.payload;
-      state.notifications.data = Array.isArray(payload) 
-        ? payload 
-        : Array.isArray(payload?.content) 
-        ? payload.content 
-        : [];
+      if (Array.isArray(payload)) {
+        state.notifications.data = payload;
+      } else if (Array.isArray(payload?.notifications)) {
+        state.notifications.data = payload.notifications;
+      } else if (Array.isArray(payload?.content)) {
+        state.notifications.data = payload.content;
+      } else {
+        state.notifications.data = [];
+      }
     },
     fetchNotificationsFailure(state, action: PayloadAction<string>) {
       state.notifications.status = 'failed';

@@ -9,6 +9,7 @@ export function useNotificationsPageState() {
   const rawData = useAppSelector((s) => s.notifications.notifications.data);
   const notifications = useMemo(() => {
     if (Array.isArray(rawData)) return rawData;
+    if (Array.isArray((rawData as any)?.notifications)) return (rawData as any).notifications;
     if (Array.isArray((rawData as any)?.content)) return (rawData as any).content;
     return [];
   }, [rawData]);
