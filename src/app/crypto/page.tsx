@@ -68,12 +68,54 @@ export default function CryptoDashboard() {
     return `${curr.symbol}${converted.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
   };
 
-  const handleSetReminder = (e: React.FormEvent) => {
+  const handleSetReminder = async (e: React.FormEvent) => {
     e.preventDefault();
-    pageState.setReminderSuccess(`Price alert set for ${pageState.symbol} at ${formatPrice(Number(pageState.targetPrice))} on ${new Date(pageState.dueAt).toLocaleString()}`);
+    if (!pageState.targetPrice || !pageState.dueAt) return;
+
+    const formattedTargetPrice = formatPrice(Number(pageState.targetPrice));
+    const title = `Crypto Price Alert: ${pageState.symbol} @ ${formattedTargetPrice}`;
+    const description = `Alert triggered when ${pageState.symbol} reaches target price of ${formattedTargetPrice} (${pageState.currency})`;
+
+    const newReminder = {
+      id: Math.random().toString(36).substring(2, 9),
+      title,
+      description,
+      dueAt: new Date(pageState.dueAt).toISOString(),
+      recurrence: "NONE",
+      priority: "HIGH",
+      contactPreference: pageState.channel || "SMS",
+      assigneeName: "Crypto Watcher",
+      assigneeContact: pageState.channel === "SMS" ? "+15550199" : "#crypto-alerts",
+      status: "PENDING",
+      snoozeCount: 0,
+    };
+
+    try {
+      const stored = localStorage.getItem("procureiq_reminders");
+      const currentReminders = stored ? JSON.parse(stored) : [];
+      localStorage.setItem("procureiq_reminders", JSON.stringify([newReminder, ...currentReminders]));
+
+      const storedLogs = localStorage.getItem("procureiq_reminder_logs");
+      const currentLogs = storedLogs ? JSON.parse(storedLogs) : [];
+      const newLog = {
+        id: Math.random().toString(36).substring(2, 9),
+        time: new Date().toLocaleTimeString(),
+        taskTitle: title,
+        assigneeName: "Crypto Watcher",
+        channel: pageState.channel || "SMS",
+        status: "SENT",
+        details: `Price alert scheduled for ${new Date(pageState.dueAt).toLocaleString()}`
+      };
+      localStorage.setItem("procureiq_reminder_logs", JSON.stringify([newLog, ...currentLogs]));
+
+      pageState.setReminderSuccess(`Price alert saved! Trigger set for ${pageState.symbol} at ${formattedTargetPrice} on ${new Date(pageState.dueAt).toLocaleString()}`);
+    } catch (err: any) {
+      pageState.setReminderSuccess(`Price alert set for ${pageState.symbol} at ${formattedTargetPrice}`);
+    }
+
     setTimeout(() => {
       pageState.closeModal();
-    }, 2000);
+    }, 1800);
   };
 
   return (
