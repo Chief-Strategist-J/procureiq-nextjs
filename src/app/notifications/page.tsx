@@ -150,11 +150,11 @@ export default function NotificationsPage() {
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                           )}
                           <span className={`text-xs font-semibold ${notification.status === "UNREAD" ? "text-white" : "text-zinc-300"}`}>
-                            {notification.payload?.title || "No Title"}
+                            {notification.title || notification.payload?.title || "No Title"}
                           </span>
                         </div>
                         <span className="text-[11px] text-zinc-500 mt-1 line-clamp-1 leading-relaxed">
-                          {notification.payload?.message || "No message content."}
+                          {notification.message || notification.payload?.message || "No message content."}
                         </span>
                       </div>
                     </td>
