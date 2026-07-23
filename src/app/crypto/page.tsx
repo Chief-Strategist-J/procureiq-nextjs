@@ -3,6 +3,8 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { CryptoService, CryptoDetailsData, CryptoMoversData, CryptoOrderbook, CryptoTradesData, CryptoKlinesData } from "@/features/crypto";
 import { useCryptoPageState } from "@/features/crypto/CryptoPageState";
+import { RemindersApi } from "@/app/reminders/api-client";
+import { NotificationsApi } from "@/app/notifications/api-client";
 import { Activity, TrendingUp, TrendingDown, RefreshCw, BarChart2, Bell, CheckCircle2, X } from "lucide-react";
 import { ChartContainer } from "@/components/ui/chart";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -74,39 +76,24 @@ export default function CryptoDashboard() {
 
     const formattedTargetPrice = formatPrice(Number(pageState.targetPrice));
     const title = `Crypto Price Alert: ${pageState.symbol} @ ${formattedTargetPrice}`;
-    const description = `Alert triggered when ${pageState.symbol} reaches target price of ${formattedTargetPrice} (${pageState.currency})`;
-
-    const newReminder = {
-      id: Math.random().toString(36).substring(2, 9),
-      title,
-      description,
-      dueAt: new Date(pageState.dueAt).toISOString(),
-      recurrence: "NONE",
-      priority: "HIGH",
-      contactPreference: pageState.channel || "SMS",
-      assigneeName: "Crypto Watcher",
-      assigneeContact: pageState.channel === "SMS" ? "+15550199" : "#crypto-alerts",
-      status: "PENDING",
-      snoozeCount: 0,
-    };
+    const message = `Price alert set for ${pageState.symbol} at ${formattedTargetPrice} on ${new Date(pageState.dueAt).toLocaleString()}`;
 
     try {
-      const stored = localStorage.getItem("procureiq_reminders");
-      const currentReminders = stored ? JSON.parse(stored) : [];
-      localStorage.setItem("procureiq_reminders", JSON.stringify([newReminder, ...currentReminders]));
+      await RemindersApi.create({
+        userId: 1,
+        title,
+        message,
+        scheduledAt: new Date(pageState.dueAt).toISOString(),
+        status: 'pending',
+        channel: (pageState.channel as 'CALL' | 'SMS' | 'SLACK') || 'SMS',
+      });
 
-      const storedLogs = localStorage.getItem("procureiq_reminder_logs");
-      const currentLogs = storedLogs ? JSON.parse(storedLogs) : [];
-      const newLog = {
-        id: Math.random().toString(36).substring(2, 9),
-        time: new Date().toLocaleTimeString(),
-        taskTitle: title,
-        assigneeName: "Crypto Watcher",
-        channel: pageState.channel || "SMS",
-        status: "SENT",
-        details: `Price alert scheduled for ${new Date(pageState.dueAt).toLocaleString()}`
-      };
-      localStorage.setItem("procureiq_reminder_logs", JSON.stringify([newLog, ...currentLogs]));
+      await NotificationsApi.dispatch(
+        1,
+        `New Price Alert Configured: ${pageState.symbol}`,
+        `Successfully set price alert trigger for ${pageState.symbol} at ${formattedTargetPrice}. Alert scheduled for ${new Date(pageState.dueAt).toLocaleString()}.`,
+        [pageState.channel || 'SMS']
+      ).catch(() => {});
 
       pageState.setReminderSuccess(`Price alert saved! Trigger set for ${pageState.symbol} at ${formattedTargetPrice} on ${new Date(pageState.dueAt).toLocaleString()}`);
     } catch (err: any) {
