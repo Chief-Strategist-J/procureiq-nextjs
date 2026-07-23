@@ -1,85 +1,7 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
 import { githubActions } from "./githubSlice";
 import { ActionTemplate } from "@/app/github/types";
-
-export class GitHubDashboardState {
-  constructor(
-    public dispatch: ReturnType<typeof useAppDispatch>,
-    public owner: string,
-    public setOwner: (val: string) => void,
-    public repo: string,
-    public setRepo: (val: string) => void,
-    public query: string,
-    public setQuery: (val: string) => void,
-    public categoryFilter: string,
-    public setCategoryFilter: (val: string) => void,
-    public busyId: number | null,
-    public setBusyId: (val: number | null) => void,
-    public yamlTemplate: ActionTemplate | null,
-    public setYamlTemplate: (val: ActionTemplate | null) => void,
-    public templatesState: any,
-    public repoInfoState: any,
-    public runsState: any,
-    public operationsState: any
-  ) {}
-
-  get templates() {
-    return Array.isArray(this.templatesState.data) ? this.templatesState.data : [];
-  }
-
-  get loading() {
-    return this.templatesState.status === 'loading';
-  }
-
-  get error() {
-    return this.templatesState.error || this.operationsState.dispatch.error || this.operationsState.deploy.error;
-  }
-
-  get success() {
-    return (this.operationsState.dispatch.status === 'succeeded' && this.operationsState.dispatch.data) ? "Triggered successfully" :
-           (this.operationsState.deploy.status === 'succeeded' && this.operationsState.deploy.data ? "Deployed successfully" : "");
-  }
-
-  handleLookupRepo = () => {
-    if (!this.owner || !this.repo) return;
-    this.dispatch(githubActions.repo.fetchRequest({ owner: this.owner, repo: this.repo }));
-  };
-
-  handleRefreshRuns = () => {
-    if (!this.owner || !this.repo) return;
-    this.dispatch(githubActions.runs.fetchRequest({ owner: this.owner, repo: this.repo }));
-  };
-
-  handleDeploy = (template: ActionTemplate) => {
-    if (!this.owner || !this.repo) return;
-    this.setBusyId(template.id);
-    this.dispatch(githubActions.operations.deployRequest({ owner: this.owner, repo: this.repo, template }));
-  };
-
-  handleTrigger = (template: ActionTemplate) => {
-    if (!this.owner || !this.repo) return;
-    this.setBusyId(template.id);
-    this.dispatch(githubActions.operations.dispatchRequest({ owner: this.owner, repo: this.repo, eventType: template.eventType, templateId: template.id }));
-  };
-
-  get categories() {
-    return Array.from(new Set(this.templates.map((t: any) => t.category))).sort();
-  }
-
-  get filteredTemplates() {
-    return this.templates.filter((t: any) => {
-      if (this.categoryFilter !== "all" && t.category !== this.categoryFilter) return false;
-      if (!this.query) return true;
-      const q = this.query.toLowerCase();
-      return t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q) || t.eventType.toLowerCase().includes(q);
-    });
-  }
-
-  get anyMockResult() {
-    return this.operationsState.deploy.data?.result.mock === true;
-  }
-}
 
 export function useGitHubDashboardState() {
   const dispatch = useAppDispatch();
@@ -121,33 +43,101 @@ export function useGitHubDashboardState() {
     fetchTemplates();
   }, [fetchTemplates]);
 
+  const deployStatus = operationsState.deploy.status;
+  const deployData = operationsState.deploy.data;
   useEffect(() => {
-    if (operationsState.deploy.status === 'succeeded' && operationsState.deploy.data) {
+    if (deployStatus === 'succeeded' && deployData) {
       setBusyId(null);
-    } else if (operationsState.deploy.status === 'failed') {
+    } else if (deployStatus === 'failed') {
       setBusyId(null);
     }
-  }, [operationsState.deploy]);
+  }, [deployStatus, deployData]);
 
+  const dispatchStatus = operationsState.dispatch.status;
+  const dispatchData = operationsState.dispatch.data;
   useEffect(() => {
-    if (operationsState.dispatch.status === 'succeeded' && operationsState.dispatch.data) {
+    if (dispatchStatus === 'succeeded' && dispatchData) {
       setBusyId(null);
-    } else if (operationsState.dispatch.status === 'failed') {
+    } else if (dispatchStatus === 'failed') {
       setBusyId(null);
     }
-  }, [operationsState.dispatch]);
+  }, [dispatchStatus, dispatchData]);
 
-  return new GitHubDashboardState(
+  const templates = useMemo(() => Array.isArray(templatesState.data) ? templatesState.data : [], [templatesState.data]);
+  const loading = templatesState.status === 'loading';
+  const error = templatesState.error || operationsState.dispatch.error || operationsState.deploy.error;
+
+  const success = useMemo(() => {
+    if (operationsState.dispatch.status === 'succeeded' && operationsState.dispatch.data) return "Triggered successfully";
+    if (operationsState.deploy.status === 'succeeded' && operationsState.deploy.data) return "Deployed successfully";
+    return "";
+  }, [operationsState.dispatch.status, operationsState.dispatch.data, operationsState.deploy.status, operationsState.deploy.data]);
+
+  const categories = useMemo(() => {
+    return Array.from(new Set(templates.map((t: any) => t.category))).sort();
+  }, [templates]);
+
+  const filteredTemplates = useMemo(() => {
+    return templates.filter((t: any) => {
+      if (categoryFilter !== "all" && t.category !== categoryFilter) return false;
+      if (!query) return true;
+      const q = query.toLowerCase();
+      return t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q) || t.eventType.toLowerCase().includes(q);
+    });
+  }, [templates, categoryFilter, query]);
+
+  const anyMockResult = operationsState.deploy.data?.result.mock === true;
+
+  const handleLookupRepo = useCallback(() => {
+    if (!owner || !repo) return;
+    dispatch(githubActions.repo.fetchRequest({ owner, repo }));
+  }, [dispatch, owner, repo]);
+
+  const handleRefreshRuns = useCallback(() => {
+    if (!owner || !repo) return;
+    dispatch(githubActions.runs.fetchRequest({ owner, repo }));
+  }, [dispatch, owner, repo]);
+
+  const handleDeploy = useCallback((template: ActionTemplate) => {
+    if (!owner || !repo) return;
+    setBusyId(template.id);
+    dispatch(githubActions.operations.deployRequest({ owner, repo, template }));
+  }, [dispatch, owner, repo]);
+
+  const handleTrigger = useCallback((template: ActionTemplate) => {
+    if (!owner || !repo) return;
+    setBusyId(template.id);
+    dispatch(githubActions.operations.dispatchRequest({ owner, repo, eventType: template.eventType, templateId: template.id }));
+  }, [dispatch, owner, repo]);
+
+  return {
     dispatch,
-    owner, setOwner,
-    repo, setRepo,
-    query, setQuery,
-    categoryFilter, setCategoryFilter,
-    busyId, setBusyId,
-    yamlTemplate, setYamlTemplate,
+    owner,
+    setOwner,
+    repo,
+    setRepo,
+    query,
+    setQuery,
+    categoryFilter,
+    setCategoryFilter,
+    busyId,
+    setBusyId,
+    yamlTemplate,
+    setYamlTemplate,
     templatesState,
     repoInfoState,
     runsState,
-    operationsState
-  );
+    operationsState,
+    templates,
+    loading,
+    error,
+    success,
+    categories,
+    filteredTemplates,
+    anyMockResult,
+    handleLookupRepo,
+    handleRefreshRuns,
+    handleDeploy,
+    handleTrigger,
+  };
 }

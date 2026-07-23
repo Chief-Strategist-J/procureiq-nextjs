@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
 import {
@@ -9,54 +9,6 @@ import {
   signupSlice,
 } from "./signupSlice";
 
-export class SignupPageState {
-  constructor(
-    public router: ReturnType<typeof useRouter>,
-    public dispatch: ReturnType<typeof useAppDispatch>,
-    public status: string,
-    public lastAction: any,
-    public ui: any
-  ) {}
-
-  get username() {
-    return this.ui.formFields.username ?? "";
-  }
-
-  get email() {
-    return this.ui.formFields.email ?? "";
-  }
-
-  get password() {
-    return this.ui.formFields.password ?? "";
-  }
-
-  get localError() {
-    return this.ui.localError;
-  }
-
-  get loading() {
-    return this.status === "loading";
-  }
-
-  get error() {
-    return this.localError || (this.lastAction?.status === "error" ? this.lastAction.message : "");
-  }
-
-  get success() {
-    return this.lastAction?.status === "success" ? "Account created successfully! Redirecting to login..." : "";
-  }
-
-  handleSignup = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!this.username || !this.email || !this.password) {
-      this.dispatch(signupSlice.actions.setLocalError("Please fill in all fields"));
-      return;
-    }
-    this.dispatch(signupSlice.actions.setLocalError(""));
-    this.dispatch(createRequest({ username: this.username, email: this.email, password: this.password }));
-  };
-}
-
 export function useSignupPageState() {
   const router = useRouter();
   const dispatch = useAppDispatch();
@@ -64,6 +16,23 @@ export function useSignupPageState() {
   const status = useAppSelector(selectSignupStatus);
   const lastAction = useAppSelector(selectSignupLastAction);
   const ui = useAppSelector((state) => state.signup.ui);
+
+  const { localError = null, formFields = {} } = ui;
+  const { username = "", email = "", password = "" } = formFields;
+
+  const loading = status === "loading";
+  const error = localError || (lastAction?.status === "error" ? lastAction.message : "");
+  const success = lastAction?.status === "success" ? "Account created successfully! Redirecting to login..." : "";
+
+  const handleSignup = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    if (!username || !email || !password) {
+      dispatch(signupSlice.actions.setLocalError("Please fill in all fields"));
+      return;
+    }
+    dispatch(signupSlice.actions.setLocalError(""));
+    dispatch(createRequest({ username, email, password }));
+  }, [dispatch, username, email, password]);
 
   useEffect(() => {
     if (lastAction?.status === "success") {
@@ -81,5 +50,19 @@ export function useSignupPageState() {
     };
   }, [dispatch]);
 
-  return new SignupPageState(router, dispatch, status, lastAction, ui);
+  return {
+    router,
+    dispatch,
+    status,
+    lastAction,
+    ui,
+    username,
+    email,
+    password,
+    localError,
+    loading,
+    error,
+    success,
+    handleSignup,
+  };
 }

@@ -1,121 +1,98 @@
-import React, { useEffect, useCallback } from "react";
+import React, { useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
 import { operatingHoursSlice } from "./fieldServiceSlice";
 import { OperatingHours } from "@/app/field-service/types";
 
-export class OperatingHoursPageState {
-  constructor(
-    public router: ReturnType<typeof useRouter>,
-    public dispatch: ReturnType<typeof useAppDispatch>,
-    public items: OperatingHours[],
-    public loading: boolean,
-    public storeError: any,
-    public ui: any
-  ) {}
+export function useOperatingHoursPageState() {
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+  const items = useAppSelector((s) => s.fieldService.operatingHours.items.data) ?? [];
+  const loading = useAppSelector((s) => s.fieldService.operatingHours.items.status === "loading");
+  const storeError = useAppSelector((s) => s.fieldService.operatingHours.items.error);
+  const ui = useAppSelector((s) => s.fieldService.operatingHours.ui);
 
-  get error() {
-    return this.ui.localError || this.storeError || "";
-  }
+  const { searchQuery = "", isModalOpen = false, modalMode = "create", editingId = null, formFields = {}, localError = null, successMessage = null } = ui;
+  const { name = "", timezone = "America/New_York" } = formFields;
 
-  get success() {
-    return this.ui.successMessage || "";
-  }
+  const error = localError || storeError || "";
+  const success = successMessage || "";
+  const saving = loading && isModalOpen;
 
-  get query() {
-    return this.ui.searchQuery;
-  }
+  const fetchItems = useCallback(() => {
+    dispatch(operatingHoursSlice.actions.fetchRequest(undefined));
+  }, [dispatch]);
 
-  get isModalOpen() {
-    return this.ui.isModalOpen;
-  }
-
-  get modalMode() {
-    return this.ui.modalMode;
-  }
-
-  get editingId() {
-    return this.ui.editingId;
-  }
-
-  get name() {
-    return this.ui.formFields.name ?? "";
-  }
-
-  get timezone() {
-    return this.ui.formFields.timezone ?? "America/New_York";
-  }
-
-  get saving() {
-    return this.loading && this.isModalOpen;
-  }
-
-  fetchItems = () => {
-    this.dispatch(operatingHoursSlice.actions.fetchRequest(undefined));
-  };
-
-  openCreateModal = () => {
-    this.dispatch(operatingHoursSlice.actions.openModal({
+  const openCreateModal = useCallback(() => {
+    dispatch(operatingHoursSlice.actions.openModal({
       mode: "create",
       initialFields: { name: "", timezone: "America/New_York" }
     }));
-  };
+  }, [dispatch]);
 
-  openEditModal = (item: OperatingHours) => {
-    this.dispatch(operatingHoursSlice.actions.openModal({
+  const openEditModal = useCallback((item: OperatingHours) => {
+    dispatch(operatingHoursSlice.actions.openModal({
       mode: "edit",
       editingId: item.id,
       initialFields: { name: item.name, timezone: item.timezone }
     }));
-  };
+  }, [dispatch]);
 
-  handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
-    if (!this.name.trim()) return;
+    if (!name.trim()) return;
 
-    if (this.modalMode === "create") {
-      this.dispatch(operatingHoursSlice.actions.createRequest({ name: this.name, timezone: this.timezone }));
-      this.dispatch(operatingHoursSlice.actions.setSuccessMessage("Operating hours creation initiated."));
-    } else if (this.modalMode === "edit" && this.editingId !== null) {
-      this.dispatch(operatingHoursSlice.actions.updateRequest({ id: this.editingId, data: { name: this.name, timezone: this.timezone } }));
-      this.dispatch(operatingHoursSlice.actions.setSuccessMessage("Operating hours update initiated."));
+    if (modalMode === "create") {
+      dispatch(operatingHoursSlice.actions.createRequest({ name, timezone }));
+      dispatch(operatingHoursSlice.actions.setSuccessMessage("Operating hours creation initiated."));
+    } else if (modalMode === "edit" && editingId !== null) {
+      dispatch(operatingHoursSlice.actions.updateRequest({ id: editingId, data: { name, timezone } }));
+      dispatch(operatingHoursSlice.actions.setSuccessMessage("Operating hours update initiated."));
     }
-  };
+  }, [dispatch, name, timezone, modalMode, editingId]);
 
-  handleDelete = (id: number) => {
+  const handleDelete = useCallback((id: number) => {
     if (!confirm("Are you sure you want to delete these operating hours?")) return;
-    this.dispatch(operatingHoursSlice.actions.deleteRequest(id));
-    this.dispatch(operatingHoursSlice.actions.setSuccessMessage("Operating hours deletion initiated."));
-  };
+    dispatch(operatingHoursSlice.actions.deleteRequest(id));
+    dispatch(operatingHoursSlice.actions.setSuccessMessage("Operating hours deletion initiated."));
+  }, [dispatch]);
 
-  get filteredItems() {
-    return this.items.filter((item) => {
-      if (!this.query) return true;
-      const q = this.query.toLowerCase();
+  const filteredItems = useMemo(() => {
+    return items.filter((item) => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
       return (
         item.name.toLowerCase().includes(q) ||
         item.timezone.toLowerCase().includes(q) ||
         item.id.toString().includes(q)
       );
     });
-  }
-}
-
-export function useOperatingHoursPageState() {
-  const router = useRouter();
-  const dispatch = useAppDispatch();
-  const items = useAppSelector((s) => s.fieldService.operatingHours.items.data) || [];
-  const loading = useAppSelector((s) => s.fieldService.operatingHours.items.status === "loading");
-  const storeError = useAppSelector((s) => s.fieldService.operatingHours.items.error);
-  const ui = useAppSelector((s) => s.fieldService.operatingHours.ui);
-
-  const fetchItems = useCallback(() => {
-    dispatch(operatingHoursSlice.actions.fetchRequest(undefined));
-  }, [dispatch]);
+  }, [items, searchQuery]);
 
   useEffect(() => {
     fetchItems();
   }, [fetchItems]);
 
-  return new OperatingHoursPageState(router, dispatch, items, loading, storeError, ui);
+  return {
+    router,
+    dispatch,
+    items,
+    loading,
+    ui,
+    searchQuery,
+    isModalOpen,
+    modalMode,
+    editingId,
+    name,
+    timezone,
+    error,
+    success,
+    saving,
+    fetchItems,
+    openCreateModal,
+    openEditModal,
+    handleSubmit,
+    handleDelete,
+    filteredItems,
+  };
 }

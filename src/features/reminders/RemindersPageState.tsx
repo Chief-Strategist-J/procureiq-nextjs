@@ -1,10 +1,10 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
 import { remindersActions } from "./remindersSlice";
 import { Badge } from "@/components/ui/badge";
 
-interface TaskReminder {
+export interface TaskReminder {
   id: string | number;
   title: string;
   description: string;
@@ -18,7 +18,7 @@ interface TaskReminder {
   snoozeCount: number;
 }
 
-interface DispatchLog {
+export interface DispatchLog {
   id: string;
   time: string;
   taskTitle: string;
@@ -28,34 +28,24 @@ interface DispatchLog {
   details: string;
 }
 
-export class RemindersPageState {
-  constructor(
-    public router: ReturnType<typeof useRouter>,
-    public dispatch: ReturnType<typeof useAppDispatch>,
-    public reduxReminders: any[],
-    public reduxLoading: boolean,
-    public reduxError: any,
-    public remindersUi: any
-  ) {}
+export function useRemindersPageState() {
+  const router = useRouter();
+  const dispatch = useAppDispatch();
 
-  get refreshing() {
-    return !!this.remindersUi.formFields.refreshing;
-  }
+  const reduxReminders = useAppSelector((s) => s.reminders.items.data) ?? [];
+  const reduxLoading = useAppSelector((s) => s.reminders.items.status === "loading");
+  const reduxError = useAppSelector((s) => s.reminders.items.error);
+  const remindersUi = useAppSelector((s) => s.reminders.items.ui);
 
-  get success() {
-    return this.remindersUi.successMessage || "";
-  }
+  const { localError = null, successMessage = null, formFields = {} } = remindersUi;
+  const { refreshing = false, logs = [] } = formFields;
 
-  get error() {
-    return this.remindersUi.localError || this.reduxError || "";
-  }
+  const success = successMessage || "";
+  const error = localError || reduxError || "";
+  const loading = reduxLoading;
 
-  get logs(): DispatchLog[] {
-    return this.remindersUi.formFields.logs || [];
-  }
-
-  get reminders(): TaskReminder[] {
-    return this.reduxReminders.map((r) => ({
+  const reminders = useMemo(() => {
+    return reduxReminders.map((r) => ({
       id: r.id,
       title: r.title,
       description: r.message,
@@ -68,25 +58,21 @@ export class RemindersPageState {
       status: (r.status?.toUpperCase() as TaskReminder["status"]) || "PENDING",
       snoozeCount: 0,
     }));
-  }
+  }, [reduxReminders]);
 
-  get loading() {
-    return this.reduxLoading;
-  }
+  const handleRefresh = useCallback(() => {
+    dispatch(remindersActions.setFormField({ field: "refreshing", value: true }));
+    dispatch(remindersActions.fetchRequest());
+    setTimeout(() => dispatch(remindersActions.setFormField({ field: "refreshing", value: false })), 800);
+  }, [dispatch]);
 
-  handleRefresh = () => {
-    this.dispatch(remindersActions.setFormField({ field: "refreshing", value: true }));
-    this.dispatch(remindersActions.fetchRequest());
-    setTimeout(() => this.dispatch(remindersActions.setFormField({ field: "refreshing", value: false })), 800);
-  };
+  const handleDelete = useCallback((id: string | number) => {
+    dispatch(remindersActions.deleteRequest(Number(id)));
+    dispatch(remindersActions.setSuccessMessage("Reminder deleted successfully."));
+    setTimeout(() => dispatch(remindersActions.setSuccessMessage("")), 3000);
+  }, [dispatch]);
 
-  handleDelete = (id: string | number) => {
-    this.dispatch(remindersActions.deleteRequest(Number(id)));
-    this.dispatch(remindersActions.setSuccessMessage("Reminder deleted successfully."));
-    setTimeout(() => this.dispatch(remindersActions.setSuccessMessage("")), 3000);
-  };
-
-  addLogEntry = (
+  const addLogEntry = useCallback((
     taskTitle: string,
     assigneeName: string, 
     channel: "CALL" | "SMS" | "SLACK", 
@@ -102,13 +88,13 @@ export class RemindersPageState {
       status,
       details
     };
-    const updatedLogs = [newLog, ...this.logs];
-    this.dispatch(remindersActions.setFormField({ field: "logs", value: updatedLogs }));
+    const updatedLogs = [newLog, ...logs];
+    dispatch(remindersActions.setFormField({ field: "logs", value: updatedLogs }));
     localStorage.setItem("procureiq_reminder_logs", JSON.stringify(updatedLogs));
-  };
+  }, [dispatch, logs]);
 
-  triggerCallSimulation = (reminder: TaskReminder) => {
-    this.addLogEntry(
+  const triggerCallSimulation = useCallback((reminder: TaskReminder) => {
+    addLogEntry(
       reminder.title, 
       reminder.assigneeName.split(" ")[0], 
       reminder.contactPreference, 
@@ -117,7 +103,7 @@ export class RemindersPageState {
     );
 
     setTimeout(() => {
-      this.dispatch(remindersActions.updateRequest({
+      dispatch(remindersActions.updateRequest({
         id: Number(reminder.id),
         data: {
           userId: 1,
@@ -128,25 +114,25 @@ export class RemindersPageState {
         },
       }));
 
-      this.addLogEntry(
+      addLogEntry(
         reminder.title, 
         reminder.assigneeName.split(" ")[0], 
         reminder.contactPreference, 
         "COMPLETED", 
         `Alert confirmed. Recipient answered and acknowledged follow-up task.`
       );
-      this.dispatch(remindersActions.setSuccessMessage(`Alert successfully acknowledged for "${reminder.title}"`));
-      setTimeout(() => this.dispatch(remindersActions.setSuccessMessage("")), 4000);
+      dispatch(remindersActions.setSuccessMessage(`Alert successfully acknowledged for "${reminder.title}"`));
+      setTimeout(() => dispatch(remindersActions.setSuccessMessage("")), 4000);
     }, 2000);
-  };
+  }, [dispatch, addLogEntry]);
 
-  getPriorityColor = (p: string) => {
+  const getPriorityColor = useCallback((p: string) => {
     if (p === "HIGH") return "text-red-400 border-red-955 bg-red-955/30";
     if (p === "MEDIUM") return "text-amber-400 border-amber-955 bg-amber-955/30";
     return "text-zinc-400 border-zinc-800 bg-zinc-900";
-  };
+  }, []);
 
-  getStatusBadge = (status: string) => {
+  const getStatusBadge = useCallback((status: string) => {
     const styles = {
       PENDING: "bg-blue-950/60 text-blue-400 border-blue-900/50",
       COMPLETED: "bg-emerald-950/60 text-emerald-400 border-emerald-900/50",
@@ -158,17 +144,7 @@ export class RemindersPageState {
         {status}
       </Badge>
     );
-  };
-}
-
-export function useRemindersPageState() {
-  const router = useRouter();
-  const dispatch = useAppDispatch();
-
-  const reduxReminders = useAppSelector((s) => s.reminders.items.data);
-  const reduxLoading = useAppSelector((s) => s.reminders.items.status === "loading");
-  const reduxError = useAppSelector((s) => s.reminders.items.error);
-  const remindersUi = useAppSelector((s) => s.reminders.items.ui);
+  }, []);
 
   useEffect(() => {
     dispatch(remindersActions.fetchRequest());
@@ -178,12 +154,24 @@ export function useRemindersPageState() {
     }
   }, [dispatch]);
 
-  return new RemindersPageState(
+  return {
     router,
     dispatch,
     reduxReminders,
     reduxLoading,
     reduxError,
-    remindersUi
-  );
+    remindersUi,
+    refreshing,
+    success,
+    error,
+    logs,
+    reminders,
+    loading,
+    handleRefresh,
+    handleDelete,
+    addLogEntry,
+    triggerCallSimulation,
+    getPriorityColor,
+    getStatusBadge,
+  };
 }

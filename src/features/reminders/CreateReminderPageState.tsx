@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
 import { remindersActions } from "./remindersSlice";
@@ -10,83 +10,43 @@ export const INITIAL_PEOPLE = [
   { name: "Myself", contact: "+15550100", channel: "CALL" }
 ];
 
-export class CreateReminderPageState {
-  constructor(
-    public router: ReturnType<typeof useRouter>,
-    public dispatch: ReturnType<typeof useAppDispatch>,
-    public remindersUi: any,
-    public loading: boolean
-  ) {}
+export function useCreateReminderPageState() {
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+  const remindersUi = useAppSelector((state) => state.reminders.items.ui);
+  const loading = useAppSelector((state) => state.reminders.items.status === "loading");
 
-  get title() {
-    return this.remindersUi.formFields.title ?? "";
-  }
+  const { successMessage = null, formFields = {} } = remindersUi;
+  const { title = "", description = "", dueAt = "", recurrence = "NONE", priority = "MEDIUM", assigneeIndex = "0", contactPreference = "CALL", customName = "", customContact = "", useCustomAssignee = false } = formFields;
 
-  get description() {
-    return this.remindersUi.formFields.description ?? "";
-  }
+  const success = successMessage || "";
 
-  get dueAt() {
-    return this.remindersUi.formFields.dueAt ?? "";
-  }
-
-  get recurrence() {
-    return this.remindersUi.formFields.recurrence ?? "NONE";
-  }
-
-  get priority(): "LOW" | "MEDIUM" | "HIGH" {
-    return this.remindersUi.formFields.priority ?? "MEDIUM";
-  }
-
-  get assigneeIndex() {
-    return this.remindersUi.formFields.assigneeIndex ?? "0";
-  }
-
-  get contactPreference(): "CALL" | "SMS" | "SLACK" {
-    return this.remindersUi.formFields.contactPreference ?? "CALL";
-  }
-
-  get customName() {
-    return this.remindersUi.formFields.customName ?? "";
-  }
-
-  get customContact() {
-    return this.remindersUi.formFields.customContact ?? "";
-  }
-
-  get useCustomAssignee() {
-    return !!this.remindersUi.formFields.useCustomAssignee;
-  }
-
-  get success() {
-    return this.remindersUi.successMessage || "";
-  }
-
-  handleCreateTask = async (e: React.FormEvent) => {
+  const handleCreateTask = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!this.title.trim()) return;
+    if (!title.trim()) return;
 
-    this.dispatch(remindersActions.setSuccessMessage(""));
+    dispatch(remindersActions.setSuccessMessage(""));
 
     let targetName = "";
     let targetContact = "";
 
-    if (this.useCustomAssignee) {
-      targetName = this.customName || "External Recipient";
-      targetContact = this.customContact || "No contact info";
+    if (useCustomAssignee) {
+      targetName = customName || "External Recipient";
+      targetContact = customContact || "No contact info";
     } else {
-      const selected = INITIAL_PEOPLE[parseInt(this.assigneeIndex)];
+      const idx = parseInt(assigneeIndex, 10);
+      const selected = INITIAL_PEOPLE[Number.isNaN(idx) ? 0 : idx] ?? INITIAL_PEOPLE[0];
       targetName = selected.name;
       targetContact = selected.contact;
     }
 
     const payload = {
-      title: this.title,
-      description: this.description,
-      dueAt: new Date(this.dueAt).toISOString(),
-      recurrence: this.recurrence,
-      priority: this.priority,
-      contactPreference: this.contactPreference,
+      title,
+      description,
+      dueAt: new Date(dueAt).toISOString(),
+      recurrence,
+      priority,
+      contactPreference,
       assigneeName: targetName,
       assigneeContact: targetContact,
       status: "PENDING",
@@ -107,7 +67,7 @@ export class CreateReminderPageState {
         throw new Error("Failed to schedule reminder on backend");
       }
 
-      this.dispatch(remindersActions.setSuccessMessage("AI Reminder task scheduled successfully!"));
+      dispatch(remindersActions.setSuccessMessage("AI Reminder task scheduled successfully!"));
     } catch (err: any) {
       const newReminder = {
         ...payload,
@@ -118,35 +78,26 @@ export class CreateReminderPageState {
       const currentReminders = stored ? JSON.parse(stored) : [];
       localStorage.setItem("procureiq_reminders", JSON.stringify([newReminder, ...currentReminders]));
 
-      this.dispatch(remindersActions.setSuccessMessage("[Offline Sandbox] AI Reminder task scheduled successfully!"));
+      dispatch(remindersActions.setSuccessMessage("[Offline Sandbox] AI Reminder task scheduled successfully!"));
     } finally {
       const storedLogs = localStorage.getItem("procureiq_reminder_logs");
       const currentLogs = storedLogs ? JSON.parse(storedLogs) : [];
       const newLog = {
         id: Math.random().toString(36).substring(2, 9),
         time: new Date().toLocaleTimeString(),
-        taskTitle: this.title,
+        taskTitle: title,
         assigneeName: targetName,
-        channel: this.contactPreference,
+        channel: contactPreference,
         status: "SENT",
-        details: `Scheduled reminder successfully for ${new Date(this.dueAt).toLocaleString()}`
+        details: `Scheduled reminder successfully for ${new Date(dueAt).toLocaleString()}`
       };
       localStorage.setItem("procureiq_reminder_logs", JSON.stringify([newLog, ...currentLogs]));
 
       setTimeout(() => {
-        this.router.push("/reminders");
+        router.push("/reminders");
       }, 1500);
     }
-  };
-}
-
-export function useCreateReminderPageState() {
-  const router = useRouter();
-  const dispatch = useAppDispatch();
-  const remindersUi = useAppSelector((state) => state.reminders.items.ui);
-  const loading = useAppSelector((state) => state.reminders.items.status === "loading");
-
-  const dueAt = remindersUi.formFields.dueAt ?? "";
+  }, [dispatch, router, useCustomAssignee, customName, customContact, assigneeIndex, title, description, dueAt, recurrence, priority, contactPreference]);
 
   useEffect(() => {
     if (!dueAt) {
@@ -155,10 +106,22 @@ export function useCreateReminderPageState() {
     }
   }, [dispatch, dueAt]);
 
-  return new CreateReminderPageState(
+  return {
     router,
     dispatch,
     remindersUi,
-    loading
-  );
+    loading,
+    title,
+    description,
+    dueAt,
+    recurrence,
+    priority,
+    assigneeIndex,
+    contactPreference,
+    customName,
+    customContact,
+    useCustomAssignee,
+    success,
+    handleCreateTask,
+  };
 }

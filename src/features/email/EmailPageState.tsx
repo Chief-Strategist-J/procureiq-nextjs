@@ -1,36 +1,16 @@
-import React, { useEffect, useCallback } from "react";
+import React, { useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
 import { fetchRequest, selectEmailState } from "./emailSlice";
-
-export class EmailPageState {
-  constructor(
-    public router: ReturnType<typeof useRouter>,
-    public dispatch: ReturnType<typeof useAppDispatch>,
-    public emailState: any
-  ) {}
-
-  get items() {
-    return this.emailState.items.data || [];
-  }
-
-  get loading() {
-    return this.emailState.items.status === "loading";
-  }
-
-  get error() {
-    return this.emailState.items.error;
-  }
-
-  fetchItems = () => {
-    this.dispatch(fetchRequest());
-  };
-}
 
 export function useEmailPageState() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const emailState = useAppSelector(selectEmailState);
+
+  const items = useMemo(() => emailState.items.data ?? [], [emailState.items.data]);
+  const loading = emailState.items.status === "loading";
+  const error = emailState.items.error;
 
   const fetchItems = useCallback(() => {
     dispatch(fetchRequest());
@@ -42,5 +22,13 @@ export function useEmailPageState() {
     }
   }, [emailState.items.status, fetchItems]);
 
-  return new EmailPageState(router, dispatch, emailState);
+  return {
+    router,
+    dispatch,
+    emailState,
+    items,
+    loading,
+    error,
+    fetchItems,
+  };
 }

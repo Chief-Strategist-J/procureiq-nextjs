@@ -1,60 +1,30 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
-import { sendRequest, selectEmailSendState, resetSendState, emailSlice, selectEmailState } from "./emailSlice";
-
-export class SendEmailPageState {
-  constructor(
-    public router: ReturnType<typeof useRouter>,
-    public dispatch: ReturnType<typeof useAppDispatch>,
-    public sendState: any,
-    public emailState: any
-  ) {}
-
-  get ui() {
-    return this.emailState.ui;
-  }
-
-  get recipients() {
-    return this.ui.formFields.recipients ?? "";
-  }
-
-  get subject() {
-    return this.ui.formFields.subject ?? "";
-  }
-
-  get body() {
-    return this.ui.formFields.body ?? "";
-  }
-
-  get sending() {
-    return this.sendState.status === "loading";
-  }
-
-  get error() {
-    return this.sendState.error;
-  }
-
-  get success() {
-    return this.emailState.lastAction?.status === "success" && this.emailState.lastAction?.type === "create" ? this.emailState.lastAction.message : "";
-  }
-
-  handleSend = (e: React.FormEvent) => {
-    e.preventDefault();
-    const recipientList = this.recipients
-      .split(",")
-      .map((r: string) => r.trim())
-      .filter((r: string) => r.length > 0);
-
-    this.dispatch(sendRequest({ recipients: recipientList, subject: this.subject, body: this.body }));
-  };
-}
+import { sendRequest, selectEmailSendState, resetSendState, selectEmailState } from "./emailSlice";
 
 export function useSendEmailPageState() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const sendState = useAppSelector(selectEmailSendState);
   const emailState = useAppSelector(selectEmailState);
+
+  const { formFields = {} } = emailState.ui;
+  const { recipients = "", subject = "", body = "" } = formFields;
+
+  const sending = sendState.status === "loading";
+  const error = sendState.error;
+  const success = emailState.lastAction?.status === "success" && emailState.lastAction?.type === "create" ? emailState.lastAction.message : "";
+
+  const handleSend = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    const recipientList = recipients
+      .split(",")
+      .map((r: string) => r.trim())
+      .filter((r: string) => r.length > 0);
+
+    dispatch(sendRequest({ recipients: recipientList, subject, body }));
+  }, [dispatch, recipients, subject, body]);
 
   useEffect(() => {
     return () => {
@@ -69,5 +39,18 @@ export function useSendEmailPageState() {
     }
   }, [sendState.status, router]);
 
-  return new SendEmailPageState(router, dispatch, sendState, emailState);
+  return {
+    router,
+    dispatch,
+    sendState,
+    emailState,
+    ui: emailState.ui,
+    recipients,
+    subject,
+    body,
+    sending,
+    error,
+    success,
+    handleSend,
+  };
 }

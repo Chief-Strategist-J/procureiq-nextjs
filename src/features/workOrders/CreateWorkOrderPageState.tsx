@@ -1,68 +1,7 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
 import { workOrdersActions } from "./workOrdersSlice";
-
-export class CreateWorkOrderPageState {
-  constructor(
-    public router: ReturnType<typeof useRouter>,
-    public dispatch: ReturnType<typeof useAppDispatch>,
-    public lastAction: any,
-    public items: any,
-    public ui: any
-  ) {}
-
-  get creating() {
-    return this.items.status === 'loading';
-  }
-
-  get caseId() {
-    return this.ui.formFields.caseId ?? "";
-  }
-
-  get contactId() {
-    return this.ui.formFields.contactId ?? "";
-  }
-
-  get assetId() {
-    return this.ui.formFields.assetId ?? "";
-  }
-
-  get workTypeId() {
-    return this.ui.formFields.workTypeId ?? "";
-  }
-
-  get status() {
-    return this.ui.formFields.status ?? "new";
-  }
-
-  get priority() {
-    return this.ui.formFields.priority ?? 2;
-  }
-
-  get error() {
-    return this.ui.localError;
-  }
-
-  get success() {
-    return this.ui.successMessage;
-  }
-
-  handleCreateWorkOrder = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const requestPayload: Record<string, any> = {
-      status: this.status,
-      priority: this.priority,
-    };
-    if (this.caseId) requestPayload.caseId = parseInt(this.caseId);
-    if (this.contactId) requestPayload.contactId = parseInt(this.contactId);
-    if (this.assetId) requestPayload.assetId = parseInt(this.assetId);
-    if (this.workTypeId) requestPayload.workTypeId = parseInt(this.workTypeId);
-
-    this.dispatch(workOrdersActions.createRequest(requestPayload as any));
-  };
-}
 
 export function useCreateWorkOrderPageState() {
   const router = useRouter();
@@ -70,13 +9,39 @@ export function useCreateWorkOrderPageState() {
 
   const { lastAction, items, ui } = useAppSelector((state) => state.workOrders);
 
-  const state = new CreateWorkOrderPageState(
-    router,
-    dispatch,
-    lastAction,
-    items,
-    ui
-  );
+  const { localError = null, successMessage = null, formFields = {} } = ui;
+  const { caseId = "", contactId = "", assetId = "", workTypeId = "", status = "new", priority = 2 } = formFields;
+
+  const creating = items.status === 'loading';
+  const error = localError;
+  const success = successMessage;
+
+  const handleCreateWorkOrder = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+
+    const requestPayload: Record<string, any> = {
+      status,
+      priority,
+    };
+    if (caseId) {
+      const parsed = parseInt(caseId, 10);
+      if (!Number.isNaN(parsed)) requestPayload.caseId = parsed;
+    }
+    if (contactId) {
+      const parsed = parseInt(contactId, 10);
+      if (!Number.isNaN(parsed)) requestPayload.contactId = parsed;
+    }
+    if (assetId) {
+      const parsed = parseInt(assetId, 10);
+      if (!Number.isNaN(parsed)) requestPayload.assetId = parsed;
+    }
+    if (workTypeId) {
+      const parsed = parseInt(workTypeId, 10);
+      if (!Number.isNaN(parsed)) requestPayload.workTypeId = parsed;
+    }
+
+    dispatch(workOrdersActions.createRequest(requestPayload as any));
+  }, [dispatch, status, priority, caseId, contactId, assetId, workTypeId]);
 
   useEffect(() => {
     if (lastAction?.type === 'create') {
@@ -84,15 +49,32 @@ export function useCreateWorkOrderPageState() {
         dispatch(workOrdersActions.setSuccessMessage("Work order registered successfully!"));
         dispatch(workOrdersActions.setFormFields({ caseId: "", contactId: "", assetId: "", workTypeId: "", status: "new", priority: 2 }));
         
-        setTimeout(() => {
+        const timer = setTimeout(() => {
           dispatch(workOrdersActions.resetLastAction());
           router.push("/work-orders");
         }, 1500);
+        return () => clearTimeout(timer);
       } else if (lastAction.status === 'error') {
         dispatch(workOrdersActions.setLocalError(lastAction.message || "Failed to create work order"));
       }
     }
   }, [lastAction, router, dispatch]);
 
-  return state;
+  return {
+    router,
+    dispatch,
+    lastAction,
+    items,
+    ui,
+    caseId,
+    contactId,
+    assetId,
+    workTypeId,
+    status,
+    priority,
+    creating,
+    error,
+    success,
+    handleCreateWorkOrder,
+  };
 }

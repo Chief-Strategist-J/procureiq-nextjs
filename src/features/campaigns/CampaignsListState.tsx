@@ -1,114 +1,92 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAppSelector, useAppDispatch } from "@/shared/store/hooks";
 import { campaignsActions } from "./campaignsSlice";
 import { Campaign } from "@/app/campaigns/types";
-
-export class CampaignListPageState {
-  constructor(
-    public router: ReturnType<typeof useRouter>,
-    public dispatch: ReturnType<typeof useAppDispatch>,
-    public items: Campaign[],
-    public fetchStatus: string,
-    public searchQuery: string,
-    public isModalOpen: boolean,
-    public modalMode: string,
-    public editingId: number | null,
-    public formFields: any,
-    public saving: boolean,
-    public localError: string | null,
-    public successMessage: string | null
-  ) {}
-
-  get loading() {
-    return this.fetchStatus === "loading";
-  }
-
-  get error() {
-    return this.localError;
-  }
-
-  get orgId() {
-    return this.formFields.orgId ?? "1";
-  }
-
-  get name() {
-    return this.formFields.name ?? "";
-  }
-
-  get status() {
-    return this.formFields.status ?? "draft";
-  }
-
-  fetchItems = () => {
-    this.dispatch(campaignsActions.fetchRequest());
-  };
-
-  openCreateModal = () => {
-    this.dispatch(campaignsActions.openModal({
-      mode: "create",
-      initialFields: { orgId: "1", name: "", status: "draft" }
-    }));
-  };
-
-  openEditModal = (item: Campaign) => {
-    this.dispatch(campaignsActions.openModal({
-      mode: "edit",
-      editingId: item.id,
-      initialFields: { orgId: item.orgId.toString(), name: item.name, status: item.status }
-    }));
-  };
-
-  handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!this.name.trim()) return;
-
-    const payload = { orgId: parseInt(this.orgId) || 1, name: this.name, status: this.status };
-
-    if (this.modalMode === "create") {
-      this.dispatch(campaignsActions.createRequest(payload));
-    } else if (this.modalMode === "edit" && this.editingId !== null) {
-      this.dispatch(campaignsActions.updateRequest({ id: this.editingId, data: payload }));
-    }
-  };
-
-  handleDelete = (id: number) => {
-    if (!confirm("Are you sure you want to delete this campaign?")) return;
-    this.dispatch(campaignsActions.deleteRequest(id));
-  };
-
-  get filteredItems() {
-    return this.items.filter((item) => {
-      if (!this.searchQuery) return true;
-      const q = this.searchQuery.toLowerCase();
-      return item.name.toLowerCase().includes(q) || item.status.toLowerCase().includes(q) || item.id.toString().includes(q);
-    });
-  }
-}
 
 export function useCampaignListPageState() {
   const router = useRouter();
   const dispatch = useAppDispatch();
 
   const { data: items = [], status: fetchStatus } = useAppSelector(state => state.campaigns.list.items);
-  const { searchQuery, isModalOpen, modalMode, editingId, formFields, saving, localError, successMessage } = useAppSelector(state => state.campaigns.list.ui);
+  const { searchQuery = "", isModalOpen = false, modalMode = "create", editingId = null, formFields = {}, saving = false, localError = null, successMessage = null } = useAppSelector(state => state.campaigns.list.ui);
+
+  const loading = fetchStatus === "loading";
+  const error = localError;
+
+  const { orgId = "1", name = "", status = "draft" } = formFields;
+
+  const fetchItems = useCallback(() => {
+    dispatch(campaignsActions.fetchRequest());
+  }, [dispatch]);
+
+  const openCreateModal = useCallback(() => {
+    dispatch(campaignsActions.openModal({
+      mode: "create",
+      initialFields: { orgId: "1", name: "", status: "draft" }
+    }));
+  }, [dispatch]);
+
+  const openEditModal = useCallback((item: Campaign) => {
+    dispatch(campaignsActions.openModal({
+      mode: "edit",
+      editingId: item.id,
+      initialFields: { orgId: item.orgId.toString(), name: item.name, status: item.status }
+    }));
+  }, [dispatch]);
+
+  const handleSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+
+    const parsedOrgId = parseInt(orgId, 10);
+    const finalOrgId = Number.isNaN(parsedOrgId) ? 1 : parsedOrgId;
+
+    const payload = { orgId: finalOrgId, name, status };
+
+    if (modalMode === "create") {
+      dispatch(campaignsActions.createRequest(payload));
+    } else if (modalMode === "edit" && editingId !== null) {
+      dispatch(campaignsActions.updateRequest({ id: editingId, data: payload }));
+    }
+  }, [dispatch, name, orgId, modalMode, editingId]);
+
+  const handleDelete = useCallback((id: number) => {
+    if (!confirm("Are you sure you want to delete this campaign?")) return;
+    dispatch(campaignsActions.deleteRequest(id));
+  }, [dispatch]);
+
+  const filteredItems = useMemo(() => {
+    return items.filter((item) => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return item.name.toLowerCase().includes(q) || item.status.toLowerCase().includes(q) || item.id.toString().includes(q);
+    });
+  }, [items, searchQuery]);
 
   useEffect(() => {
     dispatch(campaignsActions.fetchRequest());
   }, [dispatch]);
 
-  return new CampaignListPageState(
+  return {
     router,
     dispatch,
     items,
-    fetchStatus,
-    searchQuery,
+    loading,
+    error,
+    orgId,
+    name,
+    status,
+    saving,
+    successMessage,
     isModalOpen,
     modalMode,
-    editingId,
-    formFields,
-    saving,
-    localError,
-    successMessage
-  );
+    searchQuery,
+    fetchItems,
+    openCreateModal,
+    openEditModal,
+    handleSubmit,
+    handleDelete,
+    filteredItems,
+  };
 }
