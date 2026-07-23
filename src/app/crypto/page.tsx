@@ -99,7 +99,21 @@ export default function CryptoDashboard() {
         `New Price Alert Configured: ${pageState.symbol}`,
         `Successfully set price alert trigger for ${pageState.symbol} at ${formattedTargetPrice}. Alert scheduled for ${new Date(pageState.dueAt).toLocaleString()}.`,
         [pageState.channel || 'SMS']
-      ).catch(() => {});
+      ).catch(() => {
+        const storedNotifications = JSON.parse(localStorage.getItem('piq_notifications') || '[]');
+        const newNotif = {
+          id: Math.floor(Math.random() * 1000000),
+          userId: 1,
+          typeCode: 'PRICE_ALERT',
+          sourceService: 'crypto-service',
+          title: `New Price Alert Configured: ${pageState.symbol}`,
+          message: `Successfully set price alert trigger for ${pageState.symbol} at ${formattedTargetPrice}. Alert scheduled for ${new Date(pageState.dueAt).toLocaleString()}.`,
+          status: 'UNREAD',
+          channel: pageState.channel || 'SMS',
+          createdAt: new Date().toISOString(),
+        };
+        localStorage.setItem('piq_notifications', JSON.stringify([newNotif, ...storedNotifications]));
+      });
 
       pageState.setReminderSuccess(`Price alert saved! Trigger set for ${pageState.symbol} at ${formattedTargetPrice} on ${new Date(pageState.dueAt).toLocaleString()}`);
     } catch (err: any) {
