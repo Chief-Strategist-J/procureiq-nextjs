@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { CryptoService, CryptoDetailsData, CryptoMoversData, CryptoOrderbook, CryptoTradesData } from "@/features/crypto";
+import { CryptoService, CryptoDetailsData, CryptoMoversData, CryptoOrderbook, CryptoTradesData, CryptoKlinesData } from "@/features/crypto";
 import { Activity, TrendingUp, TrendingDown, RefreshCw, BarChart2 } from "lucide-react";
+import { ChartContainer } from "@/components/ui/chart";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 export default function CryptoDashboard() {
   const [symbol, setSymbol] = useState("BTCUSDT");
@@ -11,6 +13,7 @@ export default function CryptoDashboard() {
   const [movers, setMovers] = useState<CryptoMoversData | null>(null);
   const [orderbook, setOrderbook] = useState<CryptoOrderbook | null>(null);
   const [trades, setTrades] = useState<CryptoTradesData | null>(null);
+  const [klines, setKlines] = useState<CryptoKlinesData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -18,18 +21,20 @@ export default function CryptoDashboard() {
     setLoading(true);
     setError(null);
     try {
-      const [syms, det, mov, ob, tr] = await Promise.all([
+      const [syms, det, mov, ob, tr, kl] = await Promise.all([
         CryptoService.getSymbols().catch(() => ["BTCUSDT", "ETHUSDT", "BNBUSDT"]),
         CryptoService.getDetails(symbol),
         CryptoService.getMovers(),
         CryptoService.getOrderbook(symbol, 5),
         CryptoService.getTrades(symbol, 5),
+        CryptoService.getKlines(symbol, "1d", 10),
       ]);
       if (syms && syms.length > 0) setSymbols(syms.slice(0, 10));
       setDetails(det);
       setMovers(mov);
       setOrderbook(ob);
       setTrades(tr);
+      setKlines(kl);
     } catch (err: any) {
       setError(err.message || "Failed to load crypto data");
     } finally {
@@ -40,6 +45,28 @@ export default function CryptoDashboard() {
   useEffect(() => {
     fetchData();
   }, [symbol]);
+
+  const chartData = klines?.klines.map((k) => ({
+    time: new Date(k.openTime).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+    price: k.close,
+  })) || [];
+
+  const [currency, setCurrency] = useState<string>("USD");
+
+  const CURRENCY_RATES: Record<string, { symbol: string; rate: number }> = {
+    USD: { symbol: "$", rate: 1.0 },
+    EUR: { symbol: "€", rate: 0.92 },
+    GBP: { symbol: "£", rate: 0.78 },
+    JPY: { symbol: "¥", rate: 155.0 },
+    INR: { symbol: "₹", rate: 83.5 },
+  };
+
+  const formatPrice = (val?: number) => {
+    if (val === undefined || val === null) return "0";
+    const curr = CURRENCY_RATES[currency] || CURRENCY_RATES["USD"];
+    const converted = val * curr.rate;
+    return `${curr.symbol}${converted.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+  };
 
   return (
     <div className="min-h-screen bg-black text-white p-6 font-sans">
@@ -54,6 +81,21 @@ export default function CryptoDashboard() {
         </div>
 
         <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 rounded-md px-2 py-1">
+            <span className="text-[11px] text-zinc-500 font-medium uppercase">Display Currency</span>
+            <select
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+              className="bg-transparent text-xs text-white outline-none cursor-pointer"
+            >
+              {Object.keys(CURRENCY_RATES).map((c) => (
+                <option key={c} value={c} className="bg-zinc-900 text-white">
+                  {c} ({CURRENCY_RATES[c].symbol})
+                </option>
+              ))}
+            </select>
+          </div>
+
           <select
             value={symbol}
             onChange={(e) => setSymbol(e.target.value)}
@@ -80,7 +122,6 @@ export default function CryptoDashboard() {
         </div>
       )}
 
-      {/* Main Details Bar */}
       {details && (
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
           <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
@@ -88,8 +129,8 @@ export default function CryptoDashboard() {
             <div className="text-xl font-medium text-emerald-400 mt-1">{details.symbol}</div>
           </div>
           <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
-            <span className="text-xs text-zinc-500">Current Price</span>
-            <div className="text-xl font-medium mt-1">${details.currentPrice?.toLocaleString()}</div>
+            <span className="text-xs text-zinc-500">Current Price ({currency})</span>
+            <div className="text-xl font-medium mt-1">{formatPrice(details.currentPrice)}</div>
           </div>
           <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
             <span className="text-xs text-zinc-500">24h Change</span>
@@ -103,9 +144,9 @@ export default function CryptoDashboard() {
             </div>
           </div>
           <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
-            <span className="text-xs text-zinc-500">24h High / Low</span>
+            <span className="text-xs text-zinc-500">24h High / Low ({currency})</span>
             <div className="text-sm font-medium mt-1">
-              ${details.high24h?.toLocaleString()} / ${details.low24h?.toLocaleString()}
+              {formatPrice(details.high24h)} / {formatPrice(details.low24h)}
             </div>
           </div>
           <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
@@ -115,8 +156,41 @@ export default function CryptoDashboard() {
         </div>
       )}
 
+      {chartData.length > 0 && (
+        <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-4 mb-8">
+          <div className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-4">
+            Price Movement ({symbol})
+          </div>
+          <ChartContainer
+            config={{
+              price: {
+                label: "Price",
+                color: "#10b981",
+              },
+            }}
+            className="h-48 w-full"
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="time" stroke="#52525b" fontSize={10} tickLine={false} />
+                <YAxis stroke="#52525b" fontSize={10} domain={["auto", "auto"]} tickLine={false} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: "#09090b", borderColor: "#27272a", fontSize: "12px", color: "#fff" }}
+                />
+                <Area type="monotone" dataKey="price" stroke="#10b981" fillOpacity={1} fill="url(#colorPrice)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </ChartContainer>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        {/* Order Book Depth */}
         <div className="rounded-lg border border-zinc-800 overflow-hidden bg-zinc-950/40">
           <div className="px-4 py-3 border-b border-zinc-800 bg-zinc-900/40 flex items-center justify-between">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Order Book ({symbol})</h2>
@@ -144,7 +218,6 @@ export default function CryptoDashboard() {
           </div>
         </div>
 
-        {/* Recent Trades */}
         <div className="rounded-lg border border-zinc-800 overflow-hidden bg-zinc-950/40">
           <div className="px-4 py-3 border-b border-zinc-800 bg-zinc-900/40 flex items-center justify-between">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Recent Trades ({symbol})</h2>
@@ -166,7 +239,6 @@ export default function CryptoDashboard() {
           </div>
         </div>
 
-        {/* Top Market Gainers */}
         <div className="rounded-lg border border-zinc-800 overflow-hidden bg-zinc-950/40">
           <div className="px-4 py-3 border-b border-zinc-800 bg-zinc-900/40 flex items-center justify-between">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Top Market Gainers</h2>
@@ -186,3 +258,4 @@ export default function CryptoDashboard() {
     </div>
   );
 }
+
