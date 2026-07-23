@@ -1,16 +1,22 @@
-/**
- * Reminders API — built on the shared createResourceApi factory.
- */
 import { API_ENDPOINTS } from '@/config/api-endpoints';
 import { createResourceApi } from '@/shared/utils/resourceApi';
 
 export interface Reminder {
   id: number;
-  userId: number;
   title: string;
-  message: string;
-  scheduledAt: string;
-  status: 'pending' | 'completed' | 'snoozed' | 'failed';
+  description?: string;
+  dueAt: string;
+  scheduledAt?: string;
+  recurrence?: string;
+  priority?: 'LOW' | 'MEDIUM' | 'HIGH';
+  contactPreference?: 'CALL' | 'SMS' | 'SLACK';
+  assigneeName?: string;
+  assigneeContact?: string;
+  status: 'PENDING' | 'COMPLETED' | 'SNOOZED' | 'FAILED' | 'pending' | 'completed' | 'snoozed' | 'failed';
+  snoozeCount?: number;
+  createdAt?: string;
+  userId?: number;
+  message?: string;
   channel?: 'CALL' | 'SMS' | 'SLACK';
 }
 

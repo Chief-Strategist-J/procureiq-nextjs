@@ -79,13 +79,19 @@ export default function CryptoDashboard() {
     const message = `Price alert set for ${pageState.symbol} at ${formattedTargetPrice} on ${new Date(pageState.dueAt).toLocaleString()}`;
 
     try {
+      const isoDueAt = new Date(pageState.dueAt).toISOString();
       await RemindersApi.create({
-        userId: 1,
         title,
-        message,
-        scheduledAt: new Date(pageState.dueAt).toISOString(),
-        status: 'pending',
-        channel: (pageState.channel as 'CALL' | 'SMS' | 'SLACK') || 'SMS',
+        description: message,
+        dueAt: isoDueAt,
+        scheduledAt: isoDueAt,
+        recurrence: "NONE",
+        priority: "HIGH",
+        contactPreference: (pageState.channel as 'CALL' | 'SMS' | 'SLACK') || 'SMS',
+        assigneeName: "Crypto Watcher",
+        assigneeContact: pageState.channel === "SMS" ? "+15550199" : "#crypto-alerts",
+        status: "PENDING",
+        snoozeCount: 0,
       });
 
       await NotificationsApi.dispatch(
