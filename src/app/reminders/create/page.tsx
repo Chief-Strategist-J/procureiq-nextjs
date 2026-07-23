@@ -130,7 +130,7 @@ export default function CreateReminderPage() {
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="space-y-2">
               <label className="text-[10px] text-zinc-400 uppercase tracking-widest block font-bold">Due Time</label>
               <input 
@@ -152,6 +152,23 @@ export default function CreateReminderPage() {
                 <option value="LOW">Low</option>
                 <option value="MEDIUM">Medium</option>
                 <option value="HIGH">High</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] text-zinc-400 uppercase tracking-widest block font-bold">Target Currency</label>
+              <select
+                value={state.remindersUi?.formFields?.currency || "USD"}
+                onChange={e => state.dispatch(remindersActions.setFormField({ field: "currency", value: e.target.value }))}
+                className="w-full rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3.5 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700"
+              >
+                <option value="USD">USD ($ - US Dollar)</option>
+                <option value="EUR">EUR (€ - Euro)</option>
+                <option value="GBP">GBP (£ - British Pound)</option>
+                <option value="JPY">JPY (¥ - Japanese Yen)</option>
+                <option value="INR">INR (₹ - Indian Rupee)</option>
+                <option value="BTC">BTC (₿ - Bitcoin)</option>
+                <option value="ETH">ETH (Ξ - Ethereum)</option>
               </select>
             </div>
           </div>

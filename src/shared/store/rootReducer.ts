@@ -11,6 +11,8 @@ import sessionsReducer from '@/features/sessions/sessionsSlice';
 import workOrdersReducer from '@/features/workOrders/workOrdersSlice';
 import signupReducer from '@/features/signup/signupSlice';
 
+import cryptoReducer from '@/features/crypto/cryptoSlice';
+
 export const rootReducer = combineReducers({
   campaigns: campaignsReducer,
   notifications: notificationsReducer,
@@ -23,6 +25,7 @@ export const rootReducer = combineReducers({
   sessions: sessionsReducer,
   workOrders: workOrdersReducer,
   signup: signupReducer,
+  crypto: cryptoReducer,
 });
 
 export type RootState = ReturnType<typeof rootReducer>;

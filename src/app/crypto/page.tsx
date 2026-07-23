@@ -1,13 +1,15 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { CryptoService, CryptoDetailsData, CryptoMoversData, CryptoOrderbook, CryptoTradesData, CryptoKlinesData } from "@/features/crypto";
-import { Activity, TrendingUp, TrendingDown, RefreshCw, BarChart2 } from "lucide-react";
+import { useCryptoPageState } from "@/features/crypto/CryptoPageState";
+import { Activity, TrendingUp, TrendingDown, RefreshCw, BarChart2, Bell, CheckCircle2, X } from "lucide-react";
 import { ChartContainer } from "@/components/ui/chart";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 export default function CryptoDashboard() {
-  const [symbol, setSymbol] = useState("BTCUSDT");
+  const pageState = useCryptoPageState();
+  
   const [symbols, setSymbols] = useState<string[]>(["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT"]);
   const [details, setDetails] = useState<CryptoDetailsData | null>(null);
   const [movers, setMovers] = useState<CryptoMoversData | null>(null);
@@ -17,17 +19,17 @@ export default function CryptoDashboard() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const [syms, det, mov, ob, tr, kl] = await Promise.all([
         CryptoService.getSymbols().catch(() => ["BTCUSDT", "ETHUSDT", "BNBUSDT"]),
-        CryptoService.getDetails(symbol),
+        CryptoService.getDetails(pageState.symbol),
         CryptoService.getMovers(),
-        CryptoService.getOrderbook(symbol, 5),
-        CryptoService.getTrades(symbol, 5),
-        CryptoService.getKlines(symbol, "1d", 10),
+        CryptoService.getOrderbook(pageState.symbol, 5),
+        CryptoService.getTrades(pageState.symbol, 5),
+        CryptoService.getKlines(pageState.symbol, "1d", 10),
       ]);
       if (syms && syms.length > 0) setSymbols(syms.slice(0, 10));
       setDetails(det);
@@ -40,18 +42,16 @@ export default function CryptoDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [pageState.symbol]);
 
   useEffect(() => {
     fetchData();
-  }, [symbol]);
+  }, [fetchData]);
 
   const chartData = klines?.klines.map((k) => ({
     time: new Date(k.openTime).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
     price: k.close,
   })) || [];
-
-  const [currency, setCurrency] = useState<string>("USD");
 
   const CURRENCY_RATES: Record<string, { symbol: string; rate: number }> = {
     USD: { symbol: "$", rate: 1.0 },
@@ -63,13 +63,21 @@ export default function CryptoDashboard() {
 
   const formatPrice = (val?: number) => {
     if (val === undefined || val === null) return "0";
-    const curr = CURRENCY_RATES[currency] || CURRENCY_RATES["USD"];
+    const curr = CURRENCY_RATES[pageState.currency] || CURRENCY_RATES["USD"];
     const converted = val * curr.rate;
     return `${curr.symbol}${converted.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
   };
 
+  const handleSetReminder = (e: React.FormEvent) => {
+    e.preventDefault();
+    pageState.setReminderSuccess(`Price alert set for ${pageState.symbol} at ${formatPrice(Number(pageState.targetPrice))} on ${new Date(pageState.dueAt).toLocaleString()}`);
+    setTimeout(() => {
+      pageState.closeModal();
+    }, 2000);
+  };
+
   return (
-    <div className="min-h-screen bg-black text-white p-6 font-sans">
+    <div className="min-h-screen bg-black text-white p-6 font-sans relative">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-light tracking-tight flex items-center gap-2">
@@ -84,8 +92,8 @@ export default function CryptoDashboard() {
           <div className="flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 rounded-md px-2 py-1">
             <span className="text-[11px] text-zinc-500 font-medium uppercase">Display Currency</span>
             <select
-              value={currency}
-              onChange={(e) => setCurrency(e.target.value)}
+              value={pageState.currency}
+              onChange={(e) => pageState.setCurrency(e.target.value)}
               className="bg-transparent text-xs text-white outline-none cursor-pointer"
             >
               {Object.keys(CURRENCY_RATES).map((c) => (
@@ -97,8 +105,8 @@ export default function CryptoDashboard() {
           </div>
 
           <select
-            value={symbol}
-            onChange={(e) => setSymbol(e.target.value)}
+            value={pageState.symbol}
+            onChange={(e) => pageState.setSymbol(e.target.value)}
             className="bg-zinc-900 border border-zinc-800 text-xs text-white rounded-md px-3 py-2 outline-none focus:border-zinc-600"
           >
             {symbols.map((s) => (
@@ -107,6 +115,12 @@ export default function CryptoDashboard() {
               </option>
             ))}
           </select>
+          <button
+            onClick={pageState.openModal}
+            className="flex items-center gap-1.5 bg-emerald-600 text-black text-xs font-semibold px-3 py-2 rounded-md hover:bg-emerald-500 transition-colors shadow-[0_0_12px_rgba(16,185,129,0.2)]"
+          >
+            <Bell className="h-3.5 w-3.5" /> Set Price Alert
+          </button>
           <button
             onClick={fetchData}
             className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 text-xs px-3 py-2 rounded-md hover:bg-zinc-800 transition-colors"
@@ -129,7 +143,7 @@ export default function CryptoDashboard() {
             <div className="text-xl font-medium text-emerald-400 mt-1">{details.symbol}</div>
           </div>
           <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
-            <span className="text-xs text-zinc-500">Current Price ({currency})</span>
+            <span className="text-xs text-zinc-500">Current Price ({pageState.currency})</span>
             <div className="text-xl font-medium mt-1">{formatPrice(details.currentPrice)}</div>
           </div>
           <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
@@ -144,7 +158,7 @@ export default function CryptoDashboard() {
             </div>
           </div>
           <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
-            <span className="text-xs text-zinc-500">24h High / Low ({currency})</span>
+            <span className="text-xs text-zinc-500">24h High / Low ({pageState.currency})</span>
             <div className="text-sm font-medium mt-1">
               {formatPrice(details.high24h)} / {formatPrice(details.low24h)}
             </div>
@@ -159,7 +173,7 @@ export default function CryptoDashboard() {
       {chartData.length > 0 && (
         <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-4 mb-8">
           <div className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-4">
-            Price Movement ({symbol})
+            Price Movement ({pageState.symbol})
           </div>
           <ChartContainer
             config={{
@@ -193,7 +207,7 @@ export default function CryptoDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <div className="rounded-lg border border-zinc-800 overflow-hidden bg-zinc-950/40">
           <div className="px-4 py-3 border-b border-zinc-800 bg-zinc-900/40 flex items-center justify-between">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Order Book ({symbol})</h2>
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Order Book ({pageState.symbol})</h2>
             <Activity className="h-3.5 w-3.5 text-zinc-500" />
           </div>
           <div className="p-4 space-y-4 text-xs font-mono">
@@ -220,7 +234,7 @@ export default function CryptoDashboard() {
 
         <div className="rounded-lg border border-zinc-800 overflow-hidden bg-zinc-950/40">
           <div className="px-4 py-3 border-b border-zinc-800 bg-zinc-900/40 flex items-center justify-between">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Recent Trades ({symbol})</h2>
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Recent Trades ({pageState.symbol})</h2>
             <Activity className="h-3.5 w-3.5 text-zinc-500" />
           </div>
           <div className="p-4 text-xs font-mono">
@@ -255,7 +269,93 @@ export default function CryptoDashboard() {
           </div>
         </div>
       </div>
+
+      {pageState.isReminderModalOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-zinc-950 border border-zinc-800 rounded-xl max-w-md w-full p-6 shadow-2xl space-y-6">
+            <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
+              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                <Bell className="h-4 w-4 text-emerald-400" /> Set Currency Price Alert
+              </h3>
+              <button onClick={pageState.closeModal} className="text-zinc-500 hover:text-white">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {pageState.reminderSuccess ? (
+              <div className="p-4 bg-emerald-950/30 border border-emerald-500/30 rounded-lg text-emerald-400 text-xs flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                <span>{pageState.reminderSuccess}</span>
+              </div>
+            ) : (
+              <form onSubmit={handleSetReminder} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] text-zinc-400 uppercase font-semibold">Asset Symbol</label>
+                  <input
+                    type="text"
+                    value={pageState.symbol}
+                    disabled
+                    className="w-full bg-zinc-900 border border-zinc-800 text-xs text-zinc-400 rounded-md p-2.5"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] text-zinc-400 uppercase font-semibold">Target Price ({pageState.currency})</label>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder={`Target price in ${pageState.currency}`}
+                    value={pageState.targetPrice}
+                    onChange={(e) => pageState.setTargetPrice(e.target.value)}
+                    required
+                    className="w-full bg-zinc-900 border border-zinc-800 text-xs text-white rounded-md p-2.5 focus:border-zinc-600 outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] text-zinc-400 uppercase font-semibold">Alert Trigger Date & Time</label>
+                  <input
+                    type="datetime-local"
+                    value={pageState.dueAt}
+                    onChange={(e) => pageState.setDueAt(e.target.value)}
+                    required
+                    className="w-full bg-zinc-900 border border-zinc-800 text-xs text-white rounded-md p-2.5 focus:border-zinc-600 outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] text-zinc-400 uppercase font-semibold">Dispatch Channel</label>
+                  <select
+                    value={pageState.channel}
+                    onChange={(e) => pageState.setChannel(e.target.value)}
+                    className="w-full bg-zinc-900 border border-zinc-800 text-xs text-white rounded-md p-2.5 focus:border-zinc-600 outline-none"
+                  >
+                    <option value="SMS">SMS Text Message</option>
+                    <option value="CALL">AI Voice Call</option>
+                    <option value="SLACK">Slack Bot Alert</option>
+                  </select>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-zinc-900">
+                  <button
+                    type="button"
+                    onClick={pageState.closeModal}
+                    className="px-4 py-2 bg-zinc-900 border border-zinc-800 text-xs text-zinc-300 rounded-md hover:bg-zinc-800"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-emerald-600 text-black text-xs font-semibold rounded-md hover:bg-emerald-500"
+                  >
+                    Set Price Alert
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
