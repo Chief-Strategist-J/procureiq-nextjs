@@ -5,7 +5,7 @@ import { API_ENDPOINTS } from '@/config/api-endpoints';
 import { AppConfig } from '@/config/app-config';
 import { createResourceApi } from '@/shared/utils/resourceApi';
 import { request } from '@/shared/utils/apiClient';
-import { fetchWithFallback } from '@/shared/utils/fallbackClient';
+import { fetchWithFallback, mutateWithFallback } from '@/shared/utils/fallbackClient';
 
 const BASE = AppConfig.apiUrl;
 
@@ -67,9 +67,24 @@ export const NotificationsApi = {
     ),
 
   dispatch: (userId: number, title: string, message: string, channels: string[]) =>
-    request<void>(
+    mutateWithFallback<NotificationItem>(
       `${BASE}${API_ENDPOINTS.notifications.create}`,
-      { method: 'POST', headers: { 'X-User-Id': '1' }, body: JSON.stringify({ userId, title, message, channels, payload: {} }) },
-      'dispatch notification'
+      { method: 'POST', headers: { 'X-User-Id': String(userId) }, body: JSON.stringify({ userId, title, message, channels, payload: {} }) },
+      'piq_notifications',
+      'dispatch notification',
+      (list) => {
+        const newNotif: NotificationItem = {
+          id: Math.floor(Math.random() * 1000000),
+          userId,
+          typeCode: 'SYSTEM_ALERT',
+          sourceService: 'frontend-service',
+          title,
+          message,
+          status: 'UNREAD',
+          channel: channels[0] || 'SMS',
+          createdAt: new Date().toISOString(),
+        };
+        return { updatedList: [newNotif, ...(list || [])], returnVal: newNotif };
+      }
     ),
 };
