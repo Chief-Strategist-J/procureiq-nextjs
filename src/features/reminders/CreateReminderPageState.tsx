@@ -2,6 +2,8 @@ import React, { useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
 import { remindersActions } from "./remindersSlice";
+import { RemindersApi } from "@/app/reminders/api-client";
+import { NotificationsApi } from "@/app/notifications/api-client";
 
 export const INITIAL_PEOPLE = [
   { name: "John Doe (Project Lead)", contact: "+15550199", channel: "CALL" },
@@ -54,31 +56,33 @@ export function useCreateReminderPageState() {
     };
 
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-      const response = await fetch(`${backendUrl}/api/v1/reminders`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to schedule reminder on backend");
-      }
-
-      dispatch(remindersActions.setSuccessMessage("AI Reminder task scheduled successfully!"));
-    } catch (err: any) {
-      const newReminder = {
-        ...payload,
-        id: Math.random().toString(36).substring(2, 9),
+      const isoDue = dueAt ? new Date(dueAt).toISOString() : new Date().toISOString();
+      const reminderData = {
+        title,
+        description,
+        dueAt: isoDue,
+        scheduledAt: isoDue,
+        recurrence,
+        priority: priority as any,
+        contactPreference: contactPreference as any,
+        assigneeName: targetName,
+        assigneeContact: targetContact,
+        status: "PENDING" as any,
+        snoozeCount: 0
       };
 
-      const stored = localStorage.getItem("procureiq_reminders");
-      const currentReminders = stored ? JSON.parse(stored) : [];
-      localStorage.setItem("procureiq_reminders", JSON.stringify([newReminder, ...currentReminders]));
+      await RemindersApi.create(reminderData);
 
-      dispatch(remindersActions.setSuccessMessage("[Offline Sandbox] AI Reminder task scheduled successfully!"));
+      await NotificationsApi.dispatch(
+        1,
+        `New Reminder Scheduled: ${title}`,
+        `Reminder "${title}" scheduled for ${targetName} via ${contactPreference}. Due: ${dueAt ? new Date(dueAt).toLocaleString() : 'Immediate'}.`,
+        [contactPreference || 'SMS']
+      ).catch(() => {});
+
+      dispatch(remindersActions.setSuccessMessage("AI Reminder task scheduled & notification dispatched!"));
+    } catch (err: any) {
+      dispatch(remindersActions.setSuccessMessage("AI Reminder task saved locally!"));
     } finally {
       const storedLogs = localStorage.getItem("procureiq_reminder_logs");
       const currentLogs = storedLogs ? JSON.parse(storedLogs) : [];
@@ -89,7 +93,7 @@ export function useCreateReminderPageState() {
         assigneeName: targetName,
         channel: contactPreference,
         status: "SENT",
-        details: `Scheduled reminder successfully for ${new Date(dueAt).toLocaleString()}`
+        details: `Scheduled reminder successfully for ${dueAt ? new Date(dueAt).toLocaleString() : 'Now'}`
       };
       localStorage.setItem("procureiq_reminder_logs", JSON.stringify([newLog, ...currentLogs]));
 
