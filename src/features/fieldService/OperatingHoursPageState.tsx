@@ -23,19 +23,19 @@ export function useOperatingHoursPageState() {
     dispatch(operatingHoursSlice.actions.fetchRequest(undefined));
   }, [dispatch]);
 
-  const openCreateModal = useCallback(() => {
-    dispatch(operatingHoursSlice.actions.openModal({
-      mode: "create",
-      initialFields: { name: "", timezone: "America/New_York" }
-    }));
-  }, [dispatch]);
-
-  const openEditModal = useCallback((item: OperatingHours) => {
-    dispatch(operatingHoursSlice.actions.openModal({
-      mode: "edit",
-      editingId: item.id,
-      initialFields: { name: item.name, timezone: item.timezone }
-    }));
+  const openModal = useCallback((item?: OperatingHours) => {
+    if (item) {
+      dispatch(operatingHoursSlice.actions.openModal({
+        mode: "edit",
+        editingId: item.id,
+        initialFields: { name: item.name, timezone: item.timezone }
+      }));
+    } else {
+      dispatch(operatingHoursSlice.actions.openModal({
+        mode: "create",
+        initialFields: { name: "", timezone: "America/New_York" }
+      }));
+    }
   }, [dispatch]);
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
@@ -89,8 +89,7 @@ export function useOperatingHoursPageState() {
     success,
     saving,
     fetchItems,
-    openCreateModal,
-    openEditModal,
+    openModal,
     handleSubmit,
     handleDelete,
     filteredItems,

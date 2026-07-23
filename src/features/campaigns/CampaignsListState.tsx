@@ -20,19 +20,19 @@ export function useCampaignListPageState() {
     dispatch(campaignsActions.fetchRequest());
   }, [dispatch]);
 
-  const openCreateModal = useCallback(() => {
-    dispatch(campaignsActions.openModal({
-      mode: "create",
-      initialFields: { orgId: "1", name: "", status: "draft" }
-    }));
-  }, [dispatch]);
-
-  const openEditModal = useCallback((item: Campaign) => {
-    dispatch(campaignsActions.openModal({
-      mode: "edit",
-      editingId: item.id,
-      initialFields: { orgId: item.orgId.toString(), name: item.name, status: item.status }
-    }));
+  const openModal = useCallback((item?: Campaign) => {
+    if (item) {
+      dispatch(campaignsActions.openModal({
+        mode: "edit",
+        editingId: item.id,
+        initialFields: { orgId: item.orgId.toString(), name: item.name, status: item.status }
+      }));
+    } else {
+      dispatch(campaignsActions.openModal({
+        mode: "create",
+        initialFields: { orgId: "1", name: "", status: "draft" }
+      }));
+    }
   }, [dispatch]);
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
@@ -49,7 +49,7 @@ export function useCampaignListPageState() {
     } else if (modalMode === "edit" && editingId !== null) {
       dispatch(campaignsActions.updateRequest({ id: editingId, data: payload }));
     }
-  }, [dispatch, name, orgId, modalMode, editingId]);
+  }, [dispatch, name, orgId, status, modalMode, editingId]);
 
   const handleDelete = useCallback((id: number) => {
     if (!confirm("Are you sure you want to delete this campaign?")) return;
@@ -65,8 +65,8 @@ export function useCampaignListPageState() {
   }, [items, searchQuery]);
 
   useEffect(() => {
-    dispatch(campaignsActions.fetchRequest());
-  }, [dispatch]);
+    fetchItems();
+  }, [fetchItems]);
 
   return {
     router,
@@ -83,8 +83,7 @@ export function useCampaignListPageState() {
     modalMode,
     searchQuery,
     fetchItems,
-    openCreateModal,
-    openEditModal,
+    openModal,
     handleSubmit,
     handleDelete,
     filteredItems,

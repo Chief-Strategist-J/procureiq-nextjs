@@ -41,7 +41,7 @@ export default function WorkflowsPage() {
             Refresh
           </button>
           <button
-            onClick={state.openCreateModal}
+            onClick={state.openModal}
             className="flex items-center gap-1.5 rounded-lg bg-indigo-650 hover:bg-indigo-650/80 px-4 py-2 text-xs font-semibold shadow-md transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
           >
             <Plus className="h-4 w-4" />
@@ -142,7 +142,7 @@ export default function WorkflowsPage() {
                           <Play className="h-3.5 w-3.5 text-emerald-400" />
                         </button>
                         <button
-                          onClick={() => state.openEditModal(item)}
+                          onClick={() => state.openModal(item)}
                           className="p-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-zinc-950/60 hover:text-white transition-all text-zinc-400 cursor-pointer"
                         >
                           <Edit2 className="h-3.5 w-3.5" />

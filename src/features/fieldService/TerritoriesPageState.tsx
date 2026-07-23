@@ -25,26 +25,27 @@ export function useTerritoriesPageState() {
     dispatch(operatingHoursSlice.actions.fetchRequest(undefined));
   }, [dispatch]);
 
-  const openCreateModal = useCallback(() => {
-    dispatch(territoriesSlice.actions.openModal({
-      mode: "create",
-      initialFields: { name: "", operatingHoursId: "" }
-    }));
-  }, [dispatch]);
-
-  const openEditModal = useCallback((item: ServiceTerritory) => {
-    dispatch(territoriesSlice.actions.openModal({
-      mode: "edit",
-      editingId: item.id,
-      initialFields: { name: item.name, operatingHoursId: item.operatingHoursId ? item.operatingHoursId.toString() : "" }
-    }));
+  const openModal = useCallback((item?: ServiceTerritory) => {
+    if (item) {
+      dispatch(territoriesSlice.actions.openModal({
+        mode: "edit",
+        editingId: item.id,
+        initialFields: { name: item.name, operatingHoursId: item.operatingHoursId ? item.operatingHoursId.toString() : "" }
+      }));
+    } else {
+      dispatch(territoriesSlice.actions.openModal({
+        mode: "create",
+        initialFields: { name: "", operatingHoursId: "" }
+      }));
+    }
   }, [dispatch]);
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
-    const opId = operatingHoursId ? parseInt(operatingHoursId) : undefined;
+    const parsedOpId = parseInt(operatingHoursId, 10);
+    const opId = operatingHoursId && !Number.isNaN(parsedOpId) ? parsedOpId : undefined;
 
     if (modalMode === "create") {
       dispatch(territoriesSlice.actions.createRequest({ name, operatingHoursId: opId }));
@@ -101,8 +102,7 @@ export function useTerritoriesPageState() {
     success,
     saving,
     fetchItems,
-    openCreateModal,
-    openEditModal,
+    openModal,
     handleSubmit,
     handleDelete,
     getOperatingHoursName,

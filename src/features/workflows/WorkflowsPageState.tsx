@@ -20,21 +20,23 @@ export function useWorkflowsPageState() {
   const { searchQuery = "", isModalOpen = false, modalMode = "create", editingId = null, formFields = {} } = workflowsUi;
   const { orgId = "1", name = "", status = "active", isRunsModalOpen = false, runsWorkflow = null } = formFields;
 
-  const query = searchQuery;
-
-  const openCreateModal = useCallback(() => {
-    dispatch(workflowsActions.openModal({
-      mode: "create",
-      initialFields: { orgId: "1", name: "", status: "active" }
-    }));
+  const fetchItems = useCallback(() => {
+    dispatch(workflowsActions.fetchRequest());
   }, [dispatch]);
 
-  const openEditModal = useCallback((item: Workflow) => {
-    dispatch(workflowsActions.openModal({
-      mode: "edit",
-      editingId: item.id,
-      initialFields: { orgId: "1", name: item.name, status: item.status }
-    }));
+  const openModal = useCallback((item?: Workflow) => {
+    if (item) {
+      dispatch(workflowsActions.openModal({
+        mode: "edit",
+        editingId: item.id,
+        initialFields: { orgId: "1", name: item.name, status: item.status }
+      }));
+    } else {
+      dispatch(workflowsActions.openModal({
+        mode: "create",
+        initialFields: { orgId: "1", name: "", status: "active" }
+      }));
+    }
   }, [dispatch]);
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
@@ -73,8 +75,8 @@ export function useWorkflowsPageState() {
   }, [items, searchQuery]);
 
   useEffect(() => {
-    dispatch(workflowsActions.fetchRequest());
-  }, [dispatch]);
+    fetchItems();
+  }, [fetchItems]);
 
   return {
     dispatch,
@@ -96,9 +98,8 @@ export function useWorkflowsPageState() {
     status,
     isRunsModalOpen,
     runsWorkflow,
-    query,
-    openCreateModal,
-    openEditModal,
+    fetchItems,
+    openModal,
     handleSubmit,
     handleDelete,
     openRunsModal,

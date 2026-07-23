@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
 import { operatingHoursSlice, territoriesSlice, resourcesSlice, appointmentsSlice } from "./fieldServiceSlice";
@@ -55,12 +55,16 @@ export function useFieldServiceDashboardState() {
     },
   ], [stats]);
 
-  useEffect(() => {
+  const fetchAll = useCallback(() => {
     dispatch(operatingHoursSlice.actions.fetchRequest(undefined));
     dispatch(territoriesSlice.actions.fetchRequest(undefined));
     dispatch(resourcesSlice.actions.fetchRequest(undefined));
     dispatch(appointmentsSlice.actions.fetchRequest(undefined));
   }, [dispatch]);
+
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
 
   return {
     router,

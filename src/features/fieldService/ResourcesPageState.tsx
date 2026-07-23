@@ -23,19 +23,19 @@ export function useServiceResourcesPageState() {
     dispatch(resourcesSlice.actions.fetchRequest(undefined));
   }, [dispatch]);
 
-  const openCreateModal = useCallback(() => {
-    dispatch(resourcesSlice.actions.openModal({
-      mode: "create",
-      initialFields: { name: "", resourceType: "T", description: "" }
-    }));
-  }, [dispatch]);
-
-  const openEditModal = useCallback((item: ServiceResource) => {
-    dispatch(resourcesSlice.actions.openModal({
-      mode: "edit",
-      editingId: item.id,
-      initialFields: { name: item.name, resourceType: item.resourceType, description: item.description || "" }
-    }));
+  const openModal = useCallback((item?: ServiceResource) => {
+    if (item) {
+      dispatch(resourcesSlice.actions.openModal({
+        mode: "edit",
+        editingId: item.id,
+        initialFields: { name: item.name, resourceType: item.resourceType, description: item.description || "" }
+      }));
+    } else {
+      dispatch(resourcesSlice.actions.openModal({
+        mode: "create",
+        initialFields: { name: "", resourceType: "T", description: "" }
+      }));
+    }
   }, [dispatch]);
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
@@ -91,8 +91,7 @@ export function useServiceResourcesPageState() {
     success,
     saving,
     fetchItems,
-    openCreateModal,
-    openEditModal,
+    openModal,
     handleSubmit,
     handleDelete,
     filteredItems,

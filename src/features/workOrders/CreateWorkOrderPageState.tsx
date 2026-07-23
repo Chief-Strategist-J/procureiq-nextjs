@@ -2,6 +2,7 @@ import React, { useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
 import { workOrdersActions } from "./workOrdersSlice";
+import { WorkOrder } from "@/app/work-orders/api-client";
 
 export function useCreateWorkOrderPageState() {
   const router = useRouter();
@@ -19,28 +20,21 @@ export function useCreateWorkOrderPageState() {
   const handleCreateWorkOrder = useCallback((e: React.FormEvent) => {
     e.preventDefault();
 
-    const requestPayload: Record<string, any> = {
+    const parsedCaseId = parseInt(caseId, 10);
+    const parsedContactId = parseInt(contactId, 10);
+    const parsedAssetId = parseInt(assetId, 10);
+    const parsedWorkTypeId = parseInt(workTypeId, 10);
+
+    const payload: Omit<WorkOrder, "id"> = {
       status,
       priority,
+      ...(caseId && !Number.isNaN(parsedCaseId) ? { caseId: parsedCaseId } : {}),
+      ...(contactId && !Number.isNaN(parsedContactId) ? { contactId: parsedContactId } : {}),
+      ...(assetId && !Number.isNaN(parsedAssetId) ? { assetId: parsedAssetId } : {}),
+      ...(workTypeId && !Number.isNaN(parsedWorkTypeId) ? { workTypeId: parsedWorkTypeId } : {}),
     };
-    if (caseId) {
-      const parsed = parseInt(caseId, 10);
-      if (!Number.isNaN(parsed)) requestPayload.caseId = parsed;
-    }
-    if (contactId) {
-      const parsed = parseInt(contactId, 10);
-      if (!Number.isNaN(parsed)) requestPayload.contactId = parsed;
-    }
-    if (assetId) {
-      const parsed = parseInt(assetId, 10);
-      if (!Number.isNaN(parsed)) requestPayload.assetId = parsed;
-    }
-    if (workTypeId) {
-      const parsed = parseInt(workTypeId, 10);
-      if (!Number.isNaN(parsed)) requestPayload.workTypeId = parsed;
-    }
 
-    dispatch(workOrdersActions.createRequest(requestPayload as any));
+    dispatch(workOrdersActions.createRequest(payload));
   }, [dispatch, status, priority, caseId, contactId, assetId, workTypeId]);
 
   useEffect(() => {

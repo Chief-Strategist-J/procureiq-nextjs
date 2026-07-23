@@ -20,26 +20,30 @@ export function useJobsPageState() {
   const { searchQuery = "", isModalOpen = false, modalMode = "create", editingId = null, formFields = {} } = jobsUi;
   const { orgId = "1", categoryId = "", name = "", status = "active", configText = "{}", configError = "", isRunsModalOpen = false, runsJob = null } = formFields;
 
-  const openCreateModal = useCallback(() => {
-    dispatch(jobsActions.openModal({
-      mode: "create",
-      initialFields: { orgId: "1", categoryId: "", name: "", status: "active", configText: "{}", configError: "" }
-    }));
+  const fetchItems = useCallback(() => {
+    dispatch(jobsActions.fetchJobsRequest());
   }, [dispatch]);
 
-  const openEditModal = useCallback((item: Job) => {
-    dispatch(jobsActions.openModal({
-      mode: "edit",
-      editingId: item.id,
-      initialFields: {
-        orgId: item.orgId.toString(),
-        categoryId: item.categoryId?.toString() ?? "",
-        name: item.name,
-        status: item.status,
-        configText: JSON.stringify(item.config ?? {}, null, 2),
-        configError: ""
-      }
-    }));
+  const openModal = useCallback((item?: Job) => {
+    if (item) {
+      dispatch(jobsActions.openModal({
+        mode: "edit",
+        editingId: item.id,
+        initialFields: {
+          orgId: item.orgId.toString(),
+          categoryId: item.categoryId?.toString() ?? "",
+          name: item.name,
+          status: item.status,
+          configText: JSON.stringify(item.config ?? {}, null, 2),
+          configError: ""
+        }
+      }));
+    } else {
+      dispatch(jobsActions.openModal({
+        mode: "create",
+        initialFields: { orgId: "1", categoryId: "", name: "", status: "active", configText: "{}", configError: "" }
+      }));
+    }
   }, [dispatch]);
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
@@ -57,19 +61,22 @@ export function useJobsPageState() {
     const parsedOrgId = parseInt(orgId, 10);
     const finalOrgId = Number.isNaN(parsedOrgId) ? 1 : parsedOrgId;
 
-    const payload: Omit<Job, "id"> = { orgId: finalOrgId, name, status, config };
-    
     const parsedCategoryId = parseInt(categoryId, 10);
-    if (!Number.isNaN(parsedCategoryId)) {
-      (payload as any).categoryId = parsedCategoryId;
-    }
+
+    const payload: Omit<Job, "id"> & { categoryId?: number } = {
+      orgId: finalOrgId,
+      name,
+      status,
+      config,
+      ...(!Number.isNaN(parsedCategoryId) ? { categoryId: parsedCategoryId } : {}),
+    };
 
     if (modalMode === "create") {
       dispatch(jobsActions.createJobRequest(payload));
     } else if (modalMode === "edit" && editingId !== null) {
       dispatch(jobsActions.updateJobRequest({ id: editingId, data: payload }));
     }
-  }, [dispatch, name, configText, orgId, categoryId, modalMode, editingId]);
+  }, [dispatch, name, configText, orgId, categoryId, status, modalMode, editingId]);
 
   const handleDelete = useCallback((id: number) => {
     if (!confirm("Are you sure you want to delete this job?")) return;
@@ -95,8 +102,8 @@ export function useJobsPageState() {
   }, [items, searchQuery]);
 
   useEffect(() => {
-    dispatch(jobsActions.fetchJobsRequest());
-  }, [dispatch]);
+    fetchItems();
+  }, [fetchItems]);
 
   return {
     dispatch,
@@ -121,8 +128,8 @@ export function useJobsPageState() {
     configError,
     isRunsModalOpen,
     runsJob,
-    openCreateModal,
-    openEditModal,
+    fetchItems,
+    openModal,
     handleSubmit,
     handleDelete,
     openRunsModal,

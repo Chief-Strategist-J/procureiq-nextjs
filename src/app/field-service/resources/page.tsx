@@ -46,7 +46,7 @@ export default function ServiceResourcesPage() {
           </button>
 
           <button
-            onClick={state.openCreateModal}
+            onClick={state.openModal}
             className="flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-xs font-semibold text-black hover:bg-zinc-100 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 cursor-pointer shadow-[0_4px_20px_rgba(255,255,255,0.08)]"
           >
             <Plus className="h-4 w-4" />
@@ -122,7 +122,7 @@ export default function ServiceResourcesPage() {
                     <td className="px-5 py-4 text-right pr-6">
                       <div className="flex items-center justify-end gap-2.5">
                         <button
-                          onClick={() => state.openEditModal(item)}
+                          onClick={() => state.openModal(item)}
                           className="p-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-zinc-950/60 hover:text-white transition-all text-zinc-400 cursor-pointer"
                         >
                           <Edit2 className="h-3.5 w-3.5" />

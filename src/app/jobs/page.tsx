@@ -44,7 +44,7 @@ export default function JobsPage() {
             Refresh
           </button>
           <button
-            onClick={state.openCreateModal}
+            onClick={state.openModal}
             className="flex items-center gap-1.5 rounded-lg bg-indigo-650 hover:bg-indigo-600 active:scale-[0.98] px-4 py-2 text-xs font-semibold shadow-[0_0_15px_rgba(79,70,229,0.25)] transition-all cursor-pointer"
           >
             <Plus className="h-4 w-4" />
@@ -147,7 +147,7 @@ export default function JobsPage() {
                           <Play className="h-3.5 w-3.5 text-emerald-400" />
                         </button>
                         <button
-                          onClick={() => state.openEditModal(item)}
+                          onClick={() => state.openModal(item)}
                           className="p-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-zinc-950/60 hover:text-white transition-all text-zinc-400 cursor-pointer"
                         >
                           <Edit2 className="h-3.5 w-3.5" />
