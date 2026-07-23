@@ -9,6 +9,8 @@ import { Activity, TrendingUp, TrendingDown, RefreshCw, BarChart2, Bell, CheckCi
 import { ChartContainer } from "@/components/ui/chart";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
+import { Button } from "@/components/ui/button";
+
 export default function CryptoDashboard() {
   const pageState = useCryptoPageState();
   
@@ -164,18 +166,19 @@ export default function CryptoDashboard() {
               </option>
             ))}
           </select>
-          <button
+          <Button
             onClick={pageState.openModal}
-            className="flex items-center gap-1.5 bg-emerald-600 text-black text-xs font-semibold px-3 py-2 rounded-md hover:bg-emerald-500 transition-colors shadow-[0_0_12px_rgba(16,185,129,0.2)]"
+            className="bg-white text-black hover:bg-zinc-150 font-semibold cursor-pointer shadow-[0_4px_20px_rgba(255,255,255,0.08)]"
           >
             <Bell className="h-3.5 w-3.5" /> Set Price Alert
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={fetchData}
-            className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 text-xs px-3 py-2 rounded-md hover:bg-zinc-800 transition-colors"
+            variant="outline"
+            className="border-zinc-800 bg-zinc-950/60 text-zinc-400 hover:text-white hover:bg-zinc-900 cursor-pointer"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -386,19 +389,20 @@ export default function CryptoDashboard() {
                 </div>
 
                 <div className="flex justify-end gap-3 pt-4 border-t border-zinc-900">
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
                     onClick={pageState.closeModal}
-                    className="px-4 py-2 bg-zinc-900 border border-zinc-800 text-xs text-zinc-300 rounded-md hover:bg-zinc-800"
+                    className="border-zinc-800 bg-zinc-950/60 text-zinc-400 hover:text-white hover:bg-zinc-900 cursor-pointer"
                   >
                     Cancel
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="submit"
-                    className="px-4 py-2 bg-emerald-600 text-black text-xs font-semibold rounded-md hover:bg-emerald-500"
+                    className="bg-white text-black hover:bg-zinc-150 font-semibold cursor-pointer shadow-[0_4px_20px_rgba(255,255,255,0.08)]"
                   >
                     Set Price Alert
-                  </button>
+                  </Button>
                 </div>
               </form>
             )}
