@@ -26,7 +26,6 @@ export function useGitHubDashboardState() {
         setOwner(parsed.owner || "");
         setRepo(parsed.repo || "");
       } catch {
-        // ignore malformed local target
       }
     }
   }, []);

@@ -8,19 +8,16 @@ const recipientsHandlers = createSagaHandlers(recipientsActions, RecipientsApi);
 const schedulesHandlers = createSagaHandlers(schedulesActions, SchedulesApi);
 
 export function* campaignsSaga() {
-  // Campaigns
   yield takeLatest(campaignsActions.fetchRequest.type as any, campaignsHandlers.fetchSaga);
   yield takeLatest(campaignsActions.createRequest.type as any, campaignsHandlers.createSaga);
   yield takeLatest(campaignsActions.updateRequest.type as any, campaignsHandlers.updateSaga);
   yield takeLatest(campaignsActions.deleteRequest.type as any, campaignsHandlers.deleteSaga);
 
-  // Recipients
   yield takeLatest(recipientsActions.fetchRequest.type as any, recipientsHandlers.fetchSaga);
   yield takeLatest(recipientsActions.createRequest.type as any, recipientsHandlers.createSaga);
   yield takeLatest(recipientsActions.updateRequest.type as any, recipientsHandlers.updateSaga);
   yield takeLatest(recipientsActions.deleteRequest.type as any, recipientsHandlers.deleteSaga);
 
-  // Schedules
   yield takeLatest(schedulesActions.fetchRequest.type as any, schedulesHandlers.fetchSaga);
   yield takeLatest(schedulesActions.createRequest.type as any, schedulesHandlers.createSaga);
   yield takeLatest(schedulesActions.updateRequest.type as any, schedulesHandlers.updateSaga);

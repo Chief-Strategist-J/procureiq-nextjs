@@ -15,20 +15,16 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Perform client-side auth check
     const token = localStorage.getItem("procureiq_token");
     const isPublicPath = publicPaths.includes(pathname);
 
     if (!token && !isPublicPath) {
-      // Not logged in -> redirect to login
       setAuthorized(false);
       router.push("/login");
     } else if (token && isPublicPath) {
-      // Logged in -> redirect to dashboard
       setAuthorized(true);
       router.push("/");
     } else {
-      // Allowed access
       setAuthorized(true);
     }
     setLoading(false);
@@ -45,7 +41,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
   const isPublicPath = publicPaths.includes(pathname);
 
-  // If we are checking / loading or if not authorized on a protected page, show loading state
   if (!authorized && !isPublicPath) {
     return (
       <div className="flex h-screen w-screen flex-col items-center justify-center bg-black text-white">

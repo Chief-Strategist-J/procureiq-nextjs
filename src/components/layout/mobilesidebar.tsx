@@ -35,12 +35,10 @@ export function MobileSidebar() {
     }
   }, []);
 
-  // Close drawer on route change
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
 
-  // Lock body scroll while drawer is open
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
     return () => {
@@ -50,7 +48,7 @@ export function MobileSidebar() {
 
   return (
     <>
-      {/* Top bar */}
+      {}
       <div className="md:hidden flex items-center justify-between h-14 px-4 border-b border-zinc-800 bg-black text-white sticky top-0 z-40">
         <span className="text-base font-light tracking-tight">ProcureIQ</span>
         <button
@@ -62,7 +60,7 @@ export function MobileSidebar() {
         </button>
       </div>
 
-      {/* Overlay + Drawer */}
+      {}
       <div
         className={`md:hidden fixed inset-0 z-50 transition-opacity duration-200 ${
           open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"

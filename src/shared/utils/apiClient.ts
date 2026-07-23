@@ -1,83 +1,84 @@
 import { ApiValidationError } from '@/config/api-endpoints';
+import { withTraceSpan } from '@/infra/tracing/tracer';
 
 const DEFAULT_HEADERS = {
   'Content-Type': 'application/json',
 };
 
-const activeRequests = new Map<string, AbortController>();
-
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export interface RetryOptions {
+  maxRetries?: number;
+  baseDelayMs?: number;
+  maxDelayMs?: number;
 }
 
 export async function request<T>(
   url: string,
   options: RequestInit = {},
   actionContext: string,
-  retryCount = 3,
-  baseDelayMs = 500
+  retryOpts: RetryOptions = {}
 ): Promise<T> {
-  const requestKey = `${options.method || 'GET'}:${url}`;
+  const httpMethod = options.method || 'GET';
+  return withTraceSpan(`HTTP ${httpMethod} ${actionContext}`, async (span) => {
+    span.setAttribute('http.url', url);
+    span.setAttribute('http.method', httpMethod);
+    span.setAttribute('action.context', actionContext);
 
-  // Abort duplicate in-flight requests
-  if (activeRequests.has(requestKey)) {
-    const controller = activeRequests.get(requestKey);
-    controller?.abort();
-  }
+    const maxRetries = retryOpts.maxRetries ?? 3;
+    const baseDelayMs = retryOpts.baseDelayMs ?? 300;
+    const maxDelayMs = retryOpts.maxDelayMs ?? 3000;
 
-  const controller = new AbortController();
-  activeRequests.set(requestKey, controller);
+    const mergedHeaders = { ...DEFAULT_HEADERS, ...options.headers };
+    const config: RequestInit = {
+      ...options,
+      headers: mergedHeaders,
+    };
 
-  const mergedHeaders = { ...DEFAULT_HEADERS, ...options.headers };
-  const config: RequestInit = {
-    ...options,
-    headers: mergedHeaders,
-    signal: controller.signal,
-  };
+    let attempt = 0;
 
-  let attempt = 0;
+    while (true) {
+      try {
+        const response = await fetch(url, config);
+        span.setAttribute('http.status_code', response.status);
 
-  while (attempt < retryCount) {
-    try {
-      const response = await fetch(url, config);
-
-      // Request finished, remove from tracking map
-      activeRequests.delete(requestKey);
-
-      if (!response.ok) {
-        if (response.status === 400) {
-          const errorJson = await response.json();
-          if (errorJson.data && errorJson.data.details) {
-            throw new ApiValidationError(errorJson.data.message || 'Validation failed', errorJson.data.details);
+        if (!response.ok) {
+          if (response.status === 400) {
+            const errorJson = await response.json();
+            if (errorJson.data && errorJson.data.details) {
+              throw new ApiValidationError(errorJson.data.message || 'Validation failed', errorJson.data.details);
+            }
           }
+          
+          if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+            throw new Error(`Request failed with status ${response.status}: ${response.statusText}`);
+          }
+
+          throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
         }
-        
-        // Don't retry client errors (4xx) except maybe rate limits (429)
-        if (response.status >= 400 && response.status < 500 && response.status !== 429) {
-          throw new Error(`Request failed with status ${response.status}: ${response.statusText}`);
-        }
-      } else {
+
         const result = await response.json();
         return result.data as T;
-      }
-    } catch (e: any) {
-      if (e.name === 'AbortError') {
-        throw new Error(`Request to ${actionContext} was aborted due to duplicate request execution.`);
-      }
 
-      attempt++;
-      if (attempt >= retryCount) {
-        activeRequests.delete(requestKey);
-        throw new Error(`Failed to ${actionContext} after ${retryCount} retries. Error: ${e.message}`);
-      }
+      } catch (e: any) {
+        if (e.name === 'AbortError' || e instanceof ApiValidationError) {
+          throw e;
+        }
 
-      // Exponential backoff delay: baseDelay * 2^attempt
-      const backoffDelay = baseDelayMs * Math.pow(2, attempt);
-      console.warn(`Retry attempt ${attempt} for ${actionContext} after ${backoffDelay}ms delay...`);
-      await delay(backoffDelay);
+        attempt++;
+        if (attempt > maxRetries) {
+          throw new Error(`Failed to ${actionContext} after ${maxRetries} attempts. Error: ${e.message}`);
+        }
+
+        const expBackoff = Math.min(maxDelayMs, baseDelayMs * Math.pow(2, attempt - 1));
+        const jitter = Math.random() * 0.5 * expBackoff;
+        const totalDelay = Math.round(expBackoff + jitter);
+
+        console.warn(`[Retry ${attempt}/${maxRetries}] ${actionContext} failed (${e.message}). Retrying in ${totalDelay}ms...`);
+        await delay(totalDelay);
+      }
     }
-  }
-
-  activeRequests.delete(requestKey);
-  throw new Error(`Failed to ${actionContext}: Unexpected execution end.`);
+  });
 }

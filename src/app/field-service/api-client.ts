@@ -50,8 +50,6 @@ export const appointmentsApi = createResourceApi<ServiceAppointment>({
 });
 
 export class FieldServiceApi {
-  // Aliases for saga integration if needed, or we can just use the resource APIs directly
-  // However, we have specific custom methods for appointments
   static async getCandidates(appointmentId: number): Promise<ServiceResource[]> {
     const url = `${BACKEND_URL}${API_ENDPOINTS.fieldService.appointments.candidates(String(appointmentId))}`;
     return (await request<ServiceResource[]>(url, { method: "GET" }, "get candidates")) || [];

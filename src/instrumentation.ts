@@ -18,7 +18,6 @@ export async function register() {
         }),
         instrumentations: [
           getNodeAutoInstrumentations({
-            // Let's disable fs instrumentation as it produces too much noise
             '@opentelemetry/instrumentation-fs': {
               enabled: false,
             },

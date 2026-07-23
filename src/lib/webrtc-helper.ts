@@ -1,7 +1,4 @@
-/**
- * WebRtcSignalingClient handles WebSockets signaling connection,
- * room joining, and WebRTC SDP/ICE exchange payloads.
- */
+
 export class WebRtcSignalingClient {
   private ws: WebSocket | null = null;
 
@@ -12,15 +9,12 @@ export class WebRtcSignalingClient {
     private onMessage: (message: any) => void
   ) {}
 
-  /**
-   * Connect to the signaling server and join the specified room.
-   */
+  
   public connect(): void {
     this.ws = new WebSocket(this.serverUrl);
 
     this.ws.onopen = () => {
       console.log(`[webrtc-client] Connected to signaling server at ${this.serverUrl}`);
-      // Auto-join the room upon successful socket connection
       this.send({
         type: "join",
         roomId: this.roomId,
@@ -47,9 +41,7 @@ export class WebRtcSignalingClient {
     };
   }
 
-  /**
-   * Send a raw signaling payload to the WebSocket server.
-   */
+  
   public send(message: any): void {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(message));
@@ -58,9 +50,7 @@ export class WebRtcSignalingClient {
     }
   }
 
-  /**
-   * Send a WebRTC SDP Offer to a specific peer.
-   */
+  
   public sendOffer(receiverId: string, sdp: string): void {
     this.send({
       type: "offer",
@@ -71,9 +61,7 @@ export class WebRtcSignalingClient {
     });
   }
 
-  /**
-   * Send a WebRTC SDP Answer in response to a peer's Offer.
-   */
+  
   public sendAnswer(receiverId: string, sdp: string): void {
     this.send({
       type: "answer",
@@ -84,9 +72,7 @@ export class WebRtcSignalingClient {
     });
   }
 
-  /**
-   * Send a WebRTC ICE Candidate object to a peer.
-   */
+  
   public sendCandidate(
     receiverId: string,
     candidate: string,
@@ -104,9 +90,7 @@ export class WebRtcSignalingClient {
     });
   }
 
-  /**
-   * Cleanly leave the room and close the socket.
-   */
+  
   public disconnect(): void {
     if (this.ws) {
       this.send({

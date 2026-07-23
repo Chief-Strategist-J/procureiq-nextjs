@@ -15,7 +15,12 @@ interface StatCard {
 
 export default function Home() {
   const dispatch = useAppDispatch();
-  const notifications = useAppSelector((s) => s.notifications.notifications.data) || [];
+  const rawNotifs = useAppSelector((s) => s.notifications.notifications.data);
+  const notifications = Array.isArray(rawNotifs)
+    ? rawNotifs
+    : Array.isArray((rawNotifs as any)?.content)
+    ? (rawNotifs as any).content
+    : [];
   const loading = useAppSelector((s) => s.notifications.notifications.status === "loading");
   const unreadCount = useAppSelector((s) => s.notifications.unreadCount.data) || 0;
 
@@ -32,6 +37,7 @@ export default function Home() {
   ];
 
   const quickActions = [
+    { label: "Crypto & Market Intelligence", description: "Real-time market tickers, orderbook and gainers", href: "/crypto" },
     { label: "Dispatch Notification", description: "Create and broadcast a notification", href: "/notifications" },
     { label: "Field Service Work Orders", description: "Manage cases, accounts, and tasks", href: "/work-orders" },
     { label: "Configure Agents", description: "Set up procurement agents", href: "/agents" },
@@ -92,7 +98,7 @@ export default function Home() {
                     Loading dashboard info...
                   </td>
                 </tr>
-              ) : notifications.length === 0 ? (
+              ) : !Array.isArray(notifications) || notifications.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-4 py-8 text-center text-zinc-500 text-xs">
                     No recent notifications.

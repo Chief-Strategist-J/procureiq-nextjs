@@ -7,7 +7,6 @@ export interface EmailState extends ListState<EmailScheduleResponse> {
   sendState: AsyncState<null>;
 }
 
-// We wrap createListSlice so we can add sendState
 const baseSlice = createListSlice<EmailScheduleResponse>('email');
 
 export const emailSlice = createSlice({

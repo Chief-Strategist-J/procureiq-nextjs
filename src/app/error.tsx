@@ -15,18 +15,17 @@ export default function ErrorPage({
   const [showDetails, setShowDetails] = useState(false);
 
   useEffect(() => {
-    // Log error to console or telemetry services
     console.error("ProcureIQ Runtime Boundary Error:", error);
   }, [error]);
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center min-h-[80vh] bg-black text-white relative overflow-hidden px-6 selection:bg-zinc-800">
-      {/* Red ambient radial gradient for warning/destructive status */}
+      {}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,oklch(0.12_0.04_25/0.12),transparent_50%)] pointer-events-none" />
       <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-96 h-96 bg-red-500/5 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="relative z-10 max-w-xl text-center space-y-8 flex flex-col items-center w-full">
-        {/* Animated Alert Icon */}
+        {}
         <div className="relative flex items-center justify-center">
           <div className="absolute inset-0 rounded-full bg-red-500/10 blur-xl animate-pulse" />
           <div className="w-20 h-20 rounded-full border border-red-500/20 bg-zinc-950 flex items-center justify-center relative shadow-2xl">
@@ -34,7 +33,7 @@ export default function ErrorPage({
           </div>
         </div>
 
-        {/* Error Headers */}
+        {}
         <div className="space-y-3">
           <h1 className="text-4xl font-extralight tracking-tight text-white">
             System Collision Detected
@@ -44,7 +43,7 @@ export default function ErrorPage({
           </p>
         </div>
 
-        {/* Action Buttons */}
+        {}
         <div className="flex flex-col sm:flex-row items-center gap-4 w-full justify-center max-w-sm">
           <Button
             onClick={() => reset()}
@@ -62,7 +61,7 @@ export default function ErrorPage({
           </Link>
         </div>
 
-        {/* Collapsible Technical Details */}
+        {}
         <div className="w-full max-w-md border border-zinc-900 bg-zinc-950/60 rounded-xl overflow-hidden backdrop-blur-md">
           <button
             onClick={() => setShowDetails(!showDetails)}

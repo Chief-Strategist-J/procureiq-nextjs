@@ -11,7 +11,6 @@ export async function fetchWithFallback<T>(
   try {
     let data: T;
     if (bypassEnvelope) {
-      // Direct JSON parsing for non-standard response shapes (like Python backend)
       const mergedHeaders = { 'Content-Type': 'application/json', ...options.headers };
       const response = await fetch(url, { ...options, headers: mergedHeaders });
       if (!response.ok) throw new Error(response.statusText);
@@ -19,12 +18,11 @@ export async function fetchWithFallback<T>(
     } else {
       data = await request<T>(url, options, actionContext);
     }
-    if (data) {
+    if (data !== undefined && data !== null) {
       localStorage.setItem(localStorageKey, JSON.stringify(data));
       return data;
     }
   } catch (e) {
-    console.warn(`Backend offline or failed to ${actionContext}. Loading from local database fallback.`, e);
   }
   return fallbackCompute();
 }
@@ -47,9 +45,8 @@ export async function mutateWithFallback<T extends { id?: number }>(
     } else {
       data = await request<T>(url, options, actionContext);
     }
-    if (data) return data;
+    if (data !== undefined && data !== null) return data;
   } catch (e) {
-    console.warn(`Backend offline or failed to ${actionContext}. Saving changes locally.`, e);
   }
 
   const list = JSON.parse(localStorage.getItem(localStorageKey) || "[]");

@@ -6,7 +6,12 @@ import { notificationsActions } from "./notificationsSlice";
 export function useNotificationsPageState() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const notifications = useAppSelector((s) => s.notifications.notifications.data) ?? [];
+  const rawData = useAppSelector((s) => s.notifications.notifications.data);
+  const notifications = useMemo(() => {
+    if (Array.isArray(rawData)) return rawData;
+    if (Array.isArray((rawData as any)?.content)) return (rawData as any).content;
+    return [];
+  }, [rawData]);
   const loading = useAppSelector((s) => s.notifications.notifications.status === "loading");
   const storeError = useAppSelector((s) => s.notifications.notifications.error);
   const notificationsUi = useAppSelector((s) => s.notifications.notifications.ui);

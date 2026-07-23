@@ -69,7 +69,6 @@ export function ForgotPasswordDialog({
       onOpenChange(isOpen);
     }
     if (!isOpen) {
-      // Reset state on close
       setTimeout(() => {
         setEmail("");
         setSuccess(false);
@@ -83,7 +82,7 @@ export function ForgotPasswordDialog({
       {trigger && <DialogTrigger render={trigger} />}
       <DialogContent className="border-zinc-800 bg-zinc-950/95 backdrop-blur-md max-w-sm sm:max-w-md w-full p-6 text-zinc-100 shadow-2xl rounded-xl">
         
-        {/* Step 1: Request View */}
+        {}
         {!success ? (
           <form onSubmit={handleSubmit} className="space-y-4">
             <DialogHeader className="space-y-2">
@@ -148,7 +147,7 @@ export function ForgotPasswordDialog({
             </DialogFooter>
           </form>
         ) : (
-          /* Step 2: Success View */
+          
           <div className="space-y-5 py-4 text-center flex flex-col items-center">
             <div className="relative flex items-center justify-center">
               <div className="absolute inset-0 rounded-full bg-emerald-500/10 blur-xl animate-pulse" />

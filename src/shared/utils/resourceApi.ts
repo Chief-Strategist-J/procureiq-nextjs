@@ -1,14 +1,12 @@
-/**
- * Generic resource API factory.
- * Eliminates repeated boilerplate across all feature api-client files.
- * Every feature gets list/create/update/delete for free via createResourceApi().
- */
+
 
 import { AppConfig } from '@/config/app-config';
 import { fetchWithFallback, mutateWithFallback } from '@/shared/utils/fallbackClient';
 import { request } from '@/shared/utils/apiClient';
 
-const BASE = AppConfig.apiUrl;
+function getBaseUrl(): string {
+  return AppConfig.apiUrl;
+}
 
 export interface ResourceEndpoints {
   list: string;
@@ -19,13 +17,13 @@ export interface ResourceEndpoints {
 }
 
 export interface ResourceApiOptions<T extends { id: number }> {
-  /** API_ENDPOINTS.xxx config object */
+  
   endpoints: ResourceEndpoints;
-  /** localStorage key for offline fallback */
+  
   storageKey: string;
-  /** Human-readable name for error messages */
+  
   label: string;
-  /** Seed data for first-time offline initialisation */
+  
   seed?: T[];
 }
 
@@ -48,7 +46,7 @@ export function createResourceApi<T extends { id: number }>(opts: ResourceApiOpt
     async list(): Promise<T[]> {
       init();
       return fetchWithFallback<T[]>(
-        `${BASE}${endpoints.list}`,
+        `${getBaseUrl()}${endpoints.list}`,
         { method: 'GET' },
         storageKey,
         `list ${label}`,
@@ -59,7 +57,7 @@ export function createResourceApi<T extends { id: number }>(opts: ResourceApiOpt
     async create(data: Omit<T, 'id'>): Promise<T> {
       init();
       return mutateWithFallback<T>(
-        `${BASE}${endpoints.create}`,
+        `${getBaseUrl()}${endpoints.create}`,
         { method: 'POST', body: JSON.stringify(data) },
         storageKey,
         `create ${label}`,
@@ -74,7 +72,7 @@ export function createResourceApi<T extends { id: number }>(opts: ResourceApiOpt
     async update(id: number, data: Omit<T, 'id'>): Promise<T> {
       init();
       return mutateWithFallback<T>(
-        `${BASE}${endpoints.update(String(id))}`,
+        `${getBaseUrl()}${endpoints.update(String(id))}`,
         { method: 'PUT', body: JSON.stringify(data) },
         storageKey,
         `update ${label}`,
@@ -88,7 +86,7 @@ export function createResourceApi<T extends { id: number }>(opts: ResourceApiOpt
     async remove(id: number): Promise<void> {
       init();
       await mutateWithFallback<any>(
-        `${BASE}${endpoints.delete(String(id))}`,
+        `${getBaseUrl()}${endpoints.delete(String(id))}`,
         { method: 'DELETE' },
         storageKey,
         `delete ${label}`,
@@ -99,19 +97,17 @@ export function createResourceApi<T extends { id: number }>(opts: ResourceApiOpt
       );
     },
 
-    /** Generic GET to a sub-resource URL, returns array */
+    
     async get<R>(url: string, context: string): Promise<R> {
-      return (await request<R>(`${BASE}${url}`, { method: 'GET' }, context)) as R;
+      return (await request<R>(`${getBaseUrl()}${url}`, { method: 'GET' }, context)) as R;
     },
 
-    /** Generic POST to a sub-resource URL */
+    
     async post<R>(url: string, body: object, context: string): Promise<R> {
-      return (await request<R>(`${BASE}${url}`, { method: 'POST', body: JSON.stringify(body) }, context)) as R;
+      return (await request<R>(`${getBaseUrl()}${url}`, { method: 'POST', body: JSON.stringify(body) }, context)) as R;
     },
   };
 
-  // Provide alias interfaces for CRUD matching exactly what the old files exported
-  // directly on the returned object.
   return Object.assign(api, {
     listWorkflows: api.list,
     createWorkflow: api.create,

@@ -18,7 +18,6 @@ function* fetchNotificationsSaga(action: ReturnType<typeof notificationsActions.
 function* updateStatusSaga(action: ReturnType<typeof notificationsActions.updateStatusRequest>) {
   try {
     yield call(NotificationsApi.updateStatus, action.payload.id, action.payload.status);
-    // Success status handled optimistically in slice, no success actions needed.
   } catch (e: any) {
     yield put(notificationsActions.updateStatusFailure(e.message));
   }

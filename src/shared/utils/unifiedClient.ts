@@ -6,7 +6,6 @@ import { fetchWithFallback, mutateWithFallback } from "@/shared/utils/fallbackCl
 const BACKEND_URL = AppConfig.apiUrl;
 
 export class UnifiedApiClient {
-  // --- CAMPAIGNS ---
   public static async listCampaigns(): Promise<any[]> {
     const url = `${BACKEND_URL}${API_ENDPOINTS.campaigns.list}`;
     return fetchWithFallback<any[]>(url, { method: "GET" }, "piq_campaigns", "list campaigns", () =>
@@ -37,7 +36,6 @@ export class UnifiedApiClient {
     });
   }
 
-  // --- RECIPIENTS ---
   public static async listRecipients(): Promise<any[]> {
     const url = `${BACKEND_URL}${API_ENDPOINTS.campaigns.recipients.list}`;
     return fetchWithFallback<any[]>(url, { method: "GET" }, "piq_recipients", "list recipients", () =>
@@ -68,7 +66,6 @@ export class UnifiedApiClient {
     });
   }
 
-  // --- EMAIL ---
   public static async sendEmail(data: any): Promise<any> {
     const url = `${BACKEND_URL}${API_ENDPOINTS.email.send}`;
     return request<any>(url, { method: "POST", body: JSON.stringify(data) }, "send email");
@@ -84,7 +81,6 @@ export class UnifiedApiClient {
     return request<any[]>(url, { method: "GET" }, "list scheduled emails");
   }
 
-  // --- FIELD SERVICE (OPERATING HOURS) ---
   public static async listOperatingHours(): Promise<any[]> {
     const url = `${BACKEND_URL}${API_ENDPOINTS.fieldService.operatingHours.list}`;
     return fetchWithFallback<any[]>(url, { method: "GET" }, "piq_operating_hours", "list operating hours", () =>
@@ -100,7 +96,6 @@ export class UnifiedApiClient {
     });
   }
 
-  // --- JOBS ---
   public static async listJobs(): Promise<any[]> {
     const url = `${BACKEND_URL}${API_ENDPOINTS.jobs.list}`;
     return request<any[]>(url, { method: "GET" }, "list jobs");
@@ -111,7 +106,6 @@ export class UnifiedApiClient {
     return request<any>(url, { method: "POST" }, "trigger job");
   }
 
-  // --- NOTIFICATIONS ---
   public static async listNotifications(): Promise<any[]> {
     const url = `${BACKEND_URL}${API_ENDPOINTS.notifications.list}`;
     return request<any[]>(url, { method: "GET" }, "list notifications");

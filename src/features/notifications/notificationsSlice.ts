@@ -50,9 +50,14 @@ const notificationsSlice = createSlice({
       state.notifications.error = null;
       state.notifications.lastAction = null;
     },
-    fetchNotificationsSuccess(state, action: PayloadAction<NotificationItem[]>) {
+    fetchNotificationsSuccess(state, action: PayloadAction<any>) {
       state.notifications.status = 'succeeded';
-      state.notifications.data = action.payload;
+      const payload = action.payload;
+      state.notifications.data = Array.isArray(payload) 
+        ? payload 
+        : Array.isArray(payload?.content) 
+        ? payload.content 
+        : [];
     },
     fetchNotificationsFailure(state, action: PayloadAction<string>) {
       state.notifications.status = 'failed';
@@ -60,8 +65,10 @@ const notificationsSlice = createSlice({
     },
     updateStatusRequest(state, _action: PayloadAction<{ id: number; status: 'READ' | 'UNREAD' }>) {
       const { id, status } = _action.payload;
-      const n = state.notifications.data.find(x => x.id === id);
-      if (n) n.status = status;
+      if (Array.isArray(state.notifications.data)) {
+        const n = state.notifications.data.find(x => x.id === id);
+        if (n) n.status = status;
+      }
       state.notifications.lastAction = `Marked as ${_action.payload.status.toLowerCase()}.`;
     },
     updateStatusFailure(state, action: PayloadAction<string>) {
