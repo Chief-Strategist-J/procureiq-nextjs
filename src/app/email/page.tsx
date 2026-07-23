@@ -3,27 +3,10 @@
 import React, { useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Mail, Send, CalendarClock, RefreshCw, AlertCircle } from "lucide-react";
-import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
-import { fetchRequest, selectEmailState } from "@/features/email/emailSlice";
+import { useEmailPageState } from "@/features/email/EmailPageState";
 
 export default function EmailPage() {
-  const router = useRouter();
-  const dispatch = useAppDispatch();
-  const emailState = useAppSelector(selectEmailState);
-
-  const items = emailState.items.data || [];
-  const loading = emailState.items.status === "loading";
-  const error = emailState.items.error;
-
-  const fetchItems = useCallback(() => {
-    dispatch(fetchRequest());
-  }, [dispatch]);
-
-  useEffect(() => {
-    if (emailState.items.status === "idle") {
-      fetchItems();
-    }
-  }, [emailState.items.status, fetchItems]);
+  const state = useEmailPageState();
 
   return (
     <div className="min-h-screen bg-black text-white p-4 sm:p-8 font-sans relative">
@@ -48,16 +31,16 @@ export default function EmailPage() {
 
         <div className="flex items-center gap-3 self-end md:self-auto">
           <button
-            onClick={fetchItems}
-            disabled={loading}
+            onClick={state.fetchItems}
+            disabled={state.loading}
             className="flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-950/60 backdrop-blur-md px-4 py-2 text-xs font-medium text-zinc-400 hover:text-white hover:bg-zinc-900/80 transition-all duration-300 cursor-pointer"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+            <RefreshCw className={`h-3.5 w-3.5 ${state.loading ? "animate-spin" : ""}`} />
             Refresh
           </button>
 
           <button
-            onClick={() => router.push("/email/schedule")}
+            onClick={() => state.router.push("/email/schedule")}
             className="flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-950/60 backdrop-blur-md px-4 py-2 text-xs font-medium text-zinc-300 hover:text-white hover:bg-zinc-900/80 transition-all duration-300 cursor-pointer"
           >
             <CalendarClock className="h-3.5 w-3.5" />
@@ -65,7 +48,7 @@ export default function EmailPage() {
           </button>
 
           <button
-            onClick={() => router.push("/email/send")}
+            onClick={() => state.router.push("/email/send")}
             className="flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-xs font-semibold text-black hover:bg-zinc-100 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 cursor-pointer shadow-[0_4px_20px_rgba(255,255,255,0.08)]"
           >
             <Send className="h-4 w-4" />
@@ -74,19 +57,19 @@ export default function EmailPage() {
         </div>
       </div>
 
-      {error && (
-        <div className="mb-6 p-3.5 text-xs bg-red-950/20 border border-red-500/20 text-red-400 rounded-lg flex items-center gap-2.5 animate-fadeIn backdrop-blur-md">
+      {state.error && (
+        <div className="mb-6 p-3.5 text-xs bg-red-955/20 border border-red-500/20 text-red-400 rounded-lg flex items-center gap-2.5 animate-fadeIn backdrop-blur-md">
           <AlertCircle className="h-4.5 w-4.5 shrink-0 text-red-500" />
-          <span className="font-medium">{error}</span>
+          <span className="font-medium">{state.error}</span>
         </div>
       )}
       <div className="rounded-xl border border-zinc-800/80 bg-zinc-950/40 backdrop-blur-md overflow-hidden shadow-2xl shadow-black/80">
         <div className="border-b border-zinc-900/80 bg-zinc-900/10 px-6 py-4">
           <h2 className="text-sm font-medium tracking-tight text-white">Scheduled Queue</h2>
-          <p className="text-[11px] text-zinc-500 mt-0.5">Emails queued for future delivery.</p>
+          <p className="text-[11px] text-zinc-550 mt-0.5">Emails queued for future delivery.</p>
         </div>
         <div className="overflow-x-auto">
-          {loading ? (
+          {state.loading ? (
             <div className="flex flex-col items-center justify-center py-24 text-zinc-500">
               <RefreshCw className="h-8 w-8 animate-spin text-zinc-600 mb-3" />
               <p className="text-xs tracking-wider">Syncing scheduled email queue...</p>
@@ -103,7 +86,7 @@ export default function EmailPage() {
                 </tr>
               </thead>
               <tbody>
-                {items.map((item) => (
+                {state.items.map((item: any) => (
                   <tr key={item.id} className="hover:bg-zinc-900/20 transition-all duration-300 border-b border-zinc-900 text-zinc-300">
                     <td className="px-5 py-4 text-xs font-mono font-semibold text-white">#{item.id}</td>
                     <td className="px-5 py-4 text-xs font-medium text-zinc-200">{item.subject}</td>
@@ -116,7 +99,7 @@ export default function EmailPage() {
                     </td>
                   </tr>
                 ))}
-                {items.length === 0 && (
+                {state.items.length === 0 && (
                   <tr>
                     <td colSpan={5} className="px-5 py-16 text-center text-zinc-500 text-xs">
                       No scheduled emails in queue.

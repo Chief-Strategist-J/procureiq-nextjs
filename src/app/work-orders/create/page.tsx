@@ -1,73 +1,20 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
-import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
+import { useCreateWorkOrderPageState } from "@/features/workOrders/CreateWorkOrderPageState";
 import { workOrdersActions } from "@/features/workOrders/workOrdersSlice";
 
 export default function CreateWorkOrderPage() {
-  const router = useRouter();
-  const dispatch = useAppDispatch();
-
-  const [caseId, setCaseId] = useState("");
-  const [contactId, setContactId] = useState("");
-  const [assetId, setAssetId] = useState("");
-  const [workTypeId, setWorkTypeId] = useState("");
-  const [status, setStatus] = useState("new");
-  const [priority, setPriority] = useState(2);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-
-  const { lastAction, items } = useAppSelector((state) => state.workOrders);
-  const creating = items.status === 'loading';
-
-  const handleCreateWorkOrder = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setSuccess("");
-
-    const requestPayload: Record<string, any> = {
-      status,
-      priority,
-    };
-    if (caseId) requestPayload.caseId = parseInt(caseId);
-    if (contactId) requestPayload.contactId = parseInt(contactId);
-    if (assetId) requestPayload.assetId = parseInt(assetId);
-    if (workTypeId) requestPayload.workTypeId = parseInt(workTypeId);
-
-    dispatch(workOrdersActions.createRequest(requestPayload as any));
-  };
-
-  useEffect(() => {
-    if (lastAction?.type === 'create') {
-      if (lastAction.status === 'success') {
-        setSuccess("Work order registered successfully!");
-        setCaseId("");
-        setContactId("");
-        setAssetId("");
-        setWorkTypeId("");
-        setStatus("new");
-        setPriority(2);
-        
-        setTimeout(() => {
-          dispatch(workOrdersActions.resetLastAction());
-          router.push("/work-orders");
-        }, 1500);
-      } else if (lastAction.status === 'error') {
-        setError(lastAction.message || "Failed to create work order");
-      }
-    }
-  }, [lastAction, router, dispatch]);
+  const state = useCreateWorkOrderPageState();
 
   return (
     <div className="min-h-screen bg-black text-white p-4 sm:p-8 font-sans relative flex flex-col">
-      {/* Background Glows */}
       <div className="absolute top-0 right-1/4 w-[400px] h-[400px] bg-indigo-500/5 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-1/4 left-1/4 w-[350px] h-[350px] bg-emerald-500/3 rounded-full blur-[100px] pointer-events-none" />
 
-      {/* Header */}
       <div className="relative flex items-center justify-between gap-4 mb-8 border-b border-zinc-900 pb-6">
         <div className="flex items-center gap-3">
           <Link
@@ -87,26 +34,24 @@ export default function CreateWorkOrderPage() {
         </div>
       </div>
 
-      {/* Alert states */}
-      {error && (
-        <div className="mb-6 p-4 text-xs bg-red-950/20 border border-red-500/20 text-red-400 rounded-lg flex items-center gap-2.5 animate-fadeIn backdrop-blur-md">
+      {state.error && (
+        <div className="mb-6 p-4 text-xs bg-red-955/20 border border-red-500/20 text-red-400 rounded-lg flex items-center gap-2.5 animate-fadeIn backdrop-blur-md">
           <AlertCircle className="h-4.5 w-4.5 shrink-0 text-red-500" />
-          <span className="font-medium">{error}</span>
+          <span className="font-medium">{state.error}</span>
         </div>
       )}
       
-      {success && (
-        <div className="mb-6 p-4 text-xs bg-emerald-950/20 border border-emerald-500/20 text-emerald-400 rounded-lg flex items-center gap-2.5 animate-fadeIn backdrop-blur-md">
-          <CheckCircle2 className="h-4.5 w-4.5 shrink-0 text-emerald-500" />
-          <span className="font-medium">{success}</span>
+      {state.success && (
+        <div className="mb-6 p-4 text-xs bg-emerald-955/20 border border-emerald-500/20 text-emerald-400 rounded-lg flex items-center gap-2.5 animate-fadeIn backdrop-blur-md">
+          <CheckCircle2 className="h-4.5 w-4.5 shrink-0 text-emerald-505" />
+          <span className="font-medium">{state.success}</span>
         </div>
       )}
 
-      {/* Main Full-Width Form Layout */}
-      <form onSubmit={handleCreateWorkOrder} className="space-y-8 flex-1 flex flex-col justify-between w-full">
+      <form onSubmit={state.handleCreateWorkOrder} className="space-y-8 flex-1 flex flex-col justify-between w-full">
         <div className="space-y-8 w-full">
           <div className="border-b border-zinc-900 pb-4">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">Record Properties</h3>
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-450">Record Properties</h3>
             <p className="text-[11px] text-zinc-555 mt-0.5">Define metadata associations for the logged task.</p>
           </div>
           
@@ -115,10 +60,10 @@ export default function CreateWorkOrderPage() {
               <label className="text-[10px] text-zinc-400 uppercase tracking-widest block font-bold">Case ID (Optional)</label>
               <input
                 type="number"
-                value={caseId}
-                onChange={(e) => setCaseId(e.target.value)}
+                value={state.caseId}
+                onChange={(e) => state.dispatch(workOrdersActions.setFormField({ field: "caseId", value: e.target.value }))}
                 placeholder="1"
-                className="w-full rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3.5 text-xs text-white focus:outline-none focus:border-zinc-700 transition-all"
+                className="w-full rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3.5 text-xs text-white focus:outline-none focus:border-zinc-700 transition-all focus:ring-1 focus:ring-zinc-700"
               />
             </div>
 
@@ -126,10 +71,10 @@ export default function CreateWorkOrderPage() {
               <label className="text-[10px] text-zinc-400 uppercase tracking-widest block font-bold">Contact ID (Optional)</label>
               <input
                 type="number"
-                value={contactId}
-                onChange={(e) => setContactId(e.target.value)}
+                value={state.contactId}
+                onChange={(e) => state.dispatch(workOrdersActions.setFormField({ field: "contactId", value: e.target.value }))}
                 placeholder="1"
-                className="w-full rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3.5 text-xs text-white focus:outline-none focus:border-zinc-700 transition-all"
+                className="w-full rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3.5 text-xs text-white focus:outline-none focus:border-zinc-700 transition-all focus:ring-1 focus:ring-zinc-700"
               />
             </div>
           </div>
@@ -139,10 +84,10 @@ export default function CreateWorkOrderPage() {
               <label className="text-[10px] text-zinc-400 uppercase tracking-widest block font-bold">Asset ID (Optional)</label>
               <input
                 type="number"
-                value={assetId}
-                onChange={(e) => setAssetId(e.target.value)}
+                value={state.assetId}
+                onChange={(e) => state.dispatch(workOrdersActions.setFormField({ field: "assetId", value: e.target.value }))}
                 placeholder="1"
-                className="w-full rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3.5 text-xs text-white focus:outline-none focus:border-zinc-700 transition-all"
+                className="w-full rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3.5 text-xs text-white focus:outline-none focus:border-zinc-700 transition-all focus:ring-1 focus:ring-zinc-700"
               />
             </div>
 
@@ -150,11 +95,11 @@ export default function CreateWorkOrderPage() {
               <label className="text-[10px] text-zinc-400 uppercase tracking-widest block font-bold">Work Type ID</label>
               <input
                 type="number"
-                value={workTypeId}
-                onChange={(e) => setWorkTypeId(e.target.value)}
+                value={state.workTypeId}
+                onChange={(e) => state.dispatch(workOrdersActions.setFormField({ field: "workTypeId", value: e.target.value }))}
                 placeholder="1"
                 required
-                className="w-full rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3.5 text-xs text-white focus:outline-none focus:border-zinc-700 transition-all"
+                className="w-full rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3.5 text-xs text-white focus:outline-none focus:border-zinc-700 transition-all focus:ring-1 focus:ring-zinc-700"
               />
             </div>
           </div>
@@ -162,9 +107,9 @@ export default function CreateWorkOrderPage() {
           <div className="space-y-2">
             <label className="text-[10px] text-zinc-400 uppercase tracking-widest block font-bold">Status</label>
             <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="w-full rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3.5 text-xs text-white focus:outline-none focus:border-zinc-700 transition-all"
+              value={state.status}
+              onChange={(e) => state.dispatch(workOrdersActions.setFormField({ field: "status", value: e.target.value }))}
+              className="w-full rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3.5 text-xs text-white focus:outline-none focus:border-zinc-700 transition-all focus:ring-1 focus:ring-zinc-700"
             >
               <option value="new">New</option>
               <option value="in_progress">In Progress</option>
@@ -180,15 +125,15 @@ export default function CreateWorkOrderPage() {
                 <button
                   key={level}
                   type="button"
-                  onClick={() => setPriority(level)}
+                  onClick={() => state.dispatch(workOrdersActions.setFormField({ field: "priority", value: level }))}
                   className={`py-3 rounded-lg border text-xs cursor-pointer text-center font-medium transition-all duration-300 ${
-                    priority === level
+                    state.priority === level
                       ? level === 3
                         ? "border-red-500/40 bg-red-950/30 text-red-400 shadow-[0_0_12px_rgba(239,68,68,0.1)]"
                         : level === 2
-                        ? "border-amber-500/40 bg-amber-950/30 text-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.1)]"
-                        : "border-blue-500/40 bg-blue-950/30 text-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.1)]"
-                      : "border-zinc-850 bg-zinc-900/20 text-zinc-500 hover:text-zinc-350 hover:border-zinc-750"
+                        ? "border-amber-500/40 bg-amber-955/30 text-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.1)]"
+                        : "border-blue-500/40 bg-blue-955/30 text-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.1)]"
+                      : "border-zinc-850 bg-zinc-900/20 text-zinc-505 hover:text-zinc-350 hover:border-zinc-750"
                   }`}
                 >
                   {level === 3 ? "High" : level === 2 ? "Medium" : "Low"}
@@ -207,10 +152,10 @@ export default function CreateWorkOrderPage() {
           </Link>
           <button
             type="submit"
-            disabled={creating}
+            disabled={state.creating}
             className="px-10 py-3 rounded-lg bg-white text-black hover:bg-zinc-150 hover:scale-[1.02] active:scale-[0.98] text-xs font-semibold flex items-center gap-2 disabled:opacity-50 cursor-pointer transition-all shadow-[0_4px_20px_rgba(255,255,255,0.08)]"
           >
-            {creating && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
+            {state.creating && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
             Register
           </button>
         </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import {
   Search, ListChecks, Plus, RefreshCw, CheckCircle2, AlertCircle, X, Edit2, Trash2, Play, History,
 } from "lucide-react";
@@ -8,104 +8,10 @@ import { Job } from "./types";
 import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
 import { jobsActions } from "@/features/jobs/jobsSlice";
 
+import { useJobsPageState } from "@/features/jobs/JobsPageState";
+
 export default function JobsPage() {
-  const dispatch = useAppDispatch();
-  const items = useAppSelector((s) => s.jobs.jobs.data) as Job[];
-  const loading = useAppSelector((s) => s.jobs.jobs.status === "loading");
-  const error = useAppSelector((s) => s.jobs.jobs.error);
-  const success = useAppSelector((s) => s.jobs.jobs.lastAction);
-
-  const runs = useAppSelector((s) => s.jobs.runs.data);
-  const runsLoading = useAppSelector((s) => s.jobs.runs.status === "loading");
-  const runsError = useAppSelector((s) => s.jobs.runs.error);
-  const triggerSuccess = useAppSelector((s) => s.jobs.runs.lastAction);
-
-  const [query, setQuery] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<"create" | "edit">("create");
-  const [editingId, setEditingId] = useState<number | null>(null);
-
-  const [orgId, setOrgId] = useState("1");
-  const [categoryId, setCategoryId] = useState("");
-  const [name, setName] = useState("");
-  const [status, setStatus] = useState("active");
-  const [configText, setConfigText] = useState("{}");
-  const [configError, setConfigError] = useState("");
-
-  const [isRunsModalOpen, setIsRunsModalOpen] = useState(false);
-  const [runsJob, setRunsJob] = useState<Job | null>(null);
-
-  useEffect(() => {
-    dispatch(jobsActions.fetchJobsRequest());
-  }, [dispatch]);
-
-  const openCreateModal = () => {
-    setModalMode("create");
-    setOrgId("1");
-    setCategoryId("");
-    setName("");
-    setStatus("active");
-    setConfigText("{}");
-    setConfigError("");
-    setIsModalOpen(true);
-  };
-
-  const openEditModal = (item: Job) => {
-    setModalMode("edit");
-    setEditingId(item.id);
-    setOrgId(item.orgId.toString());
-    setCategoryId(item.categoryId?.toString() || "");
-    setName(item.name);
-    setStatus(item.status);
-    setConfigText(JSON.stringify(item.config ?? {}, null, 2));
-    setConfigError("");
-    setIsModalOpen(true);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) return;
-
-    let config: Record<string, unknown>;
-    try {
-      config = configText.trim() ? JSON.parse(configText) : {};
-    } catch {
-      setConfigError("Config must be valid JSON.");
-      return;
-    }
-    setConfigError("");
-
-    const payload: Omit<Job, "id"> = { orgId: parseInt(orgId) || 1, name, status, config };
-    if (categoryId) (payload as any).categoryId = parseInt(categoryId);
-
-    if (modalMode === "create") {
-      dispatch(jobsActions.createJobRequest(payload));
-    } else if (modalMode === "edit" && editingId !== null) {
-      dispatch(jobsActions.updateJobRequest({ id: editingId, data: payload }));
-    }
-    setIsModalOpen(false);
-  };
-
-  const handleDelete = (id: number) => {
-    if (!confirm("Are you sure you want to delete this job?")) return;
-    dispatch(jobsActions.deleteJobRequest(id));
-  };
-
-  const openRunsModal = (job: Job) => {
-    setRunsJob(job);
-    setIsRunsModalOpen(true);
-    dispatch(jobsActions.fetchRunsRequest(job.id));
-  };
-
-  const handleTriggerRun = (jobId: number) => {
-    dispatch(jobsActions.triggerJobRequest(jobId));
-  };
-
-  const filteredItems = items.filter((item) => {
-    if (!query) return true;
-    const q = query.toLowerCase();
-    return item.name.toLowerCase().includes(q) || item.status.toLowerCase().includes(q) || item.id.toString().includes(q);
-  });
+  const state = useJobsPageState();
 
   return (
     <div className="min-h-screen bg-black text-white p-4 sm:p-8 font-sans relative">
@@ -130,15 +36,15 @@ export default function JobsPage() {
 
         <div className="flex items-center gap-3 self-end md:self-auto">
           <button
-            onClick={() => dispatch(jobsActions.fetchJobsRequest())}
-            disabled={loading}
+            onClick={() => state.dispatch(jobsActions.fetchJobsRequest())}
+            disabled={state.loading}
             className="flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-950/60 backdrop-blur-md px-4 py-2 text-xs font-medium text-zinc-400 hover:text-white hover:bg-zinc-900/80 transition-all duration-300 cursor-pointer"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+            <RefreshCw className={`h-3.5 w-3.5 ${state.loading ? "animate-spin" : ""}`} />
             Refresh
           </button>
           <button
-            onClick={openCreateModal}
+            onClick={state.openCreateModal}
             className="flex items-center gap-1.5 rounded-lg bg-indigo-650 hover:bg-indigo-600 active:scale-[0.98] px-4 py-2 text-xs font-semibold shadow-[0_0_15px_rgba(79,70,229,0.25)] transition-all cursor-pointer"
           >
             <Plus className="h-4 w-4" />
@@ -147,31 +53,31 @@ export default function JobsPage() {
         </div>
       </div>
 
-      {success && (
+      {state.success && (
         <div className="mb-6 flex items-center gap-2.5 rounded-lg border border-emerald-950 bg-emerald-950/30 px-4 py-3.5 text-xs text-emerald-400 animate-slideDown">
           <CheckCircle2 className="h-4.5 w-4.5 shrink-0" />
-          <span>{success}</span>
+          <span>Job action successful.</span>
         </div>
       )}
 
-      {triggerSuccess && (
+      {state.triggerSuccess && (
         <div className="mb-6 flex items-center gap-2.5 rounded-lg border border-emerald-950 bg-emerald-950/30 px-4 py-3.5 text-xs text-emerald-400 animate-slideDown">
           <CheckCircle2 className="h-4.5 w-4.5 shrink-0" />
-          <span>{triggerSuccess}</span>
+          <span>Run triggered successfully.</span>
         </div>
       )}
 
-      {error && (
-        <div className="mb-6 flex items-center gap-2.5 rounded-lg border border-red-950 bg-red-950/30 px-4 py-3.5 text-xs text-red-400 animate-slideDown">
+      {state.error && (
+        <div className="mb-6 flex items-center gap-2.5 rounded-lg border border-red-950 bg-red-955/30 px-4 py-3.5 text-xs text-red-400 animate-slideDown">
           <AlertCircle className="h-4.5 w-4.5 shrink-0" />
-          <span>{error}</span>
+          <span>{state.error}</span>
         </div>
       )}
 
-      {runsError && (
-        <div className="mb-6 flex items-center gap-2.5 rounded-lg border border-red-950 bg-red-950/30 px-4 py-3.5 text-xs text-red-400 animate-slideDown">
+      {state.runsError && (
+        <div className="mb-6 flex items-center gap-2.5 rounded-lg border border-red-950 bg-red-955/30 px-4 py-3.5 text-xs text-red-400 animate-slideDown">
           <AlertCircle className="h-4.5 w-4.5 shrink-0" />
-          <span>{runsError}</span>
+          <span>{state.runsError}</span>
         </div>
       )}
 
@@ -181,18 +87,18 @@ export default function JobsPage() {
           <input
             type="text"
             placeholder="Search jobs by name, status, or ID..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            value={state.query}
+            onChange={(e) => state.dispatch(jobsActions.setSearchQuery(e.target.value))}
             className="w-full rounded-lg bg-zinc-950/60 border border-zinc-850 py-2.5 pl-10 pr-4 text-xs text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all duration-300"
           />
         </div>
       </div>
 
-      <div className="w-full overflow-hidden rounded-xl border border-zinc-900 bg-zinc-950/20 backdrop-blur-md">
+      <div className="w-full overflow-hidden rounded-xl border border-zinc-900 bg-zinc-955/20 backdrop-blur-md">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-left">
             <thead>
-              <tr className="border-b border-zinc-900 bg-zinc-950/50 text-[10px] uppercase tracking-widest text-zinc-500 font-semibold">
+              <tr className="border-b border-zinc-900 bg-zinc-950/50 text-[10px] uppercase tracking-widest text-zinc-505 font-semibold">
                 <th className="px-5 py-4 w-20 text-center">ID</th>
                 <th className="px-5 py-4 w-28 text-center">Org ID</th>
                 <th className="px-5 py-4">Job Name</th>
@@ -202,14 +108,14 @@ export default function JobsPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredItems.length === 0 ? (
+              {state.filteredItems.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-5 py-12 text-center text-xs text-zinc-500">
-                    {loading ? "Syncing scheduler details..." : "No scheduled jobs match the filter criteria."}
+                    {state.loading ? "Syncing scheduler details..." : "No scheduled jobs match the filter criteria."}
                   </td>
                 </tr>
               ) : (
-                filteredItems.map((item) => (
+                state.filteredItems.map((item) => (
                   <tr key={item.id} className="group hover:bg-zinc-900/10 transition-all duration-300 border-b border-zinc-900">
                     <td className="px-5 py-4 text-xs font-mono text-zinc-500 text-center">{item.id}</td>
                     <td className="px-5 py-4 text-xs font-mono text-zinc-500 text-center">{item.orgId}</td>
@@ -227,27 +133,27 @@ export default function JobsPage() {
                     <td className="px-5 py-4">
                       <div className="flex items-center justify-center gap-2">
                         <button
-                          onClick={() => openRunsModal(item)}
+                          onClick={() => state.openRunsModal(item)}
                           title="View Run History"
                           className="p-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-zinc-950/60 hover:text-white transition-all text-zinc-400 cursor-pointer"
                         >
                           <History className="h-3.5 w-3.5" />
                         </button>
                         <button
-                          onClick={() => handleTriggerRun(item.id)}
+                          onClick={() => state.handleTriggerRun(item.id)}
                           title="Trigger Run Now"
                           className="p-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-zinc-950/60 hover:text-white transition-all text-zinc-400 cursor-pointer"
                         >
                           <Play className="h-3.5 w-3.5 text-emerald-400" />
                         </button>
                         <button
-                          onClick={() => openEditModal(item)}
+                          onClick={() => state.openEditModal(item)}
                           className="p-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-zinc-950/60 hover:text-white transition-all text-zinc-400 cursor-pointer"
                         >
                           <Edit2 className="h-3.5 w-3.5" />
                         </button>
                         <button
-                          onClick={() => handleDelete(item.id)}
+                          onClick={() => state.handleDelete(item.id)}
                           className="p-1.5 rounded-lg border border-zinc-800 hover:border-zinc-750 hover:bg-red-950/20 hover:text-red-400 transition-all text-zinc-400 cursor-pointer"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -262,31 +168,30 @@ export default function JobsPage() {
         </div>
       </div>
 
-      {/* Edit/Create Modal */}
-      {isModalOpen && (
+      {state.isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity duration-300" onClick={() => setIsModalOpen(false)} />
-
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity duration-300" onClick={() => state.dispatch(jobsActions.closeModal())} />
+ 
           <div className="relative w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-2xl shadow-black/90 text-white animate-scaleIn">
             <button
-              onClick={() => setIsModalOpen(false)}
+              onClick={() => state.dispatch(jobsActions.closeModal())}
               className="absolute right-5 top-5 p-1 rounded-full text-zinc-500 hover:text-white hover:bg-zinc-900 transition-all duration-300 cursor-pointer"
             >
               <X className="h-4 w-4" />
             </button>
-
+ 
             <h2 className="text-lg font-light tracking-tight mb-6">
-              {modalMode === "create" ? "Schedule New Job" : "Edit Job Configuration"}
+              {state.modalMode === "create" ? "Schedule New Job" : "Edit Job Configuration"}
             </h2>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
+ 
+            <form onSubmit={state.handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-3.5">
                 <div className="space-y-1">
                   <label className="text-[10px] text-zinc-500 uppercase tracking-widest block font-medium">Org ID</label>
                   <input
                     type="number"
-                    value={orgId}
-                    onChange={(e) => setOrgId(e.target.value)}
+                    value={state.orgId}
+                    onChange={(e) => state.dispatch(jobsActions.setFormField({ field: "orgId", value: e.target.value }))}
                     required
                     className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all duration-300"
                   />
@@ -295,30 +200,30 @@ export default function JobsPage() {
                   <label className="text-[10px] text-zinc-500 uppercase tracking-widest block font-medium">Category ID (Optional)</label>
                   <input
                     type="number"
-                    value={categoryId}
-                    onChange={(e) => setCategoryId(e.target.value)}
+                    value={state.categoryId}
+                    onChange={(e) => state.dispatch(jobsActions.setFormField({ field: "categoryId", value: e.target.value }))}
                     className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all duration-300"
                   />
                 </div>
               </div>
-
+ 
               <div className="space-y-1">
                 <label className="text-[10px] text-zinc-500 uppercase tracking-widest block font-medium">Job Name</label>
                 <input
                   type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  value={state.name}
+                  onChange={(e) => state.dispatch(jobsActions.setFormField({ field: "name", value: e.target.value }))}
                   placeholder="e.g. Nightly Vendor Sync"
                   required
                   className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all duration-300"
                 />
               </div>
-
+ 
               <div className="space-y-1">
                 <label className="text-[10px] text-zinc-500 uppercase tracking-widest block font-medium">Status</label>
                 <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
+                  value={state.status}
+                  onChange={(e) => state.dispatch(jobsActions.setFormField({ field: "status", value: e.target.value }))}
                   className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all duration-300"
                 >
                   <option value="active">Active</option>
@@ -326,23 +231,23 @@ export default function JobsPage() {
                   <option value="disabled">Disabled</option>
                 </select>
               </div>
-
+ 
               <div className="space-y-1">
                 <label className="text-[10px] text-zinc-500 uppercase tracking-widest block font-medium">Config (JSON)</label>
                 <textarea
-                  value={configText}
-                  onChange={(e) => setConfigText(e.target.value)}
+                  value={state.configText}
+                  onChange={(e) => state.dispatch(jobsActions.setFormField({ field: "configText", value: e.target.value }))}
                   rows={5}
                   spellCheck={false}
                   className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs font-mono text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all duration-300"
                 />
-                {configError && <p className="text-[11px] text-red-400">{configError}</p>}
+                {state.configError && <p className="text-[11px] text-red-400">{state.configError}</p>}
               </div>
-
+ 
               <div className="flex justify-end gap-3.5 pt-4">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => state.dispatch(jobsActions.closeModal())}
                   className="px-4 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-xs font-semibold cursor-pointer transition-all duration-300"
                 >
                   Cancel
@@ -358,47 +263,46 @@ export default function JobsPage() {
           </div>
         </div>
       )}
-
-      {/* Runs Modal */}
-      {isRunsModalOpen && runsJob && (
+ 
+      {state.isRunsModalOpen && state.runsJob && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity duration-300" onClick={() => setIsRunsModalOpen(false)} />
-
-          <div className="relative w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-2xl shadow-black/90 text-white animate-scaleIn">
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity duration-300" onClick={() => state.dispatch(jobsActions.setFormField({ field: "isRunsModalOpen", value: false }))} />
+ 
+          <div className="relative w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-955 p-6 shadow-2xl shadow-black/90 text-white animate-scaleIn">
             <button
-              onClick={() => setIsRunsModalOpen(false)}
-              className="absolute right-5 top-5 p-1 rounded-full text-zinc-500 hover:text-white hover:bg-zinc-900 transition-all duration-300 cursor-pointer"
+              onClick={() => state.dispatch(jobsActions.setFormField({ field: "isRunsModalOpen", value: false }))}
+              className="absolute right-5 top-5 p-1 rounded-full text-zinc-500 hover:text-white hover:bg-zinc-905 transition-all duration-300 cursor-pointer"
             >
               <X className="h-4 w-4" />
             </button>
-
+ 
             <h2 className="text-lg font-light tracking-tight mb-1 flex items-center gap-2">
               <History className="h-4.5 w-4.5 text-indigo-400" />
-              Runs — {runsJob.name}
+              Runs — {state.runsJob.name}
             </h2>
-            <p className="text-[11px] text-zinc-500 mb-4">Job #{runsJob.id}</p>
-
+            <p className="text-[11px] text-zinc-500 mb-4">Job #{state.runsJob.id}</p>
+ 
             <button
-              onClick={() => handleTriggerRun(runsJob.id)}
+              onClick={() => state.handleTriggerRun(state.runsJob!.id)}
               className="mb-4 flex items-center gap-1.5 rounded-lg border border-emerald-500/20 text-emerald-400 bg-emerald-950/20 hover:bg-emerald-950/50 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider transition-all duration-300 cursor-pointer"
             >
               <Play className="h-3.5 w-3.5" />
               Trigger New Run
             </button>
-
+ 
             <div className="max-h-72 overflow-y-auto rounded-lg border border-zinc-900 divide-y divide-zinc-900">
-              {runsLoading ? (
+              {state.runsLoading ? (
                 <div className="flex items-center justify-center py-10 text-zinc-500">
                   <RefreshCw className="h-5 w-5 animate-spin" />
                 </div>
-              ) : runs.length === 0 ? (
+              ) : state.runs.length === 0 ? (
                 <div className="text-center py-10 text-zinc-500 text-xs">No runs recorded yet.</div>
               ) : (
-                runs.map((run) => (
+                state.runs.map((run: any) => (
                   <div key={run.id} className="p-3.5 flex items-center justify-between text-xs">
                     <div>
                       <span className="font-mono text-zinc-300">Run #{run.id}</span>
-                      <span className="ml-2 text-zinc-500">
+                      <span className="ml-2 text-zinc-505 font-light">
                         {run.startedAt ? new Date(run.startedAt).toLocaleString() : "Not started"}
                       </span>
                     </div>

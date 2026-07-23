@@ -1,19 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import React from "react";
 import Link from "next/link";
 import { ShieldAlert, ArrowLeft, Home, Key, Lock, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default function UnauthorizedPage() {
-  const [requestStatus, setRequestStatus] = useState<"idle" | "requesting" | "requested">("idle");
+import { useUnauthorizedPageState } from "@/features/signup/UnauthorizedPageState";
 
-  const handleRequestAccess = () => {
-    setRequestStatus("requesting");
-    setTimeout(() => {
-      setRequestStatus("requested");
-    }, 2000);
-  };
+export default function UnauthorizedPage() {
+  const state = useUnauthorizedPageState();
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center min-h-[80vh] bg-black text-white relative overflow-hidden px-6 selection:bg-zinc-800 font-sans">
@@ -54,20 +49,20 @@ export default function UnauthorizedPage() {
             <span>Return to Safety</span>
           </Link>
 
-          {requestStatus === "requested" ? (
+          {state.requestStatus === "requested" ? (
             <div className="flex items-center justify-center gap-2 w-full px-6 py-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 text-emerald-400 text-sm font-medium">
               <CheckCircle2 className="w-4 h-4" />
               <span>Override Requested</span>
             </div>
           ) : (
             <Button
-              onClick={handleRequestAccess}
-              disabled={requestStatus === "requesting"}
+              onClick={state.handleRequestAccess}
+              disabled={state.requestStatus === "requesting"}
               variant="outline"
               className="w-full border-zinc-800 bg-zinc-950 text-zinc-300 hover:bg-zinc-900 active:scale-95 transition-all py-6 cursor-pointer"
             >
-              <Key className={`w-4 h-4 mr-2 text-amber-400 ${requestStatus === "requesting" ? "animate-spin" : ""}`} />
-              <span>{requestStatus === "requesting" ? "Broadcasting Request..." : "Request Override"}</span>
+              <Key className={`w-4 h-4 mr-2 text-amber-400 ${state.requestStatus === "requesting" ? "animate-spin" : ""}`} />
+              <span>{state.requestStatus === "requesting" ? "Broadcasting Request..." : "Request Override"}</span>
             </Button>
           )}
         </div>

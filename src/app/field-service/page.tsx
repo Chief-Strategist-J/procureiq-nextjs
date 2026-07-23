@@ -1,77 +1,18 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Clock, MapPin, Users, CalendarDays, ArrowRight, ShieldCheck, Settings, Activity } from "lucide-react";
-import { operatingHoursApi, territoriesApi, resourcesApi, appointmentsApi } from "./api-client";
+import { useFieldServiceDashboardState } from "@/features/fieldService/FieldServiceDashboardState";
 
 export default function FieldServiceDashboard() {
-  const router = useRouter();
-  const [stats, setStats] = useState({
-    operatingHours: 0,
-    territories: 0,
-    resources: 0,
-    appointments: 0,
-  });
-
-  useEffect(() => {
-    async function loadStats() {
-      const oh = await operatingHoursApi.list();
-      const t = await territoriesApi.list();
-      const r = await resourcesApi.list();
-      const a = await appointmentsApi.list();
-      setStats({
-        operatingHours: oh.length,
-        territories: t.length,
-        resources: r.length,
-        appointments: a.length,
-      });
-    }
-    loadStats();
-  }, []);
-
-  const sections = [
-    {
-      title: "Operating Hours",
-      description: "Define time slots, shifts, and global regional timezones for work shifts.",
-      count: stats.operatingHours,
-      icon: Clock,
-      href: "/field-service/operating-hours",
-      color: "text-indigo-400 border-indigo-500/20 bg-indigo-950/20",
-    },
-    {
-      title: "Service Territories",
-      description: "Manage physical region sectors, assignments, and bind operating hours.",
-      count: stats.territories,
-      icon: MapPin,
-      href: "/field-service/territories",
-      color: "text-emerald-400 border-emerald-500/20 bg-emerald-950/20",
-    },
-    {
-      title: "Service Resources",
-      description: "Administer field technicians, equipment crews, capacities, and skills.",
-      count: stats.resources,
-      icon: Users,
-      href: "/field-service/resources",
-      color: "text-amber-400 border-amber-500/20 bg-amber-950/20",
-    },
-    {
-      title: "Service Appointments",
-      description: "Schedule parent work orders, match candidates, and dispatch assignments.",
-      count: stats.appointments,
-      icon: CalendarDays,
-      href: "/field-service/appointments",
-      color: "text-blue-400 border-blue-500/20 bg-blue-950/20",
-    },
-  ];
+  const state = useFieldServiceDashboardState();
 
   return (
     <div className="min-h-screen bg-black text-white p-4 sm:p-8 font-sans relative">
-      {/* Background ambient glows */}
       <div className="absolute top-0 right-1/4 w-[450px] h-[450px] bg-indigo-500/5 rounded-full blur-[140px] pointer-events-none" />
       <div className="absolute bottom-1/4 left-1/4 w-[380px] h-[380px] bg-emerald-500/3 rounded-full blur-[110px] pointer-events-none" />
 
-      {/* Header bar */}
       <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10 border-b border-zinc-900 pb-6">
         <div>
           <div className="flex items-center gap-3">
@@ -97,12 +38,11 @@ export default function FieldServiceDashboard() {
         </div>
       </div>
 
-      {/* Grid of sections */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-        {sections.map((sec) => (
+        {state.sections.map((sec) => (
           <div
             key={sec.title}
-            onClick={() => router.push(sec.href)}
+            onClick={() => state.router.push(sec.href)}
             className="group relative rounded-xl border border-zinc-800 bg-zinc-950/40 hover:bg-zinc-900/20 backdrop-blur-md p-6 hover:border-zinc-700 transition-all duration-300 cursor-pointer overflow-hidden shadow-xl"
           >
             <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full blur-xl translate-x-8 -translate-y-8 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -132,10 +72,9 @@ export default function FieldServiceDashboard() {
         ))}
       </div>
 
-      {/* Extra info/system overview */}
       <div className="rounded-xl border border-zinc-900 bg-zinc-950/20 p-6 backdrop-blur-md">
         <h4 className="text-xs uppercase tracking-widest text-zinc-500 font-semibold mb-3 flex items-center gap-2">
-          <Settings className="h-3.5 w-3.5 text-zinc-600" />
+          <Settings className="h-3.5 w-3.5 text-zinc-650" />
           FSL Engine Constraints Configuration
         </h4>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-xs text-zinc-400">

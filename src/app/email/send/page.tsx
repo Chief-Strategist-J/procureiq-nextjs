@@ -1,49 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, RefreshCw, CheckCircle2, AlertCircle, Send } from "lucide-react";
-import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
-import { sendRequest, selectEmailSendState, resetSendState } from "@/features/email/emailSlice";
-import { selectEmailState } from "@/features/email/emailSlice";
+import { useSendEmailPageState } from "@/features/email/SendEmailPageState";
+import { emailSlice } from "@/features/email/emailSlice";
 
 export default function SendEmailPage() {
-  const router = useRouter();
-  const dispatch = useAppDispatch();
-  const sendState = useAppSelector(selectEmailSendState);
-  const emailState = useAppSelector(selectEmailState);
-
-  const [recipients, setRecipients] = useState("");
-  const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
-
-  const sending = sendState.status === "loading";
-  const error = sendState.error;
-  const success = emailState.lastAction?.status === "success" && emailState.lastAction?.type === "create" ? emailState.lastAction.message : "";
-
-  useEffect(() => {
-    return () => {
-      dispatch(resetSendState());
-    };
-  }, [dispatch]);
-
-  useEffect(() => {
-    if (sendState.status === "succeeded") {
-      const timer = setTimeout(() => router.push("/email"), 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [sendState.status, router]);
-
-  const handleSend = (e: React.FormEvent) => {
-    e.preventDefault();
-    const recipientList = recipients
-      .split(",")
-      .map((r) => r.trim())
-      .filter((r) => r.length > 0);
-
-    dispatch(sendRequest({ recipients: recipientList, subject, body }));
-  };
+  const state = useSendEmailPageState();
 
   return (
     <div className="min-h-screen bg-black text-white p-4 sm:p-8 font-sans relative flex flex-col">
@@ -68,28 +33,28 @@ export default function SendEmailPage() {
         </div>
       </div>
 
-      {error && (
+      {state.error && (
         <div className="mb-6 p-4 text-xs bg-red-950/20 border border-red-500/20 text-red-400 rounded-lg flex items-center gap-2.5 animate-fadeIn backdrop-blur-md">
           <AlertCircle className="h-4.5 w-4.5 shrink-0 text-red-500" />
-          <span className="font-medium">{error}</span>
+          <span className="font-medium">{state.error}</span>
         </div>
       )}
 
-      {success && (
+      {state.success && (
         <div className="mb-6 p-4 text-xs bg-emerald-950/20 border border-emerald-500/20 text-emerald-400 rounded-lg flex items-center gap-2.5 animate-fadeIn backdrop-blur-md">
           <CheckCircle2 className="h-4.5 w-4.5 shrink-0 text-emerald-500" />
-          <span className="font-medium">{success}</span>
+          <span className="font-medium">{state.success}</span>
         </div>
       )}
 
-      <form onSubmit={handleSend} className="space-y-8 flex-1 flex flex-col justify-between w-full max-w-2xl">
+      <form onSubmit={state.handleSend} className="space-y-8 flex-1 flex flex-col justify-between w-full max-w-2xl">
         <div className="space-y-8 w-full">
           <div className="space-y-2">
             <label className="text-[10px] text-zinc-400 uppercase tracking-widest block font-bold">Recipients (comma-separated)</label>
             <input
               type="text"
-              value={recipients}
-              onChange={(e) => setRecipients(e.target.value)}
+              value={state.recipients}
+              onChange={(e) => state.dispatch(emailSlice.actions.setFormField({ field: "recipients", value: e.target.value }))}
               placeholder="procurement@acme.example, supply@globex.example"
               required
               className="w-full rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3.5 text-xs text-white focus:outline-none focus:border-zinc-700 transition-all"
@@ -100,8 +65,8 @@ export default function SendEmailPage() {
             <label className="text-[10px] text-zinc-400 uppercase tracking-widest block font-bold">Subject</label>
             <input
               type="text"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
+              value={state.subject}
+              onChange={(e) => state.dispatch(emailSlice.actions.setFormField({ field: "subject", value: e.target.value }))}
               placeholder="Vendor Insurance Certificate Reminder"
               required
               className="w-full rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3.5 text-xs text-white focus:outline-none focus:border-zinc-700 transition-all"
@@ -111,8 +76,8 @@ export default function SendEmailPage() {
           <div className="space-y-2">
             <label className="text-[10px] text-zinc-400 uppercase tracking-widest block font-bold">Body</label>
             <textarea
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
+              value={state.body}
+              onChange={(e) => state.dispatch(emailSlice.actions.setFormField({ field: "body", value: e.target.value }))}
               rows={8}
               placeholder="Write the message content here..."
               required
@@ -124,16 +89,16 @@ export default function SendEmailPage() {
         <div className="flex justify-end gap-4 pt-8 mt-12 border-t border-zinc-900">
           <Link
             href="/email"
-            className="px-8 py-3 rounded-lg bg-zinc-950 border border-zinc-850 hover:bg-zinc-900 text-xs font-semibold cursor-pointer transition-all text-center"
+            className="px-8 py-3 rounded-lg bg-zinc-955 border border-zinc-850 hover:bg-zinc-900 text-xs font-semibold cursor-pointer transition-all text-center"
           >
             Cancel
           </Link>
           <button
             type="submit"
-            disabled={sending}
+            disabled={state.sending}
             className="px-10 py-3 rounded-lg bg-white text-black hover:bg-zinc-150 hover:scale-[1.02] active:scale-[0.98] text-xs font-semibold flex items-center gap-2 disabled:opacity-50 cursor-pointer transition-all shadow-[0_4px_20px_rgba(255,255,255,0.08)]"
           >
-            {sending ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+            {state.sending ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
             Send
           </button>
         </div>

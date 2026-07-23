@@ -1,108 +1,20 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Megaphone, Plus, RefreshCw, CheckCircle2, AlertCircle, X, Edit2, Trash2 } from "lucide-react";
-import { useAppSelector, useAppDispatch } from "@/shared/store/hooks";
+import { useCampaignListPageState } from "@/features/campaigns/CampaignsListState";
 import { campaignsActions } from "@/features/campaigns/campaignsSlice";
-// import { CampaignsApi } from "../api-client";
-import { Campaign } from "../types";
 
 export default function CampaignListPage() {
-  const router = useRouter();
-  const dispatch = useAppDispatch();
-  const { data: items = [], status: fetchStatus, error: stateError } = useAppSelector(state => state.campaigns.list.items);
-  const loading = fetchStatus === "loading";
-  const error = stateError || "";
-  const [success, setSuccess] = useState("");
-  const [query, setQuery] = useState("");
-
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<"create" | "edit">("create");
-  const [editingId, setEditingId] = useState<number | null>(null);
-
-  const [orgId, setOrgId] = useState("1");
-  const [name, setName] = useState("");
-  const [status, setStatus] = useState("draft");
-  const [saving, setSaving] = useState(false);
-
-  const fetchItems = useCallback(() => {
-    dispatch(campaignsActions.fetchRequest());
-  }, [dispatch]);
-
-  useEffect(() => {
-    fetchItems();
-  }, [fetchItems]);
-
-  const openCreateModal = () => {
-    setModalMode("create");
-    setOrgId("1");
-    setName("");
-    setStatus("draft");
-    setIsModalOpen(true);
-  };
-
-  const openEditModal = (item: Campaign) => {
-    setModalMode("edit");
-    setEditingId(item.id);
-    setOrgId(item.orgId.toString());
-    setName(item.name);
-    setStatus(item.status);
-    setIsModalOpen(true);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) return;
-
-    setSaving(true);
-    setError("");
-    setSuccess("");
-
-    const payload = { orgId: parseInt(orgId) || 1, name, status };
-
-    try {
-      if (modalMode === "create") {
-        dispatch(campaignsActions.createRequest(payload));
-        setSuccess("Campaign created successfully.");
-      } else if (modalMode === "edit" && editingId !== null) {
-        dispatch(campaignsActions.updateRequest({ id: editingId, data: payload }));
-        setSuccess("Campaign updated successfully.");
-      }
-      setIsModalOpen(false);
-      fetchItems();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save campaign.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this campaign?")) return;
-    setError("");
-    setSuccess("");
-    try {
-      dispatch(campaignsActions.deleteRequest(id));
-      setSuccess("Campaign deleted successfully.");
-      fetchItems();
-    } catch {
-      setError("Failed to delete campaign.");
-    }
-  };
-
-  const filteredItems = items.filter((item) => {
-    if (!query) return true;
-    const q = query.toLowerCase();
-    return item.name.toLowerCase().includes(q) || item.status.toLowerCase().includes(q) || item.id.toString().includes(q);
-  });
+  const state = useCampaignListPageState();
 
   return (
     <div className="min-h-screen bg-black text-white p-4 sm:p-8 font-sans relative">
       <div className="absolute top-0 right-1/4 w-[400px] h-[400px] bg-indigo-500/5 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="flex items-center gap-2 text-xs text-zinc-500 mb-4">
-        <span className="hover:text-zinc-300 cursor-pointer" onClick={() => router.push("/campaigns")}>Campaigns</span>
+        <span className="hover:text-zinc-300 cursor-pointer" onClick={() => state.router.push("/campaigns")}>Campaigns</span>
         <span>/</span>
         <span className="text-zinc-300">Campaign List</span>
       </div>
@@ -126,16 +38,16 @@ export default function CampaignListPage() {
 
         <div className="flex items-center gap-3 self-end md:self-auto">
           <button
-            onClick={fetchItems}
-            disabled={loading}
+            onClick={state.fetchItems}
+            disabled={state.loading}
             className="flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-950/60 backdrop-blur-md px-4 py-2 text-xs font-medium text-zinc-400 hover:text-white hover:bg-zinc-900/80 transition-all duration-300 cursor-pointer"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+            <RefreshCw className={`h-3.5 w-3.5 ${state.loading ? "animate-spin" : ""}`} />
             Refresh
           </button>
 
           <button
-            onClick={openCreateModal}
+            onClick={state.openCreateModal}
             className="flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-xs font-semibold text-black hover:bg-zinc-100 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 cursor-pointer shadow-[0_4px_20px_rgba(255,255,255,0.08)]"
           >
             <Plus className="h-4 w-4" />
@@ -144,16 +56,16 @@ export default function CampaignListPage() {
         </div>
       </div>
 
-      {error && (
-        <div className="mb-6 p-3.5 text-xs bg-red-950/20 border border-red-500/20 text-red-400 rounded-lg flex items-center gap-2.5 animate-fadeIn backdrop-blur-md">
+      {state.error && (
+        <div className="mb-6 p-3.5 text-xs bg-red-955/20 border border-red-500/20 text-red-400 rounded-lg flex items-center gap-2.5 animate-fadeIn backdrop-blur-md">
           <AlertCircle className="h-4.5 w-4.5 shrink-0 text-red-500" />
-          <span className="font-medium">{error}</span>
+          <span className="font-medium">{state.error}</span>
         </div>
       )}
-      {success && (
+      {state.successMessage && (
         <div className="mb-6 p-3.5 text-xs bg-emerald-950/20 border border-emerald-500/20 text-emerald-400 rounded-lg flex items-center gap-2.5 animate-fadeIn backdrop-blur-md">
           <CheckCircle2 className="h-4.5 w-4.5 shrink-0 text-emerald-500" />
-          <span className="font-medium">{success}</span>
+          <span className="font-medium">{state.successMessage}</span>
         </div>
       )}
 
@@ -163,8 +75,8 @@ export default function CampaignListPage() {
           <input
             type="text"
             placeholder="Search by name, status or ID..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            value={state.searchQuery}
+            onChange={(e) => state.dispatch(campaignsActions.setSearchQuery(e.target.value))}
             className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 pl-9 pr-4 py-2 text-xs text-white placeholder-zinc-500"
           />
         </div>
@@ -172,7 +84,7 @@ export default function CampaignListPage() {
 
       <div className="rounded-xl border border-zinc-800/80 bg-zinc-950/40 backdrop-blur-md overflow-hidden shadow-2xl shadow-black/80">
         <div className="overflow-x-auto">
-          {loading ? (
+          {state.loading ? (
             <div className="flex flex-col items-center justify-center py-24 text-zinc-500">
               <RefreshCw className="h-8 w-8 animate-spin text-zinc-600 mb-3" />
               <p className="text-xs tracking-wider">Syncing campaign registry...</p>
@@ -189,7 +101,7 @@ export default function CampaignListPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredItems.map((item) => (
+                {state.filteredItems.map((item) => (
                   <tr key={item.id} className="hover:bg-zinc-900/20 transition-all duration-300 border-b border-zinc-900 text-zinc-300">
                     <td className="px-5 py-4 text-xs font-mono font-semibold text-white">#{item.id}</td>
                     <td className="px-5 py-4 text-xs font-medium text-zinc-200">{item.name}</td>
@@ -202,13 +114,13 @@ export default function CampaignListPage() {
                     <td className="px-5 py-4 text-right pr-6">
                       <div className="flex items-center justify-end gap-2.5">
                         <button
-                          onClick={() => openEditModal(item)}
+                          onClick={() => state.openEditModal(item)}
                           className="p-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-zinc-950/60 hover:text-white transition-all text-zinc-400 cursor-pointer"
                         >
                           <Edit2 className="h-3.5 w-3.5" />
                         </button>
                         <button
-                          onClick={() => handleDelete(item.id)}
+                          onClick={() => state.handleDelete(item.id)}
                           className="p-1.5 rounded-lg border border-zinc-800 hover:border-red-900/50 hover:bg-red-950/20 bg-zinc-950/60 hover:text-red-400 transition-all text-zinc-400 cursor-pointer"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -217,7 +129,7 @@ export default function CampaignListPage() {
                     </td>
                   </tr>
                 ))}
-                {filteredItems.length === 0 && (
+                {state.filteredItems.length === 0 && (
                   <tr>
                     <td colSpan={5} className="px-5 py-16 text-center text-zinc-500 text-xs">
                       No campaigns found in registry.
@@ -230,13 +142,13 @@ export default function CampaignListPage() {
         </div>
       </div>
 
-      {isModalOpen && (
+      {state.isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity duration-300" onClick={() => setIsModalOpen(false)} />
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity duration-300" onClick={() => state.dispatch(campaignsActions.closeModal())} />
 
           <div className="relative w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-2xl shadow-black/90 text-white animate-scaleIn">
             <button
-              onClick={() => setIsModalOpen(false)}
+              onClick={() => state.dispatch(campaignsActions.closeModal())}
               className="absolute right-5 top-5 p-1 rounded-full text-zinc-500 hover:text-white hover:bg-zinc-900 transition-all duration-300 cursor-pointer"
             >
               <X className="h-4 w-4" />
@@ -244,16 +156,16 @@ export default function CampaignListPage() {
 
             <h2 className="text-lg font-light tracking-tight mb-5 flex items-center gap-2">
               <Megaphone className="h-4.5 w-4.5 text-indigo-400" />
-              {modalMode === "create" ? "New Campaign" : "Edit Campaign"}
+              {state.modalMode === "create" ? "New Campaign" : "Edit Campaign"}
             </h2>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={state.handleSubmit} className="space-y-4">
               <div className="space-y-1">
                 <label className="text-[10px] text-zinc-500 uppercase tracking-widest block font-medium">Org ID</label>
                 <input
                   type="number"
-                  value={orgId}
-                  onChange={(e) => setOrgId(e.target.value)}
+                  value={state.orgId}
+                  onChange={(e) => state.dispatch(campaignsActions.setFormField({ field: "orgId", value: e.target.value }))}
                   required
                   className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all duration-300"
                 />
@@ -263,8 +175,8 @@ export default function CampaignListPage() {
                 <label className="text-[10px] text-zinc-500 uppercase tracking-widest block font-medium">Campaign Name</label>
                 <input
                   type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  value={state.name}
+                  onChange={(e) => state.dispatch(campaignsActions.setFormField({ field: "name", value: e.target.value }))}
                   placeholder="e.g. Q3 Vendor Renewal Outreach"
                   required
                   className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all duration-300"
@@ -274,8 +186,8 @@ export default function CampaignListPage() {
               <div className="space-y-1">
                 <label className="text-[10px] text-zinc-500 uppercase tracking-widest block font-medium">Status</label>
                 <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
+                  value={state.status}
+                  onChange={(e) => state.dispatch(campaignsActions.setFormField({ field: "status", value: e.target.value }))}
                   className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all duration-300"
                 >
                   <option value="draft">Draft</option>
@@ -288,17 +200,17 @@ export default function CampaignListPage() {
               <div className="flex justify-end gap-3.5 pt-4">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => state.dispatch(campaignsActions.closeModal())}
                   className="px-4 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-xs font-semibold cursor-pointer transition-all duration-300"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={saving}
+                  disabled={state.saving}
                   className="px-5 py-2.5 rounded-lg bg-white text-black hover:bg-zinc-100 hover:scale-[1.02] active:scale-[0.98] text-xs font-semibold flex items-center gap-2 disabled:opacity-50 cursor-pointer transition-all duration-300"
                 >
-                  {saving && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
+                  {state.saving && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
                   Save Changes
                 </button>
               </div>

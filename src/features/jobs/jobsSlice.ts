@@ -1,6 +1,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { AsyncState, createAsyncState } from '@/shared/types/asyncState';
 import { Job } from '@/app/jobs/api-client';
+import { ListUiState, initialListUiState } from '@/shared/store/createListSlice';
 
 export interface JobRun {
   id: number;
@@ -12,17 +13,39 @@ export interface JobRun {
 }
 
 export interface JobsState {
-  jobs: AsyncState<Job[]>;
+  jobs: AsyncState<Job[]> & { ui: ListUiState };
   runs: AsyncState<JobRun[]>;
 }
 
 const jobsSlice = createSlice({
   name: 'jobs',
   initialState: {
-    jobs: createAsyncState<Job[]>([]),
+    jobs: {
+      ...createAsyncState<Job[]>([]),
+      ui: initialListUiState,
+    },
     runs: createAsyncState<JobRun[]>([]),
   } as JobsState,
   reducers: {
+    setSearchQuery(state, action: PayloadAction<string>) {
+      state.jobs.ui.searchQuery = action.payload;
+    },
+    openModal(state, action: PayloadAction<{ mode?: "create" | "edit"; editingId?: number | null; initialFields?: Record<string, any> }>) {
+      state.jobs.ui.isModalOpen = true;
+      state.jobs.ui.modalMode = action.payload.mode || "create";
+      state.jobs.ui.editingId = action.payload.editingId ?? null;
+      if (action.payload.initialFields) {
+        state.jobs.ui.formFields = action.payload.initialFields;
+      }
+    },
+    closeModal(state) {
+      state.jobs.ui.isModalOpen = false;
+      state.jobs.ui.editingId = null;
+      state.jobs.ui.formFields = {};
+    },
+    setFormField(state, action: PayloadAction<{ field: string; value: any }>) {
+      state.jobs.ui.formFields[action.payload.field] = action.payload.value;
+    },
     fetchJobsRequest(state) {
       state.jobs.status = 'loading';
       state.jobs.error = null;
@@ -45,6 +68,7 @@ const jobsSlice = createSlice({
       state.jobs.status = 'succeeded';
       state.jobs.data.push(action.payload);
       state.jobs.lastAction = `Job "${action.payload.name}" created successfully.`;
+      state.jobs.ui.isModalOpen = false;
     },
     createJobFailure(state, action: PayloadAction<string>) {
       state.jobs.status = 'failed';
@@ -59,6 +83,7 @@ const jobsSlice = createSlice({
       state.jobs.status = 'succeeded';
       state.jobs.data = state.jobs.data.map(j => j.id === action.payload.id ? action.payload : j);
       state.jobs.lastAction = `Job "${action.payload.name}" updated.`;
+      state.jobs.ui.isModalOpen = false;
     },
     updateJobFailure(state, action: PayloadAction<string>) {
       state.jobs.status = 'failed';

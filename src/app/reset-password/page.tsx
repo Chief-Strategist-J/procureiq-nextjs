@@ -1,73 +1,27 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { Suspense } from "react";
 import Link from "next/link";
-import { useSearchParams, useRouter } from "next/navigation";
-import { Lock, CheckCircle2, ArrowLeft, AlertCircle, KeyRound, Terminal } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { Lock, CheckCircle2, ArrowLeft, AlertCircle, KeyRound } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Field, FieldLabel, FieldError } from "@/components/ui/field";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import { useResetPasswordFormState } from "@/features/signup/ResetPasswordFormState";
+import { signupSlice } from "@/features/signup/signupSlice";
 
 function ResetPasswordForm() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const token = searchParams.get("token") || "";
-
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState("");
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!token) {
-      setError("Authorization reset token is missing from the query payload.");
-      return;
-    }
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters in length.");
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError("Confirmation password does not match.");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-
-    try {
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-      const res = await fetch(`${backendUrl}/api/v1/auth/reset-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, newPassword: password }),
-      });
-
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(errText || "Reset request rejected by server. Token may be expired.");
-      }
-
-      setSuccess(true);
-    } catch (err: any) {
-      setError(err.message || "Failed to update credentials. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const state = useResetPasswordFormState();
 
   return (
-    <Card className="w-full max-w-md border-zinc-800 bg-zinc-950/80 backdrop-blur-md relative overflow-hidden shadow-2xl rounded-2xl">
-      {/* Visual warning aura when there's no token */}
-      {!token && (
+    <Card className="w-full max-w-md border-zinc-800 bg-zinc-955/80 backdrop-blur-md relative overflow-hidden shadow-2xl rounded-2xl">
+      {!state.token && (
         <div className="absolute inset-x-0 top-0 h-1 bg-amber-500/80" />
       )}
 
-      {!success ? (
+      {!state.success ? (
         <>
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-light text-center tracking-tight text-white flex items-center justify-center gap-2">
@@ -79,10 +33,9 @@ function ResetPasswordForm() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              
-              {!token && (
-                <div className="p-3 text-xs bg-amber-950/40 border border-amber-900/50 text-amber-400 rounded-lg flex gap-2 items-start">
+            <form onSubmit={state.handleSubmit} className="space-y-4">
+              {!state.token && (
+                <div className="p-3 text-xs bg-amber-955/40 border border-amber-900/50 text-amber-400 rounded-lg flex gap-2 items-start">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                   <div>
                     <strong>Token Missing:</strong> You arrived without a valid URL authorization signature. Submissions will fail.
@@ -90,9 +43,9 @@ function ResetPasswordForm() {
                 </div>
               )}
 
-              {error && (
-                <FieldError className="p-3 text-xs bg-red-950/40 border border-red-900/50 text-red-400 rounded-lg">
-                  {error}
+              {state.error && (
+                <FieldError className="p-3 text-xs bg-red-955/40 border border-red-900/55 text-red-400 rounded-lg">
+                  {state.error}
                 </FieldError>
               )}
 
@@ -108,9 +61,9 @@ function ResetPasswordForm() {
                     id="new-password"
                     type="password"
                     placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={loading}
+                    value={state.password}
+                    onChange={(e) => state.dispatch(signupSlice.actions.setFormField({ field: "resetPassword", value: e.target.value }))}
+                    disabled={state.loading}
                     className="text-white text-sm"
                     required
                   />
@@ -129,9 +82,9 @@ function ResetPasswordForm() {
                     id="confirm-password"
                     type="password"
                     placeholder="••••••••"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    disabled={loading}
+                    value={state.confirmPassword}
+                    onChange={(e) => state.dispatch(signupSlice.actions.setFormField({ field: "resetConfirmPassword", value: e.target.value }))}
+                    disabled={state.loading}
                     className="text-white text-sm"
                     required
                   />
@@ -140,10 +93,10 @@ function ResetPasswordForm() {
 
               <Button
                 type="submit"
-                disabled={loading}
+                disabled={state.loading}
                 className="w-full bg-white hover:bg-zinc-200 text-black font-medium py-2.5 text-sm rounded-lg transition-all mt-2 cursor-pointer"
               >
-                {loading ? (
+                {state.loading ? (
                   <span className="flex items-center gap-1.5 justify-center">
                     <Spinner className="w-4 h-4 text-black" />
                     Updating Credentials...
@@ -161,7 +114,6 @@ function ResetPasswordForm() {
           </CardFooter>
         </>
       ) : (
-        /* Success Screen */
         <div className="p-8 text-center flex flex-col items-center space-y-6">
           <div className="relative flex items-center justify-center">
             <div className="absolute inset-0 rounded-full bg-emerald-500/10 blur-xl animate-pulse" />
@@ -201,7 +153,6 @@ function LoadingPlaceholder() {
 export default function ResetPasswordPage() {
   return (
     <div className="flex flex-col flex-1 items-center justify-center min-h-screen bg-black text-white font-sans p-4 relative overflow-hidden">
-      {/* Background gradients */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,oklch(0.12_0.03_145/0.12),transparent_50%)] pointer-events-none" />
       
       <Suspense fallback={<LoadingPlaceholder />}>

@@ -1,127 +1,21 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Bell, Plus, RefreshCw, CheckCircle2, AlertTriangle, Info, Clock, AlertCircle, X, ShieldAlert, Send } from "lucide-react";
-import { NotificationsApi } from "./api-client";
-import { DispatchApi } from "./dispatch/api-client";
+import { Search, Bell, Plus, RefreshCw, CheckCircle2, AlertCircle, X, Send } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
 import { notificationsActions } from "@/features/notifications/notificationsSlice";
 
-interface NotificationResponse {
-  id: number;
-  typeCode: string;
-  sourceService: string;
-  payload: Record<string, any>;
-  metadata: Record<string, any>;
-  priority: number;
-  targetScope: string;
-  status: string;
-  createdAt: string;
-}
+import { useNotificationsPageState } from "@/features/notifications/NotificationsPageState";
 
 export default function NotificationsPage() {
-  const router = useRouter();
-  const dispatch = useAppDispatch();
-  const notifications = useAppSelector((s) => s.notifications.notifications.data);
-  const loading = useAppSelector((s) => s.notifications.notifications.status === "loading");
-  const storeError = useAppSelector((s) => s.notifications.notifications.error);
-
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [page, setPage] = useState(0);
-  const [totalElements] = useState(0);
-  
-  // Creation modal state
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [typeCode, setTypeCode] = useState("system_alert");
-  const [sourceService, setSourceService] = useState("procurement-service");
-  const [targetScope, setTargetScope] = useState("USER");
-  const [targetId, setTargetId] = useState("1");
-  const [priority, setPriority] = useState(2);
-  const [title, setTitle] = useState("");
-  const [message, setMessage] = useState("");
-  const [creating, setCreating] = useState(false);
-
-  useEffect(() => {
-    dispatch(notificationsActions.fetchNotificationsRequest({ page, statusFilter }));
-  }, [dispatch, page, statusFilter]);
-
-  useEffect(() => {
-    if (storeError) setError(storeError);
-  }, [storeError]);
-
-  // Handle Mark as Read
-  const handleToggleRead = (notificationId: number, currentStatus: string) => {
-    const newStatus = currentStatus === "READ" ? "UNREAD" : "READ";
-    dispatch(notificationsActions.updateStatusRequest({ id: notificationId, status: newStatus as "READ" | "UNREAD" }));
-    setSuccess(`Notification marked as ${newStatus.toLowerCase()}`);
-    setTimeout(() => setSuccess(""), 3000);
-  };
-
-  // Handle Send Notification
-  const handleCreateNotification = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title || !message) {
-      setError("Please fill in title and message payload fields");
-      return;
-    }
-
-    setCreating(true);
-    setError("");
-    setSuccess("");
-
-    dispatch(notificationsActions.dispatchNotificationRequest({
-      userId: targetId ? parseInt(targetId) : 1,
-      title,
-      message,
-      channels: ["EMAIL"],
-    }));
-
-    setSuccess("Notification created and sent successfully!");
-    setIsModalOpen(false);
-    setTitle("");
-    setMessage("");
-    setCreating(false);
-  };
-
-  // Filter local state by query string search
-  const filteredNotifications = notifications.filter((n) => {
-    if (!query) return true;
-    const q = query.toLowerCase();
-    const titleVal = n.payload?.title || n.title || "";
-    const msgVal = n.payload?.message || n.message || "";
-    return (
-      (n.typeCode ?? "").toLowerCase().includes(q) ||
-      (n.sourceService ?? "").toLowerCase().includes(q) ||
-      titleVal.toLowerCase().includes(q) ||
-      msgVal.toLowerCase().includes(q)
-    );
-  });
-
-  const getPriorityStyles = (p: number) => {
-    if (p >= 3) return "text-red-400 bg-red-950/30 border-red-500/20 shadow-[0_0_12px_rgba(239,68,68,0.07)]";
-    if (p === 2) return "text-amber-400 bg-amber-950/30 border-amber-500/20 shadow-[0_0_12px_rgba(245,158,11,0.07)]";
-    return "text-blue-400 bg-blue-950/20 border-blue-500/10 shadow-[0_0_12px_rgba(59,130,246,0.05)]";
-  };
-
-  const getPriorityLabel = (p: number) => {
-    if (p >= 3) return "High Priority";
-    if (p === 2) return "Medium";
-    return "Low Priority";
-  };
+  const state = useNotificationsPageState();
 
   return (
     <div className="min-h-screen bg-black text-white p-4 sm:p-8 font-sans">
-      
-      {/* Top ambient background glows */}
       <div className="absolute top-0 right-1/4 w-[400px] h-[400px] bg-indigo-500/5 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute top-1/3 left-1/4 w-[350px] h-[350px] bg-emerald-500/3 rounded-full blur-[100px] pointer-events-none" />
 
-      {/* Notifications Header */}
       <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 border-b border-zinc-900 pb-6">
         <div>
           <div className="flex items-center gap-3">
@@ -129,7 +23,7 @@ export default function NotificationsPage() {
               <Bell className="h-5 w-5 text-indigo-400" />
             </div>
             <div>
-              <h1 className="text-2xl font-light tracking-tight bg-gradient-to-r from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent">
+              <h1 className="text-2xl font-light tracking-tight bg-gradient-to-r from-white via-zinc-200 to-zinc-505 bg-clip-text text-transparent">
                 System Registry & Notifications
               </h1>
               <p className="text-xs text-zinc-500 mt-1">
@@ -141,16 +35,20 @@ export default function NotificationsPage() {
 
         <div className="flex items-center gap-3 self-end md:self-auto">
           <button
-            onClick={() => { setRefreshing(true); dispatch(notificationsActions.fetchNotificationsRequest({ page, statusFilter })); setTimeout(() => setRefreshing(false), 800); }}
-            disabled={refreshing || loading}
+            onClick={() => {
+              state.dispatch(notificationsActions.setFormField({ field: "refreshing", value: true }));
+              state.dispatch(notificationsActions.fetchNotificationsRequest({ page: state.page, statusFilter: state.statusFilter }));
+              setTimeout(() => state.dispatch(notificationsActions.setFormField({ field: "refreshing", value: false })), 800);
+            }}
+            disabled={state.refreshing || state.loading}
             className="flex items-center gap-1.5 rounded-lg border border-zinc-850 bg-zinc-950/60 backdrop-blur-md px-4 py-2 text-xs font-medium text-zinc-400 hover:text-white hover:bg-zinc-900/80 hover:border-zinc-800 transition-all duration-300 cursor-pointer disabled:opacity-50"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+            <RefreshCw className={`h-3.5 w-3.5 ${state.refreshing ? "animate-spin" : ""}`} />
             Sync Feed
           </button>
 
           <button
-            onClick={() => router.push("/notifications/dispatch")}
+            onClick={() => state.router.push("/notifications/dispatch")}
             className="flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-xs font-semibold text-black hover:bg-zinc-100 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 cursor-pointer shadow-[0_4px_20px_rgba(255,255,255,0.08)]"
           >
             <Plus className="h-4 w-4" />
@@ -159,38 +57,36 @@ export default function NotificationsPage() {
         </div>
       </div>
 
-      {/* Alert Banner System */}
-      {error && (
-        <div className="mb-6 p-3.5 text-xs bg-red-950/20 border border-red-500/20 text-red-400 rounded-lg flex items-center gap-2.5 animate-fadeIn backdrop-blur-md">
+      {state.error && (
+        <div className="mb-6 p-3.5 text-xs bg-red-955/20 border border-red-500/20 text-red-400 rounded-lg flex items-center gap-2.5 animate-fadeIn backdrop-blur-md">
           <AlertCircle className="h-4.5 w-4.5 shrink-0 text-red-500" />
-          <span className="font-medium">{error}</span>
+          <span className="font-medium">{state.error}</span>
         </div>
       )}
       
-      {success && (
+      {state.success && (
         <div className="mb-6 p-3.5 text-xs bg-emerald-950/20 border border-emerald-500/20 text-emerald-400 rounded-lg flex items-center gap-2.5 animate-fadeIn backdrop-blur-md">
           <CheckCircle2 className="h-4.5 w-4.5 shrink-0 text-emerald-500" />
-          <span className="font-medium">{success}</span>
+          <span className="font-medium">{state.success}</span>
         </div>
       )}
 
-      {/* Action Filters and Search Row */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-6">
-        <div className="flex gap-1.5 p-1 rounded-lg border border-zinc-850/80 bg-zinc-950/80 backdrop-blur-md w-fit">
-          {["all", "UNREAD", "READ"].map((status) => (
+        <div className="flex gap-1.5 p-1 rounded-lg border border-zinc-850/80 bg-zinc-955/80 backdrop-blur-md w-fit">
+          {["all", "UNREAD", "READ"].map((statusOption) => (
             <button
-              key={status}
+              key={statusOption}
               onClick={() => {
-                setStatusFilter(status);
-                setPage(0);
+                state.dispatch(notificationsActions.setFormField({ field: "statusFilter", value: statusOption }));
+                state.dispatch(notificationsActions.setFormField({ field: "page", value: 0 }));
               }}
               className={`px-4 py-1.5 text-xs rounded-md capitalize transition-all duration-300 cursor-pointer ${
-                statusFilter === status
+                state.statusFilter === statusOption
                   ? "bg-zinc-900 text-white font-medium border border-zinc-800 shadow-lg"
                   : "text-zinc-500 hover:text-zinc-350 border border-transparent"
               }`}
             >
-              {status === "all" ? "All Feed" : status.toLowerCase()}
+              {statusOption === "all" ? "All Feed" : statusOption.toLowerCase()}
             </button>
           ))}
         </div>
@@ -200,17 +96,16 @@ export default function NotificationsPage() {
           <input
             type="text"
             placeholder="Search payload content, type..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            value={state.query}
+            onChange={(e) => state.dispatch(notificationsActions.setSearchQuery(e.target.value))}
             className="w-full sm:w-72 rounded-lg bg-zinc-900/60 border border-zinc-800 pl-9 pr-4 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-700/80 focus:border-zinc-700/80 focus:bg-zinc-900 transition-all duration-300"
           />
         </div>
       </div>
 
-      {/* Data Table Grid container */}
       <div className="rounded-xl border border-zinc-800/80 bg-zinc-950/40 backdrop-blur-md overflow-hidden shadow-2xl shadow-black/80">
         <div className="overflow-x-auto">
-          {loading && !refreshing ? (
+          {state.loading && !state.refreshing ? (
             <div className="flex flex-col items-center justify-center py-24 text-zinc-500">
               <RefreshCw className="h-8 w-8 animate-spin text-zinc-600 mb-3" />
               <p className="text-xs tracking-wider">Syncing communications feed...</p>
@@ -230,7 +125,7 @@ export default function NotificationsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredNotifications.map((notification, i) => (
+                {state.filteredNotifications.map((notification: any) => (
                   <tr
                     key={notification.id}
                     className={`group hover:bg-zinc-900/20 transition-all duration-300 border-b border-zinc-900 ${
@@ -264,8 +159,8 @@ export default function NotificationsPage() {
                       </div>
                     </td>
                     <td className="px-5 py-4">
-                      <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-medium transition-all ${getPriorityStyles(notification.priority ?? 1)}`}>
-                        {getPriorityLabel(notification.priority ?? 1)}
+                      <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-medium transition-all ${state.getPriorityStyles(notification.priority ?? 1)}`}>
+                        {state.getPriorityLabel(notification.priority ?? 1)}
                       </span>
                     </td>
                     <td className="px-5 py-4 text-xs text-center font-medium">
@@ -283,10 +178,10 @@ export default function NotificationsPage() {
                     </td>
                     <td className="px-5 py-4 text-right pr-6 whitespace-nowrap">
                       <button
-                        onClick={() => handleToggleRead(notification.id, notification.status)}
+                        onClick={() => state.handleToggleRead(notification.id, notification.status)}
                         className={`text-[10px] uppercase tracking-wider font-semibold px-2.5 py-1 rounded transition-all duration-300 cursor-pointer ${
                           notification.status === "READ"
-                            ? "border border-zinc-800 text-zinc-550 hover:text-zinc-300 hover:bg-zinc-900 hover:border-zinc-700"
+                            ? "border border-zinc-800 text-zinc-550 hover:text-zinc-350 hover:bg-zinc-905 hover:border-zinc-700"
                             : "border border-emerald-500/20 text-emerald-400 bg-emerald-950/20 hover:bg-emerald-950/50 hover:border-emerald-500/40"
                         }`}
                       >
@@ -296,7 +191,7 @@ export default function NotificationsPage() {
                   </tr>
                 ))}
 
-                {filteredNotifications.length === 0 && !loading && (
+                {state.filteredNotifications.length === 0 && !state.loading && (
                   <tr>
                     <td colSpan={8} className="px-5 py-16 text-center text-zinc-500 text-xs">
                       No notifications match your current filters.
@@ -309,39 +204,13 @@ export default function NotificationsPage() {
         </div>
       </div>
 
-      {/* Pagination component */}
-      {totalElements > 20 && (
-        <div className="flex items-center justify-between mt-5 text-xs text-zinc-500">
-          <span>
-            Showing {page * 20 + 1} - {Math.min((page + 1) * 20, totalElements)} of {totalElements} logs
-          </span>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={page === 0}
-              className="px-4 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 hover:bg-zinc-850 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300 cursor-pointer"
-            >
-              Previous
-            </button>
-            <button
-              onClick={() => setPage((p) => p + 1)}
-              disabled={(page + 1) * 20 >= totalElements}
-              className="px-4 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 hover:bg-zinc-850 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300 cursor-pointer"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Dispatch Notification Dialog / Modal */}
-      {isModalOpen && (
+      {state.isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity duration-300" onClick={() => setIsModalOpen(false)} />
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity duration-300" onClick={() => state.dispatch(notificationsActions.closeModal())} />
           
           <div className="relative w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-2xl shadow-black/90 text-white animate-scaleIn">
             <button
-              onClick={() => setIsModalOpen(false)}
+              onClick={() => state.dispatch(notificationsActions.closeModal())}
               className="absolute right-5 top-5 p-1 rounded-full text-zinc-550 hover:text-white hover:bg-zinc-900 transition-all duration-300 cursor-pointer"
             >
               <X className="h-4 w-4" />
@@ -352,13 +221,13 @@ export default function NotificationsPage() {
               Dispatch Notification Registry
             </h2>
 
-            <form onSubmit={handleCreateNotification} className="space-y-4">
+            <form onSubmit={state.handleCreateNotification} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-[10px] text-zinc-550 uppercase tracking-widest block font-medium">Event Code</label>
+                  <label className="text-[10px] text-zinc-555 uppercase tracking-widest block font-medium">Event Code</label>
                   <select
-                    value={typeCode}
-                    onChange={(e) => setTypeCode(e.target.value)}
+                    value={state.typeCode}
+                    onChange={(e) => state.dispatch(notificationsActions.setFormField({ field: "typeCode", value: e.target.value }))}
                     className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 focus:border-zinc-700 transition-all duration-300"
                   >
                     <option value="system_alert">System Alert</option>
@@ -366,10 +235,10 @@ export default function NotificationsPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] text-zinc-550 uppercase tracking-widest block font-medium">Source Service</label>
+                  <label className="text-[10px] text-zinc-555 uppercase tracking-widest block font-medium">Source Service</label>
                   <select
-                    value={sourceService}
-                    onChange={(e) => setSourceService(e.target.value)}
+                    value={state.sourceService}
+                    onChange={(e) => state.dispatch(notificationsActions.setFormField({ field: "sourceService", value: e.target.value }))}
                     className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 focus:border-zinc-700 transition-all duration-300"
                   >
                     <option value="procurement-service">Procurement Service</option>
@@ -382,10 +251,10 @@ export default function NotificationsPage() {
 
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-1 col-span-2">
-                  <label className="text-[10px] text-zinc-550 uppercase tracking-widest block font-medium">Target Scope</label>
+                  <label className="text-[10px] text-zinc-555 uppercase tracking-widest block font-medium">Target Scope</label>
                   <select
-                    value={targetScope}
-                    onChange={(e) => setTargetScope(e.target.value)}
+                    value={state.targetScope}
+                    onChange={(e) => state.dispatch(notificationsActions.setFormField({ field: "targetScope", value: e.target.value }))}
                     className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 focus:border-zinc-700 transition-all duration-300"
                   >
                     <option value="USER">User (Direct)</option>
@@ -395,11 +264,11 @@ export default function NotificationsPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] text-zinc-550 uppercase tracking-widest block font-medium">Target ID</label>
+                  <label className="text-[10px] text-zinc-555 uppercase tracking-widest block font-medium">Target ID</label>
                   <input
                     type="number"
-                    value={targetId}
-                    onChange={(e) => setTargetId(e.target.value)}
+                    value={state.targetId}
+                    onChange={(e) => state.dispatch(notificationsActions.setFormField({ field: "targetId", value: e.target.value }))}
                     placeholder="1"
                     className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 focus:border-zinc-700 transition-all duration-300"
                   />
@@ -407,15 +276,15 @@ export default function NotificationsPage() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] text-zinc-550 uppercase tracking-widest block font-medium">Priority Level</label>
+                <label className="text-[10px] text-zinc-555 uppercase tracking-widest block font-medium">Priority Level</label>
                 <div className="grid grid-cols-3 gap-2">
                   {[1, 2, 3].map((level) => (
                     <button
                       key={level}
                       type="button"
-                      onClick={() => setPriority(level)}
+                      onClick={() => state.dispatch(notificationsActions.setFormField({ field: "priority", value: level }))}
                       className={`py-2 rounded-lg border text-xs cursor-pointer text-center font-medium transition-all duration-300 ${
-                        priority === level
+                        state.priority === level
                           ? level === 3
                             ? "border-red-500/40 bg-red-950/30 text-red-400 shadow-[0_0_12px_rgba(239,68,68,0.1)]"
                             : level === 2
@@ -431,23 +300,23 @@ export default function NotificationsPage() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] text-zinc-550 uppercase tracking-widest block font-medium">Title</label>
+                <label className="text-[10px] text-zinc-555 uppercase tracking-widest block font-medium">Title</label>
                 <input
                   type="text"
                   placeholder="e.g. Purchase Order #42 Created"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  value={state.title}
+                  onChange={(e) => state.dispatch(notificationsActions.setFormField({ field: "title", value: e.target.value }))}
                   className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-750 focus:border-zinc-700 transition-all duration-300"
                   required
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] text-zinc-550 uppercase tracking-widest block font-medium">Message Payload</label>
+                <label className="text-[10px] text-zinc-555 uppercase tracking-widest block font-medium">Message Payload</label>
                 <textarea
                   placeholder="e.g. A new purchase order PO-10293 has been created and requires your review."
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
+                  value={state.message}
+                  onChange={(e) => state.dispatch(notificationsActions.setFormField({ field: "message", value: e.target.value }))}
                   className="w-full h-20 rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-750 focus:border-zinc-700 transition-all duration-300 resize-none"
                   required
                 />
@@ -456,17 +325,17 @@ export default function NotificationsPage() {
               <div className="flex justify-end gap-3.5 pt-4">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => state.dispatch(notificationsActions.closeModal())}
                   className="px-4 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 hover:bg-zinc-850 text-xs font-semibold cursor-pointer transition-all duration-300"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={creating}
+                  disabled={state.creating}
                   className="px-5 py-2.5 rounded-lg bg-white text-black hover:bg-zinc-100 hover:scale-[1.02] active:scale-[0.98] text-xs font-semibold flex items-center gap-2 disabled:opacity-50 cursor-pointer transition-all duration-300"
                 >
-                  {creating && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
+                  {state.creating && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
                   Dispatch event
                 </button>
               </div>

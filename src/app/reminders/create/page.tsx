@@ -1,135 +1,24 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { 
-  Plus, ArrowLeft, RefreshCw, CheckCircle2, Phone, MessageSquare, Send
+  ArrowLeft, RefreshCw, CheckCircle2, Phone, MessageSquare, Send
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-
-const INITIAL_PEOPLE = [
-  { name: "John Doe (Project Lead)", contact: "+15550199", channel: "CALL" },
-  { name: "Jane Smith (Legal Counsel)", contact: "+15550188", channel: "SMS" },
-  { name: "Alex Rivera (Procurement Analyst)", contact: "#procure-alerts", channel: "SLACK" },
-  { name: "Myself", contact: "+15550100", channel: "CALL" }
-];
+import { useCreateReminderPageState, INITIAL_PEOPLE } from "@/features/reminders/CreateReminderPageState";
+import { remindersActions } from "@/features/reminders/remindersSlice";
 
 export default function CreateReminderPage() {
-  const router = useRouter();
-  
-  // Form states
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [dueAt, setDueAt] = useState("");
-  const [recurrence, setRecurrence] = useState("NONE");
-  const [priority, setPriority] = useState<"LOW" | "MEDIUM" | "HIGH">("MEDIUM");
-  const [assigneeIndex, setAssigneeIndex] = useState("0");
-  const [contactPreference, setContactPreference] = useState<"CALL" | "SMS" | "SLACK">("CALL");
-  const [customName, setCustomName] = useState("");
-  const [customContact, setCustomContact] = useState("");
-  const [useCustomAssignee, setUseCustomAssignee] = useState(false);
-
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState("");
-
-  useEffect(() => {
-    // Set default due time to 1 hour from now
-    const oneHourAhead = new Date(Date.now() + 60 * 60 * 1000);
-    setDueAt(oneHourAhead.toISOString().slice(0, 16));
-  }, []);
-
-  const handleCreateTask = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim()) return;
-
-    setLoading(true);
-    setSuccess("");
-
-    let targetName = "";
-    let targetContact = "";
-
-    if (useCustomAssignee) {
-      targetName = customName || "External Recipient";
-      targetContact = customContact || "No contact info";
-    } else {
-      const selected = INITIAL_PEOPLE[parseInt(assigneeIndex)];
-      targetName = selected.name;
-      targetContact = selected.contact;
-    }
-
-    const payload = {
-      title,
-      description,
-      dueAt: new Date(dueAt).toISOString(),
-      recurrence,
-      priority,
-      contactPreference,
-      assigneeName: targetName,
-      assigneeContact: targetContact,
-      status: "PENDING",
-      snoozeCount: 0
-    };
-
-    try {
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-      const response = await fetch(`${backendUrl}/api/v1/reminders`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to schedule reminder on backend");
-      }
-
-      setSuccess("AI Reminder task scheduled successfully!");
-    } catch (err: any) {
-      console.warn("Backend offline. Scheduling reminder locally in sandbox database.", err);
-      
-      const newReminder = {
-        ...payload,
-        id: Math.random().toString(36).substring(2, 9),
-      };
-
-      // Save to LocalStorage
-      const stored = localStorage.getItem("procureiq_reminders");
-      const currentReminders = stored ? JSON.parse(stored) : [];
-      localStorage.setItem("procureiq_reminders", JSON.stringify([newReminder, ...currentReminders]));
-
-      setSuccess("[Offline Sandbox] AI Reminder task scheduled successfully!");
-    } finally {
-      // Add log locally
-      const storedLogs = localStorage.getItem("procureiq_reminder_logs");
-      const currentLogs = storedLogs ? JSON.parse(storedLogs) : [];
-      const newLog = {
-        id: Math.random().toString(36).substring(2, 9),
-        time: new Date().toLocaleTimeString(),
-        taskTitle: title,
-        assigneeName: targetName,
-        channel: contactPreference,
-        status: "SENT",
-        details: `Scheduled reminder successfully for ${new Date(dueAt).toLocaleString()}`
-      };
-      localStorage.setItem("procureiq_reminder_logs", JSON.stringify([newLog, ...currentLogs]));
-
-      setLoading(false);
-      setTimeout(() => {
-        router.push("/reminders");
-      }, 1500);
-    }
-  };
+  const state = useCreateReminderPageState();
 
   return (
     <div className="min-h-screen bg-black text-white p-4 sm:p-8 font-sans relative flex flex-col">
-      {/* Ambient background glows */}
       <div className="absolute top-0 right-1/4 w-[400px] h-[400px] bg-indigo-500/5 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-1/4 left-1/4 w-[350px] h-[350px] bg-emerald-500/3 rounded-full blur-[100px] pointer-events-none" />
 
-      {/* Header */}
       <div className="relative flex items-center justify-between gap-4 mb-8 border-b border-zinc-900 pb-6">
         <div className="flex items-center gap-3">
           <Link
@@ -149,18 +38,17 @@ export default function CreateReminderPage() {
         </div>
       </div>
 
-      {success && (
+      {state.success && (
         <div className="mb-6 p-3.5 text-xs bg-emerald-950/20 border border-emerald-500/20 text-emerald-400 rounded-lg flex items-center gap-2.5 animate-fadeIn backdrop-blur-md w-full">
           <CheckCircle2 className="h-4.5 w-4.5 shrink-0 text-emerald-500" />
-          <span className="font-medium">{success}</span>
+          <span className="font-medium">{state.success}</span>
         </div>
       )}
 
-      {/* Main Full-Width Form Layout */}
-      <form onSubmit={handleCreateTask} className="space-y-8 flex-1 flex flex-col justify-between w-full">
+      <form onSubmit={state.handleCreateTask} className="space-y-8 flex-1 flex flex-col justify-between w-full">
         <div className="space-y-8 w-full">
           <div className="border-b border-zinc-900 pb-4">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">Reminder Details</h3>
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-450">Reminder Details</h3>
             <p className="text-[11px] text-zinc-555 mt-0.5">Specify task configurations and dynamic AI prompts.</p>
           </div>
 
@@ -169,9 +57,9 @@ export default function CreateReminderPage() {
             <input 
               type="text"
               placeholder="e.g. Call vendor for contract renewal" 
-              value={title} 
-              onChange={e => setTitle(e.target.value)}
-              className="w-full rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3.5 text-xs text-white focus:outline-none focus:border-zinc-700 transition-all"
+              value={state.title} 
+              onChange={e => state.dispatch(remindersActions.setFormField({ field: "title", value: e.target.value }))}
+              className="w-full rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3.5 text-xs text-white focus:outline-none focus:border-zinc-700 transition-all focus:ring-1 focus:ring-zinc-700"
               required
             />
           </div>
@@ -180,37 +68,36 @@ export default function CreateReminderPage() {
             <label className="text-[10px] text-zinc-400 uppercase tracking-widest block font-bold">Context/Instructions (AI Prompt)</label>
             <textarea 
               placeholder="Provide prompt details for the AI caller..." 
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              className="w-full h-32 rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3.5 text-xs text-white focus:outline-none focus:border-zinc-700 transition-all resize-none"
+              value={state.description}
+              onChange={e => state.dispatch(remindersActions.setFormField({ field: "description", value: e.target.value }))}
+              className="w-full h-32 rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3.5 text-xs text-white focus:outline-none focus:border-zinc-700 transition-all resize-none focus:ring-1 focus:ring-zinc-700"
             />
           </div>
 
-          {/* Contact selection section */}
           <div className="rounded-lg border border-zinc-850 bg-zinc-900/20 p-6 space-y-4">
             <div className="flex justify-between items-center">
-              <label className="text-xs font-semibold text-zinc-400">Recipient Contact Detail</label>
+              <label className="text-xs font-semibold text-zinc-450">Recipient Contact Detail</label>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-mono text-zinc-500">Custom Recipient</span>
                 <Switch 
-                  checked={useCustomAssignee} 
-                  onCheckedChange={setUseCustomAssignee}
+                  checked={state.useCustomAssignee} 
+                  onCheckedChange={(val) => state.dispatch(remindersActions.setFormField({ field: "useCustomAssignee", value: val }))}
                   className="scale-75"
                 />
               </div>
             </div>
 
-            {!useCustomAssignee ? (
+            {!state.useCustomAssignee ? (
               <div className="space-y-2">
                 <label className="text-[10px] text-zinc-555 uppercase tracking-widest block font-medium">Select Standard Contact</label>
                 <select
-                  value={assigneeIndex}
+                  value={state.assigneeIndex}
                   onChange={e => {
-                    setAssigneeIndex(e.target.value);
+                    state.dispatch(remindersActions.setFormField({ field: "assigneeIndex", value: e.target.value }));
                     const val = parseInt(e.target.value);
-                    setContactPreference(INITIAL_PEOPLE[val].channel as any);
+                    state.dispatch(remindersActions.setFormField({ field: "contactPreference", value: INITIAL_PEOPLE[val].channel }));
                   }}
-                  className="w-full rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3 text-xs text-white focus:outline-none focus:border-zinc-700 transition-all"
+                  className="w-full rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3 text-xs text-white focus:outline-none focus:border-zinc-700 transition-all focus:ring-1 focus:ring-zinc-700"
                 >
                   {INITIAL_PEOPLE.map((p, idx) => (
                     <option key={idx} value={idx}>{p.name} ({p.contact})</option>
@@ -224,9 +111,9 @@ export default function CreateReminderPage() {
                   <input 
                     type="text"
                     placeholder="Recipient Name" 
-                    value={customName}
-                    onChange={e => setCustomName(e.target.value)}
-                    className="w-full rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3 text-xs text-white focus:outline-none focus:border-zinc-700"
+                    value={state.customName}
+                    onChange={e => state.dispatch(remindersActions.setFormField({ field: "customName", value: e.target.value }))}
+                    className="w-full rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700"
                   />
                 </div>
                 <div className="space-y-2">
@@ -234,9 +121,9 @@ export default function CreateReminderPage() {
                   <input 
                     type="text"
                     placeholder="+1555..." 
-                    value={customContact}
-                    onChange={e => setCustomContact(e.target.value)}
-                    className="w-full rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3 text-xs text-white focus:outline-none focus:border-zinc-700"
+                    value={state.customContact}
+                    onChange={e => state.dispatch(remindersActions.setFormField({ field: "customContact", value: e.target.value }))}
+                    className="w-full rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700"
                   />
                 </div>
               </div>
@@ -248,9 +135,9 @@ export default function CreateReminderPage() {
               <label className="text-[10px] text-zinc-400 uppercase tracking-widest block font-bold">Due Time</label>
               <input 
                 type="datetime-local" 
-                value={dueAt}
-                onChange={e => setDueAt(e.target.value)}
-                className="w-full rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3.5 text-xs text-white focus:outline-none focus:border-zinc-700"
+                value={state.dueAt}
+                onChange={e => state.dispatch(remindersActions.setFormField({ field: "dueAt", value: e.target.value }))}
+                className="w-full rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3.5 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700"
                 required
               />
             </div>
@@ -258,9 +145,9 @@ export default function CreateReminderPage() {
             <div className="space-y-2">
               <label className="text-[10px] text-zinc-400 uppercase tracking-widest block font-bold">Priority Level</label>
               <select
-                value={priority}
-                onChange={e => setPriority(e.target.value as any)}
-                className="w-full rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3.5 text-xs text-white focus:outline-none focus:border-zinc-700"
+                value={state.priority}
+                onChange={e => state.dispatch(remindersActions.setFormField({ field: "priority", value: e.target.value }))}
+                className="w-full rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3.5 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700"
               >
                 <option value="LOW">Low</option>
                 <option value="MEDIUM">Medium</option>
@@ -280,11 +167,11 @@ export default function CreateReminderPage() {
                 <button
                   key={channel.value}
                   type="button"
-                  onClick={() => setContactPreference(channel.value as any)}
+                  onClick={() => state.dispatch(remindersActions.setFormField({ field: "contactPreference", value: channel.value }))}
                   className={`flex flex-col items-center justify-center py-3 rounded-lg border text-xs gap-1 cursor-pointer transition-all duration-300 ${
-                    contactPreference === channel.value
+                    state.contactPreference === channel.value
                       ? "border-emerald-500/40 bg-emerald-950/30 text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.08)]"
-                      : "border-zinc-850 bg-zinc-900/20 text-zinc-500 hover:text-zinc-300 hover:border-zinc-750"
+                      : "border-zinc-850 bg-zinc-900/20 text-zinc-505 hover:text-zinc-350 hover:border-zinc-750"
                   }`}
                 >
                   <channel.icon className="w-4 h-4" />
@@ -297,9 +184,9 @@ export default function CreateReminderPage() {
           <div className="space-y-2">
             <label className="text-[10px] text-zinc-400 uppercase tracking-widest block font-bold">Recurrence</label>
             <select
-              value={recurrence}
-              onChange={e => setRecurrence(e.target.value)}
-              className="w-full rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3.5 text-xs text-white focus:outline-none focus:border-zinc-700"
+              value={state.recurrence}
+              onChange={e => state.dispatch(remindersActions.setFormField({ field: "recurrence", value: e.target.value }))}
+              className="w-full rounded-lg bg-zinc-900/40 border border-zinc-800/80 p-3.5 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700"
             >
               <option value="NONE">One-time Reminder</option>
               <option value="DAILY">Every Day</option>
@@ -318,10 +205,10 @@ export default function CreateReminderPage() {
           </Link>
           <Button
             type="submit"
-            disabled={loading}
+            disabled={state.loading}
             className="px-10 py-3 rounded-lg bg-white text-black hover:bg-zinc-150 hover:scale-[1.02] active:scale-[0.98] text-xs font-semibold flex items-center gap-2 disabled:opacity-50 cursor-pointer transition-all shadow-[0_4px_20px_rgba(255,255,255,0.08)]"
           >
-            {loading && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
+            {state.loading && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
             Schedule Alert
           </Button>
         </div>

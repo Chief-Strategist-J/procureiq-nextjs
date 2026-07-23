@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowLeft, Bug } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useErrorTestPageState } from "@/features/errorTest/ErrorTestPageState";
+import { signupSlice } from "@/features/signup/signupSlice";
 
 export default function ErrorTestPage() {
-  const [shouldCrash, setShouldCrash] = useState(false);
+  const state = useErrorTestPageState();
 
-  if (shouldCrash) {
+  if (state.shouldCrash) {
     throw new Error("Simulation triggered: Failed to fetch AlloyDB cluster topology due to replica sync lag.");
   }
 
@@ -31,12 +32,12 @@ export default function ErrorTestPage() {
           <h1 className="text-3xl font-light tracking-tight text-white">
             Error Boundary Playground
           </h1>
-          <p className="text-zinc-500 text-sm font-light">
+          <p className="text-zinc-555 text-sm font-light">
             Use this page to test the client-side recovery functionality of Next.js `error.tsx` error boundaries.
           </p>
         </header>
 
-        <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-6 space-y-4">
+        <div className="bg-zinc-955 border border-zinc-900 rounded-xl p-6 space-y-4">
           <h2 className="text-base font-medium text-white">How does it work?</h2>
           <p className="text-zinc-400 text-xs font-light leading-relaxed">
             In the Next.js App Router, any component within a route segment that throws an unhandled error will trigger the closest parent <code className="text-zinc-300 font-mono">error.tsx</code> file. 
@@ -51,7 +52,7 @@ export default function ErrorTestPage() {
             </div>
             
             <Button
-              onClick={() => setShouldCrash(true)}
+              onClick={state.triggerCrash}
               variant="outline"
               className="border-red-500/20 text-red-400 hover:bg-red-500/10 hover:border-red-500/40 text-sm font-medium py-6 cursor-pointer"
             >

@@ -4,7 +4,7 @@ import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Megaphone, Users, CalendarClock, ArrowRight, ShieldCheck, Settings } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
-import { campaignsActions } from "@/features/campaigns/campaignsSlice";
+import { campaignsActions, recipientsActions, schedulesActions } from "@/features/campaigns/campaignsSlice";
 
 export default function CampaignsHub() {
   const router = useRouter();
@@ -14,9 +14,9 @@ export default function CampaignsHub() {
   const schedules = useAppSelector((s) => s.campaigns.schedules.items.data || []);
 
   useEffect(() => {
-    dispatch(campaignsActions.fetchCampaignsRequest());
-    dispatch(campaignsActions.fetchRecipientsRequest());
-    dispatch(campaignsActions.fetchSchedulesRequest());
+    dispatch(campaignsActions.fetchRequest());
+    dispatch(recipientsActions.fetchRequest());
+    dispatch(schedulesActions.fetchRequest());
   }, [dispatch]);
 
   const sections = [

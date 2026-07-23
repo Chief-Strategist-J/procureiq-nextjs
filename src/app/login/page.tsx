@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
@@ -9,47 +9,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ForgotPasswordDialog } from "@/components/forgot-password-dialog";
 import { RefreshCw, KeyRound, User, ChevronRight } from "lucide-react";
-import { AuthApi } from "./api-client";
+import { useLoginPageState } from "@/features/signup/LoginPageState";
+import { signupSlice } from "@/features/signup/signupSlice";
 
 export default function LoginPage() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [isResetOpen, setIsResetOpen] = useState(false);
-  const router = useRouter();
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!username || !password) {
-      setError("Please fill in all fields");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-
-    try {
-      const data = await AuthApi.login({ username, password });
-      localStorage.setItem("procureiq_token", data.token);
-      localStorage.setItem("procureiq_user", JSON.stringify(data.user));
-      router.push("/");
-    } catch (err: any) {
-      setError(err.message || "Something went wrong. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const state = useLoginPageState();
 
   return (
     <div className="relative flex flex-col flex-1 items-center justify-center min-h-screen bg-black text-white font-sans p-4 overflow-hidden">
-      
-      {/* Background ambient glowing spheres */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[140px] pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-[300px] h-[300px] bg-emerald-500/5 rounded-full blur-[100px] pointer-events-none" />
 
       <Card className="relative w-full max-w-md border border-zinc-800/80 bg-zinc-950/40 backdrop-blur-md shadow-2xl shadow-black/80 rounded-2xl overflow-hidden p-2">
-        {/* Subtle top border accent glow */}
         <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-zinc-700/60 to-transparent" />
         
         <CardHeader className="space-y-2 pt-8 pb-4">
@@ -67,11 +38,11 @@ export default function LoginPage() {
         </CardHeader>
 
         <CardContent className="px-6">
-          <form onSubmit={handleLogin} className="space-y-4">
-            {error && (
-              <div className="p-3 text-xs bg-red-950/20 border border-red-500/20 text-red-400 rounded-lg flex items-center gap-2">
+          <form onSubmit={state.handleLogin} className="space-y-4">
+            {state.error && (
+              <div className="p-3 text-xs bg-red-955/20 border border-red-500/20 text-red-400 rounded-lg flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
-                <span>{error}</span>
+                <span>{state.error}</span>
               </div>
             )}
             
@@ -83,8 +54,8 @@ export default function LoginPage() {
                   id="username"
                   type="text"
                   placeholder="Enter username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  value={state.username}
+                  onChange={(e) => state.dispatch(signupSlice.actions.setFormField({ field: "username", value: e.target.value }))}
                   className="bg-zinc-900/60 border-zinc-800 text-white placeholder-zinc-600 text-sm pl-10 focus:outline-none focus:ring-1 focus:ring-zinc-700 focus:border-zinc-750 transition-all duration-300 rounded-lg"
                 />
               </div>
@@ -95,8 +66,8 @@ export default function LoginPage() {
                 <Label htmlFor="password" className="text-zinc-400 text-xs font-medium">Password</Label>
                 <button
                   type="button"
-                  onClick={() => setIsResetOpen(true)}
-                  className="text-xs text-zinc-500 hover:text-zinc-300 hover:underline focus:outline-none cursor-pointer transition-colors"
+                  onClick={() => state.dispatch(signupSlice.actions.setFormField({ field: "isResetOpen", value: true }))}
+                  className="text-xs text-zinc-505 hover:text-zinc-300 hover:underline focus:outline-none cursor-pointer transition-colors"
                 >
                   Forgot password?
                 </button>
@@ -107,8 +78,8 @@ export default function LoginPage() {
                   id="password"
                   type="password"
                   placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  value={state.password}
+                  onChange={(e) => state.dispatch(signupSlice.actions.setFormField({ field: "password", value: e.target.value }))}
                   className="bg-zinc-900/60 border-zinc-800 text-white placeholder-zinc-600 text-sm pl-10 focus:outline-none focus:ring-1 focus:ring-zinc-700 focus:border-zinc-750 transition-all duration-300 rounded-lg"
                 />
               </div>
@@ -116,10 +87,10 @@ export default function LoginPage() {
 
             <Button
               type="submit"
-              disabled={loading}
+              disabled={state.loading}
               className="w-full bg-white hover:bg-zinc-200 text-black font-semibold py-2.5 text-xs uppercase tracking-wider rounded-lg transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-white/5 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
             >
-              {loading ? (
+              {state.loading ? (
                 <>
                   <RefreshCw className="h-3.5 w-3.5 animate-spin" />
                   Verifying...
@@ -143,7 +114,7 @@ export default function LoginPage() {
           </div>
         </CardFooter>
       </Card>
-      <ForgotPasswordDialog open={isResetOpen} onOpenChange={setIsResetOpen} />
+      <ForgotPasswordDialog open={state.isResetOpen} onOpenChange={(val) => state.dispatch(signupSlice.actions.setFormField({ field: "isResetOpen", value: val }))} />
     </div>
   );
 }

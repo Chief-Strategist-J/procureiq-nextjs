@@ -41,7 +41,7 @@ export class EmailApi {
   }
 
   static async scheduleEmail(data: EmailScheduleRequest): Promise<EmailScheduleResponse> {
-    return ScheduledEmailApi.create(data as unknown as Partial<EmailScheduleResponse>);
+    return ScheduledEmailApi.create(data as unknown as Omit<EmailScheduleResponse, "id">);
   }
 
   static async listScheduled(): Promise<EmailScheduleResponse[]> {

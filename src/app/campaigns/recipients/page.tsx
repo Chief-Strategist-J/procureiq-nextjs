@@ -1,31 +1,25 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Users, Plus, RefreshCw, CheckCircle2, AlertCircle, X, Edit2, Trash2 } from "lucide-react";
 import { useAppSelector, useAppDispatch } from "@/shared/store/hooks";
 import { recipientsActions } from "@/features/campaigns/campaignsSlice";
-// import { CampaignsApi } from "../api-client";
 import { Recipient } from "../types";
 
 export default function RecipientsPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { data: items = [], status: fetchStatus, error: stateError } = useAppSelector(state => state.campaigns.recipients.items);
+  const { data: items = [], status: fetchStatus } = useAppSelector(state => state.campaigns.recipients.items);
+  const { searchQuery, isModalOpen, modalMode, editingId, formFields, saving, localError, successMessage } = useAppSelector(state => state.campaigns.recipients.ui);
+
   const loading = fetchStatus === "loading";
-  const error = stateError || "";
-  const [success, setSuccess] = useState("");
-  const [query, setQuery] = useState("");
+  const error = localError;
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<"create" | "edit">("create");
-  const [editingId, setEditingId] = useState<number | null>(null);
-
-  const [accountId, setAccountId] = useState("1");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [saving, setSaving] = useState(false);
+  const accountId = formFields.accountId ?? "1";
+  const name = formFields.name ?? "";
+  const email = formFields.email ?? "";
+  const phone = formFields.phone ?? "";
 
   const fetchItems = useCallback(() => {
     dispatch(recipientsActions.fetchRequest());
@@ -36,69 +30,43 @@ export default function RecipientsPage() {
   }, [fetchItems]);
 
   const openCreateModal = () => {
-    setModalMode("create");
-    setAccountId("1");
-    setName("");
-    setEmail("");
-    setPhone("");
-    setIsModalOpen(true);
+    dispatch(recipientsActions.openModal({
+      mode: "create",
+      initialFields: { accountId: "1", name: "", email: "", phone: "" }
+    }));
   };
 
   const openEditModal = (item: Recipient) => {
-    setModalMode("edit");
-    setEditingId(item.id);
-    setAccountId(item.accountId.toString());
-    setName(item.name);
-    setEmail(item.email || "");
-    setPhone(item.phone || "");
-    setIsModalOpen(true);
+    dispatch(recipientsActions.openModal({
+      mode: "edit",
+      editingId: item.id,
+      initialFields: { accountId: item.accountId.toString(), name: item.name, email: item.email || "", phone: item.phone || "" }
+    }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-
-    setSaving(true);
-    setError("");
-    setSuccess("");
 
     const payload: Omit<Recipient, "id"> = { accountId: parseInt(accountId) || 1, name };
     if (email) payload.email = email;
     if (phone) payload.phone = phone;
 
-    try {
-      if (modalMode === "create") {
-        dispatch(recipientsActions.createRequest(payload));
-        setSuccess("Recipient created successfully.");
-      } else if (modalMode === "edit" && editingId !== null) {
-        dispatch(recipientsActions.updateRequest({ id: editingId, data: payload }));
-        setSuccess("Recipient updated successfully.");
-      }
-      setIsModalOpen(false);
-      fetchItems();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save recipient.");
-    } finally {
-      setSaving(false);
+    if (modalMode === "create") {
+      dispatch(recipientsActions.createRequest(payload));
+    } else if (modalMode === "edit" && editingId !== null) {
+      dispatch(recipientsActions.updateRequest({ id: editingId, data: payload }));
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = (id: number) => {
     if (!confirm("Are you sure you want to delete this recipient?")) return;
-    setError("");
-    setSuccess("");
-    try {
-      dispatch(recipientsActions.deleteRequest(id));
-      setSuccess("Recipient deleted successfully.");
-      fetchItems();
-    } catch {
-      setError("Failed to delete recipient.");
-    }
+    dispatch(recipientsActions.deleteRequest(id));
   };
 
   const filteredItems = items.filter((item) => {
-    if (!query) return true;
-    const q = query.toLowerCase();
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
     return (
       item.name.toLowerCase().includes(q) ||
       (item.email || "").toLowerCase().includes(q) ||
@@ -159,10 +127,10 @@ export default function RecipientsPage() {
           <span className="font-medium">{error}</span>
         </div>
       )}
-      {success && (
+      {successMessage && (
         <div className="mb-6 p-3.5 text-xs bg-emerald-950/20 border border-emerald-500/20 text-emerald-400 rounded-lg flex items-center gap-2.5 animate-fadeIn backdrop-blur-md">
           <CheckCircle2 className="h-4.5 w-4.5 shrink-0 text-emerald-500" />
-          <span className="font-medium">{success}</span>
+          <span className="font-medium">{successMessage}</span>
         </div>
       )}
 
@@ -172,8 +140,8 @@ export default function RecipientsPage() {
           <input
             type="text"
             placeholder="Search by name, email or ID..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            value={searchQuery}
+            onChange={(e) => dispatch(recipientsActions.setSearchQuery(e.target.value))}
             className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 pl-9 pr-4 py-2 text-xs text-white placeholder-zinc-500"
           />
         </div>
@@ -237,11 +205,11 @@ export default function RecipientsPage() {
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity duration-300" onClick={() => setIsModalOpen(false)} />
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity duration-300" onClick={() => dispatch(recipientsActions.closeModal())} />
 
           <div className="relative w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-2xl shadow-black/90 text-white animate-scaleIn">
             <button
-              onClick={() => setIsModalOpen(false)}
+              onClick={() => dispatch(recipientsActions.closeModal())}
               className="absolute right-5 top-5 p-1 rounded-full text-zinc-500 hover:text-white hover:bg-zinc-900 transition-all duration-300 cursor-pointer"
             >
               <X className="h-4 w-4" />
@@ -258,7 +226,7 @@ export default function RecipientsPage() {
                 <input
                   type="number"
                   value={accountId}
-                  onChange={(e) => setAccountId(e.target.value)}
+                  onChange={(e) => dispatch(recipientsActions.setFormField({ field: "accountId", value: e.target.value }))}
                   required
                   className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all duration-300"
                 />
@@ -269,7 +237,7 @@ export default function RecipientsPage() {
                 <input
                   type="text"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => dispatch(recipientsActions.setFormField({ field: "name", value: e.target.value }))}
                   placeholder="e.g. Acme Corp Procurement"
                   required
                   className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all duration-300"
@@ -281,7 +249,7 @@ export default function RecipientsPage() {
                 <input
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => dispatch(recipientsActions.setFormField({ field: "email", value: e.target.value }))}
                   placeholder="contact@example.com"
                   className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all duration-300"
                 />
@@ -292,7 +260,7 @@ export default function RecipientsPage() {
                 <input
                   type="text"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => dispatch(recipientsActions.setFormField({ field: "phone", value: e.target.value }))}
                   placeholder="+15550101"
                   className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all duration-300"
                 />
@@ -301,7 +269,7 @@ export default function RecipientsPage() {
               <div className="flex justify-end gap-3.5 pt-4">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => dispatch(recipientsActions.closeModal())}
                   className="px-4 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-xs font-semibold cursor-pointer transition-all duration-300"
                 >
                   Cancel

@@ -1,11 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Search, CalendarClock, Plus, RefreshCw, CheckCircle2, AlertCircle, X, Edit2, Trash2 } from "lucide-react";
 import { useAppSelector, useAppDispatch } from "@/shared/store/hooks";
 import { schedulesActions } from "@/features/campaigns/campaignsSlice";
-// import { CampaignsApi } from "../api-client";
 import { CampaignSchedule } from "../types";
 
 function toDateTimeLocal(iso: string): string {
@@ -19,23 +18,18 @@ function toDateTimeLocal(iso: string): string {
 export default function CampaignSchedulesPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { data: items = [], status: fetchStatus, error: stateError } = useAppSelector(state => state.campaigns.schedules.items);
+  const { data: items = [], status: fetchStatus } = useAppSelector(state => state.campaigns.schedules.items);
+  const { searchQuery, isModalOpen, modalMode, editingId, formFields, saving, localError, successMessage } = useAppSelector(state => state.campaigns.schedules.ui);
+
   const loading = fetchStatus === "loading";
-  const error = stateError || "";
-  const [success, setSuccess] = useState("");
-  const [query, setQuery] = useState("");
+  const error = localError;
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<"create" | "edit">("create");
-  const [editingId, setEditingId] = useState<number | null>(null);
-
-  const [orgId, setOrgId] = useState("1");
-  const [campaignId, setCampaignId] = useState("");
-  const [contactId, setContactId] = useState("");
-  const [templateId, setTemplateId] = useState("");
-  const [scheduledAt, setScheduledAt] = useState("");
-  const [status, setStatus] = useState("pending");
-  const [saving, setSaving] = useState(false);
+  const orgId = formFields.orgId ?? "1";
+  const campaignId = formFields.campaignId ?? "";
+  const contactId = formFields.contactId ?? "";
+  const templateId = formFields.templateId ?? "";
+  const scheduledAt = formFields.scheduledAt ?? "";
+  const status = formFields.status ?? "pending";
 
   const fetchItems = useCallback(() => {
     dispatch(schedulesActions.fetchRequest());
@@ -46,35 +40,30 @@ export default function CampaignSchedulesPage() {
   }, [fetchItems]);
 
   const openCreateModal = () => {
-    setModalMode("create");
-    setOrgId("1");
-    setCampaignId("");
-    setContactId("");
-    setTemplateId("");
-    setScheduledAt("");
-    setStatus("pending");
-    setIsModalOpen(true);
+    dispatch(schedulesActions.openModal({
+      mode: "create",
+      initialFields: { orgId: "1", campaignId: "", contactId: "", templateId: "", scheduledAt: "", status: "pending" }
+    }));
   };
 
-  const openEditModal = (item: CampaignSchedule) => {
-    setModalMode("edit");
-    setEditingId(item.id);
-    setOrgId(item.orgId.toString());
-    setCampaignId(item.campaignId?.toString() || "");
-    setContactId(item.contactId.toString());
-    setTemplateId(item.templateId?.toString() || "");
-    setScheduledAt(toDateTimeLocal(item.scheduledAt));
-    setStatus(item.status || "pending");
-    setIsModalOpen(true);
+  const openEditModal = (item: any) => {
+    dispatch(schedulesActions.openModal({
+      mode: "edit",
+      editingId: item.id,
+      initialFields: {
+        orgId: (item.orgId ?? 1).toString(),
+        campaignId: item.campaignId?.toString() || "",
+        contactId: item.contactId ? item.contactId.toString() : "",
+        templateId: item.templateId?.toString() || "",
+        scheduledAt: toDateTimeLocal(item.scheduledAt),
+        status: item.status || "pending"
+      }
+    }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!contactId || !scheduledAt) return;
-
-    setSaving(true);
-    setError("");
-    setSuccess("");
 
     const payload: Omit<CampaignSchedule, "id"> = {
       orgId: parseInt(orgId) || 1,
@@ -85,40 +74,22 @@ export default function CampaignSchedulesPage() {
     if (campaignId) payload.campaignId = parseInt(campaignId);
     if (templateId) payload.templateId = parseInt(templateId);
 
-    try {
-      if (modalMode === "create") {
-        dispatch(schedulesActions.createRequest(payload));
-        setSuccess("Schedule created successfully.");
-      } else if (modalMode === "edit" && editingId !== null) {
-        dispatch(schedulesActions.updateRequest({ id: editingId, data: payload }));
-        setSuccess("Schedule updated successfully.");
-      }
-      setIsModalOpen(false);
-      fetchItems();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save schedule.");
-    } finally {
-      setSaving(false);
+    if (modalMode === "create") {
+      dispatch(schedulesActions.createRequest(payload));
+    } else if (modalMode === "edit" && editingId !== null) {
+      dispatch(schedulesActions.updateRequest({ id: editingId, data: payload }));
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = (id: number) => {
     if (!confirm("Are you sure you want to delete this schedule?")) return;
-    setError("");
-    setSuccess("");
-    try {
-      dispatch(schedulesActions.deleteRequest(id));
-      setSuccess("Schedule deleted successfully.");
-      fetchItems();
-    } catch {
-      setError("Failed to delete schedule.");
-    }
+    dispatch(schedulesActions.deleteRequest(id));
   };
 
   const filteredItems = items.filter((item) => {
-    if (!query) return true;
-    const q = query.toLowerCase();
-    return (item.status || "").toLowerCase().includes(q) || item.id.toString().includes(q) || item.contactId.toString().includes(q);
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (item.status || "").toLowerCase().includes(q) || item.id.toString().includes(q) || (item.contactId ? item.contactId.toString().includes(q) : false);
   });
 
   return (
@@ -174,10 +145,10 @@ export default function CampaignSchedulesPage() {
           <span className="font-medium">{error}</span>
         </div>
       )}
-      {success && (
+      {successMessage && (
         <div className="mb-6 p-3.5 text-xs bg-emerald-950/20 border border-emerald-500/20 text-emerald-400 rounded-lg flex items-center gap-2.5 animate-fadeIn backdrop-blur-md">
           <CheckCircle2 className="h-4.5 w-4.5 shrink-0 text-emerald-500" />
-          <span className="font-medium">{success}</span>
+          <span className="font-medium">{successMessage}</span>
         </div>
       )}
 
@@ -187,8 +158,8 @@ export default function CampaignSchedulesPage() {
           <input
             type="text"
             placeholder="Search by status, contact or ID..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            value={searchQuery}
+            onChange={(e) => dispatch(schedulesActions.setSearchQuery(e.target.value))}
             className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 pl-9 pr-4 py-2 text-xs text-white placeholder-zinc-500"
           />
         </div>
@@ -258,11 +229,11 @@ export default function CampaignSchedulesPage() {
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity duration-300" onClick={() => setIsModalOpen(false)} />
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity duration-300" onClick={() => dispatch(schedulesActions.closeModal())} />
 
           <div className="relative w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-2xl shadow-black/90 text-white animate-scaleIn">
             <button
-              onClick={() => setIsModalOpen(false)}
+              onClick={() => dispatch(schedulesActions.closeModal())}
               className="absolute right-5 top-5 p-1 rounded-full text-zinc-500 hover:text-white hover:bg-zinc-900 transition-all duration-300 cursor-pointer"
             >
               <X className="h-4 w-4" />
@@ -280,7 +251,7 @@ export default function CampaignSchedulesPage() {
                   <input
                     type="number"
                     value={orgId}
-                    onChange={(e) => setOrgId(e.target.value)}
+                    onChange={(e) => dispatch(schedulesActions.setFormField({ field: "orgId", value: e.target.value }))}
                     required
                     className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all duration-300"
                   />
@@ -290,7 +261,7 @@ export default function CampaignSchedulesPage() {
                   <input
                     type="number"
                     value={campaignId}
-                    onChange={(e) => setCampaignId(e.target.value)}
+                    onChange={(e) => dispatch(schedulesActions.setFormField({ field: "campaignId", value: e.target.value }))}
                     className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all duration-300"
                   />
                 </div>
@@ -302,7 +273,7 @@ export default function CampaignSchedulesPage() {
                   <input
                     type="number"
                     value={contactId}
-                    onChange={(e) => setContactId(e.target.value)}
+                    onChange={(e) => dispatch(schedulesActions.setFormField({ field: "contactId", value: e.target.value }))}
                     required
                     className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all duration-300"
                   />
@@ -312,7 +283,7 @@ export default function CampaignSchedulesPage() {
                   <input
                     type="number"
                     value={templateId}
-                    onChange={(e) => setTemplateId(e.target.value)}
+                    onChange={(e) => dispatch(schedulesActions.setFormField({ field: "templateId", value: e.target.value }))}
                     className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all duration-300"
                   />
                 </div>
@@ -323,7 +294,7 @@ export default function CampaignSchedulesPage() {
                 <input
                   type="datetime-local"
                   value={scheduledAt}
-                  onChange={(e) => setScheduledAt(e.target.value)}
+                  onChange={(e) => dispatch(schedulesActions.setFormField({ field: "scheduledAt", value: e.target.value }))}
                   required
                   className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all duration-300"
                 />
@@ -333,7 +304,7 @@ export default function CampaignSchedulesPage() {
                 <label className="text-[10px] text-zinc-500 uppercase tracking-widest block font-medium">Status</label>
                 <select
                   value={status}
-                  onChange={(e) => setStatus(e.target.value)}
+                  onChange={(e) => dispatch(schedulesActions.setFormField({ field: "status", value: e.target.value }))}
                   className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all duration-300"
                 >
                   <option value="pending">Pending</option>
@@ -346,7 +317,7 @@ export default function CampaignSchedulesPage() {
               <div className="flex justify-end gap-3.5 pt-4">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => dispatch(schedulesActions.closeModal())}
                   className="px-4 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-xs font-semibold cursor-pointer transition-all duration-300"
                 >
                   Cancel

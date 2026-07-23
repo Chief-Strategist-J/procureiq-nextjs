@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Activity, Bot, Bell, DollarSign, Plus, ArrowUpRight, ShieldAlert, CheckCircle2 } from "lucide-react";
+import React, { useEffect } from "react";
+import { Activity, Bot, Bell, DollarSign, Plus, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
-import { DashboardApi } from "./api-client";
+import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
+import { notificationsActions } from "@/features/notifications/notificationsSlice";
 
 interface StatCard {
   label: string;
@@ -12,37 +13,16 @@ interface StatCard {
   icon: React.ElementType;
 }
 
-interface NotificationResponse {
-  id: number;
-  typeCode: string;
-  sourceService: string;
-  payload: Record<string, any>;
-  metadata: Record<string, any>;
-  priority: number;
-  targetScope: string;
-  status: string;
-  createdAt: string;
-}
-
 export default function Home() {
-  const [notifications, setNotifications] = useState<NotificationResponse[]>([]);
-  const [unreadCount, setUnreadCount] = useState<number>(0);
-  const [loading, setLoading] = useState(true);
+  const dispatch = useAppDispatch();
+  const notifications = useAppSelector((s) => s.notifications.notifications.data) || [];
+  const loading = useAppSelector((s) => s.notifications.notifications.status === "loading");
+  const unreadCount = useAppSelector((s) => s.notifications.unreadCount.data) || 0;
 
   useEffect(() => {
-    async function loadDashboardData() {
-      try {
-        const data = await DashboardApi.loadDashboardData();
-        setNotifications(data.notifications);
-        setUnreadCount(data.unreadCount);
-      } catch (err) {
-        console.error("Error loading dashboard data:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadDashboardData();
-  }, []);
+    dispatch(notificationsActions.fetchNotificationsRequest({ page: 0, statusFilter: "all" }));
+    dispatch(notificationsActions.fetchUnreadCountRequest());
+  }, [dispatch]);
 
   const stats: StatCard[] = [
     { label: "Unread Notifications", value: unreadCount, icon: Bell },
@@ -59,7 +39,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-black text-white p-6 font-sans">
-      {/* Header */}
       <div className="mb-8">
         <h1 className="text-xl font-light tracking-tight">Welcome back</h1>
         <p className="text-sm text-zinc-500 mt-1">
@@ -67,7 +46,6 @@ export default function Home() {
         </p>
       </div>
 
-      {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {stats.map((stat) => (
           <div
@@ -86,9 +64,7 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Two-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Notifications */}
         <div className="lg:col-span-2 rounded-lg border border-zinc-800 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 bg-zinc-900/40">
             <h2 className="text-sm font-medium">Recent Notifications</h2>
@@ -159,7 +135,6 @@ export default function Home() {
           </table>
         </div>
 
-        {/* Quick actions */}
         <div className="rounded-lg border border-zinc-800 overflow-hidden">
           <div className="px-4 py-3 border-b border-zinc-800 bg-zinc-900/40">
             <h2 className="text-sm font-medium">Quick actions</h2>

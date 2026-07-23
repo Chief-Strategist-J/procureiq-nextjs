@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
@@ -8,64 +8,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RefreshCw, User, Mail, KeyRound, ChevronRight } from "lucide-react";
-import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
-import {
-  createRequest,
-  selectSignupStatus,
-  selectSignupLastAction,
-  resetLastAction,
-} from "@/features/signup/signupSlice";
+import { useSignupPageState } from "@/features/signup/SignupPageState";
+import { signupSlice } from "@/features/signup/signupSlice";
 
 export default function SignupPage() {
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [localError, setLocalError] = useState("");
-  const router = useRouter();
-
-  const dispatch = useAppDispatch();
-  const status = useAppSelector(selectSignupStatus);
-  const lastAction = useAppSelector(selectSignupLastAction);
-
-  const loading = status === "loading";
-  const error = localError || (lastAction?.status === "error" ? lastAction.message : "");
-  const success = lastAction?.status === "success" ? "Account created successfully! Redirecting to login..." : "";
-
-  useEffect(() => {
-    if (lastAction?.status === "success") {
-      const timer = setTimeout(() => {
-        dispatch(resetLastAction());
-        router.push("/login");
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [lastAction, router, dispatch]);
-
-  useEffect(() => {
-    return () => {
-      dispatch(resetLastAction());
-    };
-  }, [dispatch]);
-
-  const handleSignup = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!username || !email || !password) {
-      setLocalError("Please fill in all fields");
-      return;
-    }
-    setLocalError("");
-    dispatch(createRequest({ username, email, password }));
-  };
+  const state = useSignupPageState();
 
   return (
     <div className="relative flex flex-col flex-1 items-center justify-center min-h-screen bg-black text-white font-sans p-4 overflow-hidden">
-      
-      {/* Background ambient glowing spheres */}
       <div className="absolute top-1/4 left-1/3 -translate-x-1/2 w-[550px] h-[550px] bg-indigo-500/5 rounded-full blur-[140px] pointer-events-none" />
       <div className="absolute bottom-10 left-10 w-[350px] h-[350px] bg-emerald-500/5 rounded-full blur-[110px] pointer-events-none" />
 
       <Card className="relative w-full max-w-md border border-zinc-800/80 bg-zinc-950/40 backdrop-blur-md shadow-2xl shadow-black/80 rounded-2xl overflow-hidden p-2">
-        {/* Subtle top border accent glow */}
         <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-zinc-700/60 to-transparent" />
         
         <CardHeader className="space-y-2 pt-8 pb-4">
@@ -83,18 +37,18 @@ export default function SignupPage() {
         </CardHeader>
 
         <CardContent className="px-6">
-          <form onSubmit={handleSignup} className="space-y-4">
-            {error && (
-              <div className="p-3 text-xs bg-red-950/20 border border-red-500/20 text-red-400 rounded-lg flex items-center gap-2">
+          <form onSubmit={state.handleSignup} className="space-y-4">
+            {state.error && (
+              <div className="p-3 text-xs bg-red-955/20 border border-red-500/20 text-red-400 rounded-lg flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
-                <span>{error}</span>
+                <span>{state.error}</span>
               </div>
             )}
             
-            {success && (
-              <div className="p-3 text-xs bg-emerald-950/20 border border-emerald-500/20 text-emerald-400 rounded-lg flex items-center gap-2">
+            {state.success && (
+              <div className="p-3 text-xs bg-emerald-955/20 border border-emerald-500/20 text-emerald-400 rounded-lg flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                <span>{success}</span>
+                <span>{state.success}</span>
               </div>
             )}
 
@@ -106,8 +60,8 @@ export default function SignupPage() {
                   id="username"
                   type="text"
                   placeholder="Choose username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  value={state.username}
+                  onChange={(e) => state.dispatch(signupSlice.actions.setFormField({ field: "username", value: e.target.value }))}
                   className="bg-zinc-900/60 border-zinc-800 text-white placeholder-zinc-650 text-sm pl-10 focus:outline-none focus:ring-1 focus:ring-zinc-700 focus:border-zinc-750 transition-all duration-300 rounded-lg"
                 />
               </div>
@@ -121,8 +75,8 @@ export default function SignupPage() {
                   id="email"
                   type="email"
                   placeholder="name@domain.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={state.email}
+                  onChange={(e) => state.dispatch(signupSlice.actions.setFormField({ field: "email", value: e.target.value }))}
                   className="bg-zinc-900/60 border-zinc-800 text-white placeholder-zinc-650 text-sm pl-10 focus:outline-none focus:ring-1 focus:ring-zinc-700 focus:border-zinc-750 transition-all duration-300 rounded-lg"
                 />
               </div>
@@ -136,8 +90,8 @@ export default function SignupPage() {
                   id="password"
                   type="password"
                   placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  value={state.password}
+                  onChange={(e) => state.dispatch(signupSlice.actions.setFormField({ field: "password", value: e.target.value }))}
                   className="bg-zinc-900/60 border-zinc-800 text-white placeholder-zinc-650 text-sm pl-10 focus:outline-none focus:ring-1 focus:ring-zinc-700 focus:border-zinc-750 transition-all duration-300 rounded-lg"
                 />
               </div>
@@ -145,10 +99,10 @@ export default function SignupPage() {
 
             <Button
               type="submit"
-              disabled={loading}
+              disabled={state.loading}
               className="w-full bg-white hover:bg-zinc-200 text-black font-semibold py-2.5 text-xs uppercase tracking-wider rounded-lg transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-white/5 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
             >
-              {loading ? (
+              {state.loading ? (
                 <>
                   <RefreshCw className="h-3.5 w-3.5 animate-spin" />
                   Creating Account...
