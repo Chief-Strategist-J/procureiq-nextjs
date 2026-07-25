@@ -3,6 +3,7 @@
 import React, { useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Clock, Plus, RefreshCw, CheckCircle2, AlertCircle, X, Edit2, Trash2 } from "lucide-react";
+import { operatingHoursSlice } from "@/features/fieldService/fieldServiceSlice";
 import { useOperatingHoursPageState } from "@/features/fieldService/OperatingHoursPageState";
 
 export default function OperatingHoursPage() {
@@ -46,7 +47,7 @@ export default function OperatingHoursPage() {
           </button>
 
           <button
-            onClick={state.openModal}
+            onClick={() => state.openModal()}
             className="flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-xs font-semibold text-black hover:bg-zinc-100 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 cursor-pointer shadow-[0_4px_20px_rgba(255,255,255,0.08)]"
           >
             <Plus className="h-4 w-4" />
@@ -74,7 +75,7 @@ export default function OperatingHoursPage() {
           <input
             type="text"
             placeholder="Search by name, timezone or ID..."
-            value={state.query}
+            value={state.searchQuery}
             onChange={(e) => state.dispatch(operatingHoursSlice.actions.setSearchQuery(e.target.value))}
             className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 pl-9 pr-4 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all duration-300"
           />
@@ -213,3 +214,4 @@ export default function OperatingHoursPage() {
       )}
     </div>
   );
+}

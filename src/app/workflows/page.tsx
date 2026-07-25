@@ -5,6 +5,7 @@ import {
   Search, Workflow as WorkflowIcon, Plus, RefreshCw, CheckCircle2, AlertCircle, X, Edit2, Trash2, Play, History,
 } from "lucide-react";
 import { Workflow } from "./api-client";
+import { workflowsActions } from "@/features/workflows/workflowsSlice";
 import { useWorkflowsPageState } from "@/features/workflows/WorkflowsPageState";
 
 export default function WorkflowsPage() {
@@ -41,7 +42,7 @@ export default function WorkflowsPage() {
             Refresh
           </button>
           <button
-            onClick={state.openModal}
+            onClick={() => state.openModal()}
             className="flex items-center gap-1.5 rounded-lg bg-indigo-650 hover:bg-indigo-650/80 px-4 py-2 text-xs font-semibold shadow-md transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
           >
             <Plus className="h-4 w-4" />
@@ -84,7 +85,7 @@ export default function WorkflowsPage() {
           <input
             type="text"
             placeholder="Search workflows by name, status, or ID..."
-            value={state.query}
+            value={state.searchQuery}
             onChange={(e) => state.dispatch(workflowsActions.setSearchQuery(e.target.value))}
             className="w-full rounded-lg bg-zinc-950/60 border border-zinc-850 py-2.5 pl-10 pr-4 text-xs text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all duration-300 focus:border-zinc-750"
           />

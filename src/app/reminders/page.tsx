@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { remindersActions } from "@/features/reminders/remindersSlice";
 import { useRemindersPageState } from "@/features/reminders/RemindersPageState";
 
 export default function RemindersPage() {
@@ -119,7 +120,7 @@ export default function RemindersPage() {
                       </span>
                       <span className="flex items-center gap-1">
                         <Clock className="w-3.5 h-3.5 text-zinc-650" />
-                        {new Date(reminder.dueAt).toLocaleString()}
+                        {reminder.dueAt ? new Date(reminder.dueAt).toLocaleString() : "N/A"}
                       </span>
                       {reminder.snoozeCount > 0 && (
                         <span className="text-amber-500">
@@ -131,7 +132,7 @@ export default function RemindersPage() {
 
                   <div className="flex items-center gap-2 shrink-0">
                     <button
-                      onClick={() => state.triggerCallSimulation(reminder)}
+                      onClick={() => state.triggerCallSimulation(reminder as any as import("@/features/reminders/RemindersPageState").TaskReminder)}
                       className="px-3 py-1.5 rounded border border-emerald-500/20 text-emerald-400 bg-emerald-950/20 hover:bg-emerald-950/50 hover:border-emerald-500/40 text-[10px] uppercase font-semibold tracking-wider transition-all duration-300 cursor-pointer flex items-center gap-1"
                     >
                       <Play className="w-3 h-3" />
@@ -170,7 +171,7 @@ export default function RemindersPage() {
           </CardHeader>
           <CardContent className="p-0">
             <div className="font-mono text-[11px] p-4 bg-zinc-950/90 max-h-60 overflow-y-auto space-y-2">
-              {state.logs.map((log) => (
+              {state.logs.map((log: any) => (
                 <div key={log.id} className="text-zinc-400 flex items-start gap-2 leading-relaxed">
                   <span className="text-zinc-655 shrink-0">[{log.time}]</span>
                   <span className="text-indigo-400 shrink-0 font-medium">{log.taskTitle}:</span>

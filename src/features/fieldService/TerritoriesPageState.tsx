@@ -14,7 +14,7 @@ export function useTerritoriesPageState() {
   const ui = useAppSelector((s) => s.fieldService.territories.ui);
 
   const { searchQuery = "", isModalOpen = false, modalMode = "create", editingId = null, formFields = {}, localError = null, successMessage = null } = ui;
-  const { name = "", operatingHoursId = "" } = formFields;
+  const { name = "", operatingHoursId = "", isActive = true } = formFields;
 
   const error = localError || storeError || "";
   const success = successMessage || "";
@@ -30,12 +30,12 @@ export function useTerritoriesPageState() {
       dispatch(territoriesSlice.actions.openModal({
         mode: "edit",
         editingId: item.id,
-        initialFields: { name: item.name, operatingHoursId: item.operatingHoursId ? item.operatingHoursId.toString() : "" }
+        initialFields: { name: item.name, operatingHoursId: item.operatingHoursId ? item.operatingHoursId.toString() : "", isActive: item.isActive }
       }));
     } else {
       dispatch(territoriesSlice.actions.openModal({
         mode: "create",
-        initialFields: { name: "", operatingHoursId: "" }
+        initialFields: { name: "", operatingHoursId: "", isActive: true }
       }));
     }
   }, [dispatch]);
@@ -45,16 +45,16 @@ export function useTerritoriesPageState() {
     if (!name.trim()) return;
 
     const parsedOpId = parseInt(operatingHoursId, 10);
-    const opId = operatingHoursId && !Number.isNaN(parsedOpId) ? parsedOpId : undefined;
+    const opId = operatingHoursId && !Number.isNaN(parsedOpId) ? parsedOpId : 0;
 
     if (modalMode === "create") {
-      dispatch(territoriesSlice.actions.createRequest({ name, operatingHoursId: opId }));
+      dispatch(territoriesSlice.actions.createRequest({ name, operatingHoursId: opId, isActive }));
       dispatch(territoriesSlice.actions.setSuccessMessage("Service territory creation initiated."));
     } else if (modalMode === "edit" && editingId !== null) {
-      dispatch(territoriesSlice.actions.updateRequest({ id: editingId, data: { name, operatingHoursId: opId } }));
+      dispatch(territoriesSlice.actions.updateRequest({ id: editingId, data: { name, operatingHoursId: opId, isActive } }));
       dispatch(territoriesSlice.actions.setSuccessMessage("Service territory update initiated."));
     }
-  }, [dispatch, name, operatingHoursId, modalMode, editingId]);
+  }, [dispatch, name, operatingHoursId, isActive, modalMode, editingId]);
 
   const handleDelete = useCallback((id: number) => {
     if (!confirm("Are you sure you want to delete this service territory?")) return;

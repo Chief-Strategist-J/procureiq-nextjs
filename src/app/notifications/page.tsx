@@ -96,7 +96,7 @@ export default function NotificationsPage() {
           <input
             type="text"
             placeholder="Search payload content, type..."
-            value={state.query}
+            value={state.searchQuery}
             onChange={(e) => state.dispatch(notificationsActions.setSearchQuery(e.target.value))}
             className="w-full sm:w-72 rounded-lg bg-zinc-900/60 border border-zinc-800 pl-9 pr-4 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-700/80 focus:border-zinc-700/80 focus:bg-zinc-900 transition-all duration-300"
           />

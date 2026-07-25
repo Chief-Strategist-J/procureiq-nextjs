@@ -110,6 +110,7 @@ export function useRemindersPageState() {
           title: reminder.title,
           message: reminder.description,
           scheduledAt: reminder.dueAt,
+          dueAt: reminder.dueAt,
           status: "completed",
         },
       }));

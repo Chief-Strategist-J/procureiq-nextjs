@@ -181,7 +181,7 @@ export default function GitHubDashboard() {
                     result = {
                       kind: 'deploy',
                       ok: true,
-                      message: state.operationsState.deploy.data.result.mock ? `Mock deploy recorded at ${state.operationsState.deploy.data.result.path}` : `Deployed to ${state.operationsState.deploy.data.result.htmlUrl}`
+                      message: state.operationsState.deploy.data?.result?.mock ? `Mock deploy succeeded (path: ${state.operationsState.deploy.data?.result?.path})` : `Deploy succeeded. to ${state.operationsState.deploy.data?.result?.htmlUrl}`
                     };
                   }
                   
@@ -189,7 +189,7 @@ export default function GitHubDashboard() {
                     result = {
                       kind: 'dispatch',
                       ok: true,
-                      message: state.operationsState.dispatch.data.message
+                      message: state.operationsState.dispatch.data?.message || ""
                     };
                   }
 

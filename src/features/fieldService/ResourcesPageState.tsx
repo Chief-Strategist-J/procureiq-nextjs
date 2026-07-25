@@ -13,7 +13,7 @@ export function useServiceResourcesPageState() {
   const ui = useAppSelector((s) => s.fieldService.resources.ui);
 
   const { searchQuery = "", isModalOpen = false, modalMode = "create", editingId = null, formFields = {}, localError = null, successMessage = null } = ui;
-  const { name = "", resourceType = "T", description = "" } = formFields;
+  const { name = "", resourceType = "technician", isActive = true } = formFields;
 
   const error = localError || storeError || "";
   const success = successMessage || "";
@@ -28,12 +28,12 @@ export function useServiceResourcesPageState() {
       dispatch(resourcesSlice.actions.openModal({
         mode: "edit",
         editingId: item.id,
-        initialFields: { name: item.name, resourceType: item.resourceType, description: item.description || "" }
+        initialFields: { name: item.name, resourceType: item.resourceType, isActive: item.isActive }
       }));
     } else {
       dispatch(resourcesSlice.actions.openModal({
         mode: "create",
-        initialFields: { name: "", resourceType: "T", description: "" }
+        initialFields: { name: "", resourceType: "technician", isActive: true }
       }));
     }
   }, [dispatch]);
@@ -43,13 +43,13 @@ export function useServiceResourcesPageState() {
     if (!name.trim()) return;
 
     if (modalMode === "create") {
-      dispatch(resourcesSlice.actions.createRequest({ name, resourceType, description }));
+      dispatch(resourcesSlice.actions.createRequest({ name, resourceType, isActive }));
       dispatch(resourcesSlice.actions.setSuccessMessage("Service resource creation initiated."));
     } else if (modalMode === "edit" && editingId !== null) {
-      dispatch(resourcesSlice.actions.updateRequest({ id: editingId, data: { name, resourceType, description } }));
+      dispatch(resourcesSlice.actions.updateRequest({ id: editingId, data: { name, resourceType, isActive } }));
       dispatch(resourcesSlice.actions.setSuccessMessage("Service resource update initiated."));
     }
-  }, [dispatch, name, resourceType, description, modalMode, editingId]);
+  }, [dispatch, name, resourceType, isActive, modalMode, editingId]);
 
   const handleDelete = useCallback((id: number) => {
     if (!confirm("Are you sure you want to delete this service resource?")) return;
@@ -64,7 +64,6 @@ export function useServiceResourcesPageState() {
       return (
         item.name.toLowerCase().includes(q) ||
         item.resourceType.toLowerCase().includes(q) ||
-        (item.description && item.description.toLowerCase().includes(q)) ||
         item.id.toString().includes(q)
       );
     });
@@ -86,7 +85,7 @@ export function useServiceResourcesPageState() {
     editingId,
     name,
     resourceType,
-    description,
+    isActive,
     error,
     success,
     saving,

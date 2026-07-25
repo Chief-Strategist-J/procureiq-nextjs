@@ -148,7 +148,7 @@ export default function VideoCallPage() {
             {state.logs.length === 0 ? (
               <div className="text-zinc-600 text-center mt-12 italic uppercase">Console idle. Join a room to see WebRTC event loops.</div>
             ) : (
-              state.logs.map((log, index) => (
+              state.logs.map((log: any, index: number) => (
                 <div key={index} className="leading-relaxed border-b border-zinc-900/50 pb-1.5">
                   <div className="flex justify-between text-zinc-655 mb-0.5">
                     <span>{log.timestamp}</span>

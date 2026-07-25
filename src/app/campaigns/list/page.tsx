@@ -47,7 +47,7 @@ export default function CampaignListPage() {
           </button>
 
           <button
-            onClick={state.openModal}
+            onClick={() => state.openModal()}
             className="flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-xs font-semibold text-black hover:bg-zinc-100 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 cursor-pointer shadow-[0_4px_20px_rgba(255,255,255,0.08)]"
           >
             <Plus className="h-4 w-4" />

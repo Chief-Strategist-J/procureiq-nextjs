@@ -3,6 +3,7 @@
 import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Briefcase, Plus, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
+import { workOrdersSlice } from "@/features/workOrders/workOrdersSlice";
 import { useWorkOrdersPageState } from "@/features/workOrders/WorkOrdersPageState";
 
 export default function WorkOrdersPage() {
@@ -69,7 +70,7 @@ export default function WorkOrdersPage() {
           {["all", "new", "in_progress", "completed"].map((statusOption) => (
             <button
               key={statusOption}
-              onClick={() => state.dispatch(workOrdersActions.setFormField({ field: "statusFilter", value: statusOption }))}
+              onClick={() => state.dispatch(workOrdersSlice.actions.setFormField({ field: "statusFilter", value: statusOption }))}
               className={`px-4 py-1.5 text-xs rounded-md capitalize transition-all duration-300 cursor-pointer ${
                 state.statusFilter === statusOption
                   ? "bg-zinc-900 text-white font-medium border border-zinc-800 shadow-lg"
@@ -86,8 +87,8 @@ export default function WorkOrdersPage() {
           <input
             type="text"
             placeholder="Search work order ID, case..."
-            value={state.query}
-            onChange={(e) => state.dispatch(workOrdersActions.setSearchQuery(e.target.value))}
+            value={state.searchQuery}
+            onChange={(e) => state.dispatch(workOrdersSlice.actions.setSearchQuery(e.target.value))}
             className="w-full sm:w-72 rounded-lg bg-zinc-900/60 border border-zinc-800 pl-9 pr-4 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all duration-300 focus:border-zinc-750"
           />
         </div>

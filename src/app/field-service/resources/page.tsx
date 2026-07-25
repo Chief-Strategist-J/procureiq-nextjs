@@ -3,6 +3,7 @@
 import React, { useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Users, Plus, RefreshCw, CheckCircle2, AlertCircle, X, Edit2, Trash2 } from "lucide-react";
+import { resourcesSlice } from "@/features/fieldService/fieldServiceSlice";
 import { useServiceResourcesPageState } from "@/features/fieldService/ResourcesPageState";
 
 export default function ServiceResourcesPage() {
@@ -46,7 +47,7 @@ export default function ServiceResourcesPage() {
           </button>
 
           <button
-            onClick={state.openModal}
+            onClick={() => state.openModal()}
             className="flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-xs font-semibold text-black hover:bg-zinc-100 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 cursor-pointer shadow-[0_4px_20px_rgba(255,255,255,0.08)]"
           >
             <Plus className="h-4 w-4" />
@@ -74,7 +75,7 @@ export default function ServiceResourcesPage() {
           <input
             type="text"
             placeholder="Search by name, type or description..."
-            value={state.query}
+            value={state.searchQuery}
             onChange={(e) => state.dispatch(resourcesSlice.actions.setSearchQuery(e.target.value))}
             className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 pl-9 pr-4 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all duration-300"
           />
@@ -95,7 +96,7 @@ export default function ServiceResourcesPage() {
                   <th className="px-5 py-4 font-medium w-24">ID</th>
                   <th className="px-5 py-4 font-medium w-64">Name</th>
                   <th className="px-5 py-4 font-medium w-36">Type</th>
-                  <th className="px-5 py-4 font-medium w-72">Description</th>
+                  <th className="px-5 py-4 font-medium w-72">Status</th>
                   <th className="px-5 py-4 font-medium text-right pr-6">Actions</th>
                 </tr>
               </thead>
@@ -113,11 +114,11 @@ export default function ServiceResourcesPage() {
                     </td>
                     <td className="px-5 py-4">
                       <span className="inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase bg-zinc-900 text-zinc-400 border-zinc-800">
-                        {item.resourceType === "T" ? "Technician" : "Crew"}
+                        {item.resourceType === "technician" ? "Technician" : "Crew"}
                       </span>
                     </td>
                     <td className="px-5 py-4 text-xs text-zinc-400 truncate max-w-xs">
-                      {item.description || <span className="text-zinc-600 italic">No description</span>}
+                      {item.isActive ? <span className="text-emerald-500">Active</span> : <span className="text-zinc-500">Inactive</span>}
                     </td>
                     <td className="px-5 py-4 text-right pr-6">
                       <div className="flex items-center justify-end gap-2.5">
@@ -187,21 +188,11 @@ export default function ServiceResourcesPage() {
                   onChange={(e) => state.dispatch(resourcesSlice.actions.setFormField({ field: "resourceType", value: e.target.value }))}
                   className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all duration-300"
                 >
-                  <option value="T">Technician (Individual)</option>
-                  <option value="C">Crew (Multiple Technicians)</option>
+                  <option value="technician">Technician (Individual)</option>
+                  <option value="crew">Crew (Multiple Technicians)</option>
                 </select>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] text-zinc-500 uppercase tracking-widest block font-medium">Description</label>
-                <textarea
-                  value={state.description}
-                  onChange={(e) => state.dispatch(resourcesSlice.actions.setFormField({ field: "description", value: e.target.value }))}
-                  placeholder="Capabilities, skills, tools loaded..."
-                  rows={3}
-                  className="w-full rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all duration-300 resize-none"
-                />
-              </div>
 
               <div className="flex justify-end gap-3.5 pt-4">
                 <button

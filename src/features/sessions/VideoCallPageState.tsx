@@ -125,7 +125,7 @@ export function useVideoCallPageState() {
 
           case "peer-left":
             addLog(`Peer left room: ${message.userId}`, "warning");
-            dispatch(sessionsActions.setFormField({ field: "peersInRoom", value: peersInRoom.filter(id => id !== message.userId) }));
+            dispatch(sessionsActions.setFormField({ field: "peersInRoom", value: peersInRoom.filter((id: any) => id !== message.userId) }));
             if (remoteVideoRef.current) {
               remoteVideoRef.current.srcObject = null;
             }
