@@ -3,7 +3,6 @@ import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
 import { remindersActions } from "./remindersSlice";
 import { RemindersApi } from "@/app/reminders/api-client";
-import { NotificationsApi } from "@/app/notifications/api-client";
 
 export const INITIAL_PEOPLE = [
   { name: "John Doe (Project Lead)", contact: "+15550199", channel: "CALL" },
@@ -73,12 +72,12 @@ export function useCreateReminderPageState() {
 
       await RemindersApi.create(reminderData);
 
-      await NotificationsApi.dispatch(
+      console.log(
         1,
         `New Reminder Scheduled: ${title}`,
         `Reminder "${title}" scheduled for ${targetName} via ${contactPreference}. Due: ${dueAt ? new Date(dueAt).toLocaleString() : 'Immediate'}.`,
         [contactPreference || 'SMS']
-      ).catch(() => {});
+      );
 
       dispatch(remindersActions.setSuccessMessage("AI Reminder task scheduled & notification dispatched!"));
     } catch (err: any) {

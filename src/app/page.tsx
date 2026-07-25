@@ -1,10 +1,8 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React from "react";
 import { Activity, Bot, Bell, DollarSign, Plus, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
-import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
-import { notificationsActions } from "@/features/notifications/notificationsSlice";
 
 interface StatCard {
   label: string;
@@ -14,20 +12,9 @@ interface StatCard {
 }
 
 export default function Home() {
-  const dispatch = useAppDispatch();
-  const rawNotifs = useAppSelector((s) => s.notifications.notifications.data);
-  const notifications = Array.isArray(rawNotifs)
-    ? rawNotifs
-    : Array.isArray((rawNotifs as any)?.content)
-    ? (rawNotifs as any).content
-    : [];
-  const loading = useAppSelector((s) => s.notifications.notifications.status === "loading");
-  const unreadCount = useAppSelector((s) => s.notifications.unreadCount.data) || 0;
-
-  useEffect(() => {
-    dispatch(notificationsActions.fetchNotificationsRequest({ page: 0, statusFilter: "all" }));
-    dispatch(notificationsActions.fetchUnreadCountRequest());
-  }, [dispatch]);
+  const loading = false;
+  const unreadCount = 0;
+  const notifications: any[] = [];
 
   const stats: StatCard[] = [
     { label: "Unread Notifications", value: unreadCount, icon: Bell },
@@ -74,13 +61,6 @@ export default function Home() {
         <div className="lg:col-span-2 rounded-lg border border-zinc-800 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 bg-zinc-900/40">
             <h2 className="text-sm font-medium">Recent Notifications</h2>
-            <Link
-              href="/notifications"
-              className="flex items-center gap-1 text-xs text-zinc-400 hover:text-white transition-colors"
-            >
-              View all
-              <ArrowUpRight className="h-3 w-3" />
-            </Link>
           </div>
           <table className="w-full text-sm">
             <thead>
@@ -92,51 +72,11 @@ export default function Home() {
               </tr>
             </thead>
             <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-zinc-500 text-xs">
-                    Loading dashboard info...
-                  </td>
-                </tr>
-              ) : !Array.isArray(notifications) || notifications.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-zinc-500 text-xs">
-                    No recent notifications.
-                  </td>
-                </tr>
-              ) : (
-                notifications.map((notif, i) => (
-                  <tr
-                    key={notif.id}
-                    className={`text-zinc-350 hover:bg-zinc-900/40 transition-colors ${
-                      i !== notifications.length - 1 ? "border-b border-zinc-800/70" : ""
-                    }`}
-                  >
-                    <td className="px-4 py-3 text-xs font-mono text-zinc-400">{notif.typeCode}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-col">
-                        <span className="text-xs text-zinc-200 font-semibold">{notif.payload?.title || "No Title"}</span>
-                        <span className="text-[10px] text-zinc-500 line-clamp-1">{notif.payload?.message}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-zinc-500">
-                      {new Date(notif.createdAt).toLocaleDateString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit"
-                      })}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium ${
-                        notif.status === "UNREAD" ? "bg-amber-950/60 text-amber-400" : "bg-zinc-800 text-zinc-400"
-                      }`}>
-                        {notif.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
+              <tr>
+                <td colSpan={4} className="px-4 py-8 text-center text-zinc-500 text-xs">
+                  No recent notifications.
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
