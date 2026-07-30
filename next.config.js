@@ -41,73 +41,37 @@ const nextConfig = {
 };
 
 // Add Multi Zones rewrites for host app 'procureiq-nextjs'
+// Each MFE sets basePath to its route (e.g. mfe-auth → basePath '/auth'),
+// so it serves at http://localhost:PORT/mfe-route — destinations must match.
 if (folderName === 'procureiq-nextjs') {
   nextConfig.rewrites = async () => {
     return [
-      {
-        source: '/crypto',
-        destination: `${CRYPTO_URL}/`,
-      },
-      {
-        source: '/crypto/:path*',
-        destination: `${CRYPTO_URL}/:path*`,
-      },
-      {
-        source: '/auth',
-        destination: `${AUTH_URL}/`,
-      },
-      {
-        source: '/auth/:path*',
-        destination: `${AUTH_URL}/:path*`,
-      },
-      {
-        source: '/notifications',
-        destination: `${NOTIFICATIONS_URL}/`,
-      },
-      {
-        source: '/notifications/:path*',
-        destination: `${NOTIFICATIONS_URL}/:path*`,
-      },
-      {
-        source: '/email',
-        destination: `${EMAIL_URL}/`,
-      },
-      {
-        source: '/email/:path*',
-        destination: `${EMAIL_URL}/:path*`,
-      },
-      {
-        source: '/campaigns',
-        destination: `${CAMPAIGNS_URL}/`,
-      },
-      {
-        source: '/campaigns/:path*',
-        destination: `${CAMPAIGNS_URL}/:path*`,
-      },
-      {
-        source: '/fieldservice',
-        destination: `${FIELDSERVICE_URL}/`,
-      },
-      {
-        source: '/fieldservice/:path*',
-        destination: `${FIELDSERVICE_URL}/:path*`,
-      },
-      {
-        source: '/github',
-        destination: `${GITHUB_URL}/`,
-      },
-      {
-        source: '/github/:path*',
-        destination: `${GITHUB_URL}/:path*`,
-      },
-      {
-        source: '/jobs',
-        destination: `${JOBS_URL}/`,
-      },
-      {
-        source: '/jobs/:path*',
-        destination: `${JOBS_URL}/:path*`,
-      },
+      // _next/static assets — must be proxied per MFE so JS/CSS chunks load
+      { source: '/crypto/_next/:path*',       destination: `${CRYPTO_URL}/crypto/_next/:path*` },
+      { source: '/auth/_next/:path*',         destination: `${AUTH_URL}/auth/_next/:path*` },
+      { source: '/notifications/_next/:path*',destination: `${NOTIFICATIONS_URL}/notifications/_next/:path*` },
+      { source: '/email/_next/:path*',        destination: `${EMAIL_URL}/email/_next/:path*` },
+      { source: '/campaigns/_next/:path*',    destination: `${CAMPAIGNS_URL}/campaigns/_next/:path*` },
+      { source: '/fieldservice/_next/:path*', destination: `${FIELDSERVICE_URL}/fieldservice/_next/:path*` },
+      { source: '/github/_next/:path*',       destination: `${GITHUB_URL}/github/_next/:path*` },
+      { source: '/jobs/_next/:path*',         destination: `${JOBS_URL}/jobs/_next/:path*` },
+      // Page routes
+      { source: '/crypto',        destination: `${CRYPTO_URL}/crypto` },
+      { source: '/crypto/:path*', destination: `${CRYPTO_URL}/crypto/:path*` },
+      { source: '/auth',          destination: `${AUTH_URL}/auth` },
+      { source: '/auth/:path*',   destination: `${AUTH_URL}/auth/:path*` },
+      { source: '/notifications',        destination: `${NOTIFICATIONS_URL}/notifications` },
+      { source: '/notifications/:path*', destination: `${NOTIFICATIONS_URL}/notifications/:path*` },
+      { source: '/email',        destination: `${EMAIL_URL}/email` },
+      { source: '/email/:path*', destination: `${EMAIL_URL}/email/:path*` },
+      { source: '/campaigns',        destination: `${CAMPAIGNS_URL}/campaigns` },
+      { source: '/campaigns/:path*', destination: `${CAMPAIGNS_URL}/campaigns/:path*` },
+      { source: '/fieldservice',        destination: `${FIELDSERVICE_URL}/fieldservice` },
+      { source: '/fieldservice/:path*', destination: `${FIELDSERVICE_URL}/fieldservice/:path*` },
+      { source: '/github',        destination: `${GITHUB_URL}/github` },
+      { source: '/github/:path*', destination: `${GITHUB_URL}/github/:path*` },
+      { source: '/jobs',        destination: `${JOBS_URL}/jobs` },
+      { source: '/jobs/:path*', destination: `${JOBS_URL}/jobs/:path*` },
     ];
   };
 }
