@@ -34,7 +34,7 @@ if (folderName === 'procureiq-nextjs') {
     return [
       {
         source: '/crypto',
-        destination: `${CRYPTO_URL}/crypto`,
+        destination: `${CRYPTO_URL}/crypto/`,
       },
       {
         source: '/crypto/:path*',
@@ -42,7 +42,7 @@ if (folderName === 'procureiq-nextjs') {
       },
       {
         source: '/auth',
-        destination: `${AUTH_URL}/auth`,
+        destination: `${AUTH_URL}/auth/`,
       },
       {
         source: '/auth/:path*',
@@ -50,7 +50,7 @@ if (folderName === 'procureiq-nextjs') {
       },
       {
         source: '/notifications',
-        destination: `${NOTIFICATIONS_URL}/notifications`,
+        destination: `${NOTIFICATIONS_URL}/notifications/`,
       },
       {
         source: '/notifications/:path*',
@@ -58,7 +58,7 @@ if (folderName === 'procureiq-nextjs') {
       },
       {
         source: '/email',
-        destination: `${EMAIL_URL}/email`,
+        destination: `${EMAIL_URL}/email/`,
       },
       {
         source: '/email/:path*',
@@ -66,7 +66,7 @@ if (folderName === 'procureiq-nextjs') {
       },
       {
         source: '/campaigns',
-        destination: `${CAMPAIGNS_URL}/campaigns`,
+        destination: `${CAMPAIGNS_URL}/campaigns/`,
       },
       {
         source: '/campaigns/:path*',
@@ -74,7 +74,7 @@ if (folderName === 'procureiq-nextjs') {
       },
       {
         source: '/fieldservice',
-        destination: `${FIELDSERVICE_URL}/fieldservice`,
+        destination: `${FIELDSERVICE_URL}/fieldservice/`,
       },
       {
         source: '/fieldservice/:path*',
@@ -82,7 +82,7 @@ if (folderName === 'procureiq-nextjs') {
       },
       {
         source: '/github',
-        destination: `${GITHUB_URL}/github`,
+        destination: `${GITHUB_URL}/github/`,
       },
       {
         source: '/github/:path*',
@@ -90,7 +90,7 @@ if (folderName === 'procureiq-nextjs') {
       },
       {
         source: '/jobs',
-        destination: `${JOBS_URL}/jobs`,
+        destination: `${JOBS_URL}/jobs/`,
       },
       {
         source: '/jobs/:path*',
