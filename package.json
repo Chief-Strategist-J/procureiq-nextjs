@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "dev": "npm run dev:host",
     "dev:host": "next dev procureiq-nextjs -p 8990",
     "dev:crypto": "next dev mfe-crypto -p 8991",
     "dev:auth": "next dev mfe-auth -p 8992",
