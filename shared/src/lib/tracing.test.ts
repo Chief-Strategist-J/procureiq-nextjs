@@ -1,4 +1,3 @@
-import { describe, it, expect, vi } from "vitest"
 import { traceNavigation, generateTraceId } from "./tracing"
 
 describe("tracing module", () => {

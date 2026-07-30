@@ -39,7 +39,6 @@ export default function AuthPage() {
     <div className="container mx-auto px-4 py-8 md:px-8 space-y-6 flex-1">
       <AuthHeader />
 
-      {/* Navigation Tabs */}
       <div className="flex flex-wrap items-center gap-2 border-b pb-3">
         <button
           onClick={() => handleModeChange("overview")}
@@ -114,7 +113,6 @@ export default function AuthPage() {
         </button>
       </div>
 
-      {/* Dynamic Mode Render */}
       {mode === "overview" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <UserAccountList users={users} onToggleStatus={toggleUserStatus} />

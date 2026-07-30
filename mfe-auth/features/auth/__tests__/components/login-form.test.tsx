@@ -1,6 +1,5 @@
 import React from "react"
 import { render, screen, fireEvent } from "@testing-library/react"
-import { describe, it, expect, vi } from "vitest"
 import { LoginForm } from "../../components/login-form"
 
 describe("LoginForm component", () => {
@@ -13,7 +12,7 @@ describe("LoginForm component", () => {
   })
 
   it("submits form with user inputs", () => {
-    const handleSubmit = vi.fn()
+    const handleSubmit = jest.fn()
     render(<LoginForm onSubmit={handleSubmit} />)
 
     fireEvent.change(screen.getByLabelText("Username or Email"), { target: { value: "testuser" } })

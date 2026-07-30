@@ -1,13 +1,12 @@
-import { describe, it, expect, vi } from "vitest"
 import { httpClient } from "../../services/http-client"
 
 describe("HttpClient", () => {
   it("injects OpenTelemetry trace headers into requests", async () => {
-    const mockFetch = vi.fn().mockResolvedValue({
+    const mockFetch = jest.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ data: { status: "ok" } }),
     })
-    global.fetch = mockFetch
+    global.fetch = mockFetch as unknown as typeof fetch
 
     const data = await httpClient.get<{ status: string }>("http://localhost/test")
 

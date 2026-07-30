@@ -1,4 +1,4 @@
-import { generateTraceId, TraceEvent } from "@shared/lib/tracing"
+import { generateTraceId, TraceEvent } from "../../../../shared/src/lib/tracing"
 
 export interface CentralizedTraceEvent extends TraceEvent {
   service: string

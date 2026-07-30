@@ -1,11 +1,14 @@
 const path = require('path');
 
-const cwd = process.cwd();
-const folderName = path.basename(cwd);
+let targetApp = path.basename(process.cwd());
+const mfeArg = process.argv.find(arg => typeof arg === 'string' && arg.startsWith('mfe-'));
+if (mfeArg) {
+  targetApp = mfeArg;
+}
 
 let basePath = '';
-if (folderName.startsWith('mfe-')) {
-  basePath = '/' + folderName.replace('mfe-', '');
+if (targetApp.startsWith('mfe-')) {
+  basePath = '/' + targetApp.replace('mfe-', '');
 }
 
 const CRYPTO_URL = process.env.NEXT_PUBLIC_CRYPTO_URL || 'http://localhost:8991';
@@ -19,7 +22,7 @@ const JOBS_URL = process.env.NEXT_PUBLIC_JOBS_URL || 'http://localhost:8998';
 
 const nextConfig = {
   basePath: basePath,
-  reactStrictMode: false, // Prevents duplicate double-render compilation overhead in dev mode
+  reactStrictMode: false,
   swcMinify: true,
   experimental: {
     proxyTimeout: 120000,
@@ -29,7 +32,6 @@ const nextConfig = {
     config.resolve.alias['@shared/index'] = path.resolve(__dirname, 'shared/src/index.ts');
     config.resolve.alias['@shared'] = path.resolve(__dirname, 'shared/src');
     
-    // Speed up Webpack dev compilation & prevent memory bottlenecks when 9 MFEs run concurrently
     if (dev) {
       config.watchOptions = {
         ignored: ['**/node_modules/**', '**/.next/**'],
@@ -40,13 +42,9 @@ const nextConfig = {
   },
 };
 
-// Add Multi Zones rewrites for host app 'procureiq-nextjs'
-// Each MFE sets basePath to its route (e.g. mfe-auth → basePath '/auth'),
-// so it serves at http://localhost:PORT/mfe-route — destinations must match.
-if (folderName === 'procureiq-nextjs') {
+if (!targetApp.startsWith('mfe-')) {
   nextConfig.rewrites = async () => {
     return [
-      // _next/static assets — must be proxied per MFE so JS/CSS chunks load
       { source: '/crypto/_next/:path*',       destination: `${CRYPTO_URL}/crypto/_next/:path*` },
       { source: '/auth/_next/:path*',         destination: `${AUTH_URL}/auth/_next/:path*` },
       { source: '/notifications/_next/:path*',destination: `${NOTIFICATIONS_URL}/notifications/_next/:path*` },
@@ -55,7 +53,6 @@ if (folderName === 'procureiq-nextjs') {
       { source: '/fieldservice/_next/:path*', destination: `${FIELDSERVICE_URL}/fieldservice/_next/:path*` },
       { source: '/github/_next/:path*',       destination: `${GITHUB_URL}/github/_next/:path*` },
       { source: '/jobs/_next/:path*',         destination: `${JOBS_URL}/jobs/_next/:path*` },
-      // Page routes
       { source: '/crypto',        destination: `${CRYPTO_URL}/crypto` },
       { source: '/crypto/:path*', destination: `${CRYPTO_URL}/crypto/:path*` },
       { source: '/auth',          destination: `${AUTH_URL}/auth` },

@@ -1,4 +1,3 @@
-import { describe, it, expect } from "vitest"
 import { tracingService } from "../../services/tracing-service"
 
 describe("TracingService", () => {

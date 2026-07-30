@@ -1,14 +1,13 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { renderHook, act } from "@testing-library/react"
 import { useAuthManagement } from "../../hooks/use-auth-management"
 
 describe("useAuthManagement hook", () => {
   beforeEach(() => {
-    vi.useFakeTimers()
+    jest.useFakeTimers()
   })
 
   afterEach(() => {
-    vi.useRealTimers()
+    jest.useRealTimers()
   })
 
   it("initializes with default user list and empty API key state", () => {
@@ -29,7 +28,7 @@ describe("useAuthManagement hook", () => {
     expect(result.current.generating).toBe(true)
 
     act(() => {
-      vi.advanceTimersByTime(1200)
+      jest.advanceTimersByTime(1200)
     })
 
     expect(result.current.generating).toBe(false)
