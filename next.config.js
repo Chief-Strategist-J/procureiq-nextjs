@@ -28,8 +28,8 @@ const nextConfig = {
   },
 };
 
-// Add Multi Zones rewrites ONLY for the host app 'procureiq-nextjs'
-if (folderName === 'procureiq-nextjs') {
+// Add Multi Zones rewrites ONLY for the host app 'procureiq-nextjs' when ENABLE_MFE_REWRITES is set
+if (folderName === 'procureiq-nextjs' && process.env.ENABLE_MFE_REWRITES === 'true') {
   nextConfig.rewrites = async () => {
     return [
       {
