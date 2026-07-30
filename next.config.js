@@ -21,6 +21,11 @@ const nextConfig = {
   basePath: basePath,
   reactStrictMode: true,
   transpilePackages: [],
+  webpack: (config) => {
+    config.resolve.alias['@shared/index'] = path.resolve(__dirname, 'shared/src/index.ts');
+    config.resolve.alias['@shared'] = path.resolve(__dirname, 'shared/src');
+    return config;
+  },
 };
 
 // Add Multi Zones rewrites ONLY for the host app 'procureiq-nextjs'
