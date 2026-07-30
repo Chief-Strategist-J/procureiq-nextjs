@@ -1,122 +1,197 @@
 "use client"
 
-import React, { useState } from "react"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Button } from "@shared/index"
-import { Key, ShieldCheck, UserCheck, KeyRound, AlertTriangle } from "lucide-react"
+import React from "react"
+import { 
+  useAuthManagement, 
+  AuthHeader, 
+  UserAccountList, 
+  ApiKeyCard, 
+  SecurityNotice,
+  LoginForm,
+  SignupForm,
+  ForgotPasswordForm,
+  ResetPasswordForm,
+  EmailVerificationCard
+} from "../features/auth"
+import { LayoutGrid, LogIn, UserPlus, KeyRound, ShieldCheck, MailCheck } from "lucide-react"
 
 export default function AuthPage() {
-  const [apiKey, setApiKey] = useState("")
-  const [generating, setGenerating] = useState(false)
-  const [users, setUsers] = useState([
-    { name: "John Doe", role: "Procurement Manager", email: "john@procureiq.com", status: "Active" },
-    { name: "Jane Smith", role: "Financial Auditor", email: "jane@procureiq.com", status: "Active" },
-    { name: "Bob Johnson", role: "System Dispatcher", email: "bob@procureiq.com", status: "Suspended" },
-  ])
-
-  const handleGenerateKey = () => {
-    setGenerating(true)
-    setTimeout(() => {
-      const generated = "pk_live_" + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
-      setApiKey(generated)
-      setGenerating(false)
-    }, 1200)
-  }
+  const { 
+    mode,
+    apiKey, 
+    generating, 
+    users, 
+    sagaState,
+    loading,
+    error,
+    successMessage,
+    handleModeChange,
+    handleGenerateKey, 
+    toggleUserStatus,
+    handleLogin,
+    handleSignup,
+    handleForgotPassword,
+    handleResetPassword,
+    handleVerifyEmail,
+  } = useAuthManagement()
 
   return (
     <div className="container mx-auto px-4 py-8 md:px-8 space-y-6 flex-1">
-      <section className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold flex items-center space-x-2">
-            <Key className="h-8 w-8 text-emerald-500 animate-pulse-glow" />
-            <span>Identity & Access Roles</span>
-          </h1>
-          <p className="text-muted-foreground text-sm">Manage user credentials, API keys, and track role assignments.</p>
-        </div>
-        <div className="flex items-center space-x-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-xs px-3 py-1.5 rounded-full font-mono font-semibold">
-          <KeyRound className="h-4 w-4 mr-1" />
-          <span>Access Port: 8992</span>
-        </div>
-      </section>
+      <AuthHeader />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Main List */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Platform User Accounts</CardTitle>
-            <CardDescription>Configure credentials and review role definitions.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              {users.map((u) => (
-                <div key={u.email} className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 p-3 rounded-lg border bg-card hover:bg-accent/20 transition-all duration-200">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-500">
-                      <UserCheck className="h-4.5 w-4.5" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-sm text-foreground">{u.name}</h4>
-                      <p className="text-xs text-muted-foreground">{u.email} • <span className="font-semibold">{u.role}</span></p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2 self-end sm:self-auto">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      u.status === "Active" 
-                        ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" 
-                        : "bg-rose-500/10 text-rose-500 border border-rose-500/20"
-                    }`}>
-                      {u.status}
-                    </span>
-                    <Button variant="ghost" size="sm" className="h-7 text-xs">Edit</Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+      {/* Navigation Tabs */}
+      <div className="flex flex-wrap items-center gap-2 border-b pb-3">
+        <button
+          onClick={() => handleModeChange("overview")}
+          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            mode === "overview"
+              ? "bg-emerald-500 text-slate-950 shadow-sm"
+              : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
+          }`}
+        >
+          <LayoutGrid className="h-3.5 w-3.5" />
+          <span>Accounts & API Keys</span>
+        </button>
 
-        {/* Access side panel */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>System API Keys</CardTitle>
-              <CardDescription>Generate access keys for Spring Boot & Python endpoints.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="text-xs text-muted-foreground">
-                Use API Keys to authenticate external services requesting dispatching records or smart contract state details.
-              </div>
-              
-              {apiKey && (
-                <div className="bg-muted p-3 rounded border font-mono text-[10px] break-all select-all text-emerald-500">
-                  {apiKey}
-                </div>
-              )}
-            </CardContent>
-            <CardFooter>
-              <Button 
-                onClick={handleGenerateKey} 
-                disabled={generating} 
-                className="w-full font-bold bg-emerald-500 hover:bg-emerald-600 text-slate-950"
-              >
-                {generating ? "Generating..." : "Generate API Key"}
-              </Button>
-            </CardFooter>
-          </Card>
+        <button
+          onClick={() => handleModeChange("login")}
+          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            mode === "login"
+              ? "bg-emerald-500 text-slate-950 shadow-sm"
+              : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
+          }`}
+        >
+          <LogIn className="h-3.5 w-3.5" />
+          <span>Sign In</span>
+        </button>
 
-          <Card className="border-rose-500/30 bg-rose-500/5">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs flex items-center space-x-1.5 text-rose-500">
-                <AlertTriangle className="h-4 w-4" />
-                <span>Security Notice</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-[11px] text-muted-foreground leading-relaxed">
-              Ensure API keys are stored securely. Never commit them to version control pipeline. Regenerate compromised keys immediately.
-            </CardContent>
-          </Card>
-        </div>
+        <button
+          onClick={() => handleModeChange("signup")}
+          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            mode === "signup"
+              ? "bg-emerald-500 text-slate-950 shadow-sm"
+              : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
+          }`}
+        >
+          <UserPlus className="h-3.5 w-3.5" />
+          <span>Register</span>
+        </button>
+
+        <button
+          onClick={() => handleModeChange("forgot_password")}
+          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            mode === "forgot_password"
+              ? "bg-emerald-500 text-slate-950 shadow-sm"
+              : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
+          }`}
+        >
+          <KeyRound className="h-3.5 w-3.5" />
+          <span>Forgot Password</span>
+        </button>
+
+        <button
+          onClick={() => handleModeChange("reset_password")}
+          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            mode === "reset_password"
+              ? "bg-emerald-500 text-slate-950 shadow-sm"
+              : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
+          }`}
+        >
+          <ShieldCheck className="h-3.5 w-3.5" />
+          <span>Reset Password</span>
+        </button>
+
+        <button
+          onClick={() => handleModeChange("verify_email")}
+          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            mode === "verify_email"
+              ? "bg-emerald-500 text-slate-950 shadow-sm"
+              : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
+          }`}
+        >
+          <MailCheck className="h-3.5 w-3.5" />
+          <span>Verify Email</span>
+        </button>
       </div>
+
+      {/* Dynamic Mode Render */}
+      {mode === "overview" && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <UserAccountList users={users} onToggleStatus={toggleUserStatus} />
+          <div className="space-y-6">
+            <ApiKeyCard 
+              apiKey={apiKey} 
+              generating={generating} 
+              onGenerateKey={handleGenerateKey} 
+            />
+            <SecurityNotice />
+          </div>
+        </div>
+      )}
+
+      {mode === "login" && (
+        <div className="py-6">
+          <LoginForm
+            onSubmit={handleLogin}
+            loading={loading}
+            error={error}
+            sagaState={sagaState}
+            onSwitchToSignup={() => handleModeChange("signup")}
+            onSwitchToForgotPassword={() => handleModeChange("forgot_password")}
+          />
+        </div>
+      )}
+
+      {mode === "signup" && (
+        <div className="py-6">
+          <SignupForm
+            onSubmit={handleSignup}
+            loading={loading}
+            error={error}
+            sagaState={sagaState}
+            onSwitchToLogin={() => handleModeChange("login")}
+          />
+        </div>
+      )}
+
+      {mode === "forgot_password" && (
+        <div className="py-6">
+          <ForgotPasswordForm
+            onSubmit={handleForgotPassword}
+            loading={loading}
+            error={error}
+            successMessage={successMessage}
+            sagaState={sagaState}
+            onSwitchToLogin={() => handleModeChange("login")}
+          />
+        </div>
+      )}
+
+      {mode === "reset_password" && (
+        <div className="py-6">
+          <ResetPasswordForm
+            onSubmit={handleResetPassword}
+            loading={loading}
+            error={error}
+            successMessage={successMessage}
+            sagaState={sagaState}
+            onSwitchToLogin={() => handleModeChange("login")}
+          />
+        </div>
+      )}
+
+      {mode === "verify_email" && (
+        <div className="py-6">
+          <EmailVerificationCard
+            onVerify={handleVerifyEmail}
+            loading={loading}
+            error={error}
+            successMessage={successMessage}
+            sagaState={sagaState}
+            onSwitchToLogin={() => handleModeChange("login")}
+          />
+        </div>
+      )}
     </div>
   )
 }
