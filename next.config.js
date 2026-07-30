@@ -19,11 +19,23 @@ const JOBS_URL = process.env.NEXT_PUBLIC_JOBS_URL || 'http://localhost:8998';
 
 const nextConfig = {
   basePath: basePath,
-  reactStrictMode: true,
-  transpilePackages: [],
-  webpack: (config) => {
+  reactStrictMode: false, // Prevents duplicate double-render compilation overhead in dev mode
+  swcMinify: true,
+  experimental: {
+    proxyTimeout: 120000,
+    optimizePackageImports: ['lucide-react', '@radix-ui/react-slot', '@radix-ui/react-dropdown-menu'],
+  },
+  webpack: (config, { dev }) => {
     config.resolve.alias['@shared/index'] = path.resolve(__dirname, 'shared/src/index.ts');
     config.resolve.alias['@shared'] = path.resolve(__dirname, 'shared/src');
+    
+    // Speed up Webpack dev compilation & prevent memory bottlenecks when 9 MFEs run concurrently
+    if (dev) {
+      config.watchOptions = {
+        ignored: ['**/node_modules/**', '**/.next/**'],
+        aggregateTimeout: 300,
+      };
+    }
     return config;
   },
 };
@@ -34,7 +46,7 @@ if (folderName === 'procureiq-nextjs') {
     return [
       {
         source: '/crypto',
-        destination: `${CRYPTO_URL}/crypto/`,
+        destination: `${CRYPTO_URL}/crypto`,
       },
       {
         source: '/crypto/:path*',
@@ -42,7 +54,7 @@ if (folderName === 'procureiq-nextjs') {
       },
       {
         source: '/auth',
-        destination: `${AUTH_URL}/auth/`,
+        destination: `${AUTH_URL}/auth`,
       },
       {
         source: '/auth/:path*',
@@ -50,7 +62,7 @@ if (folderName === 'procureiq-nextjs') {
       },
       {
         source: '/notifications',
-        destination: `${NOTIFICATIONS_URL}/notifications/`,
+        destination: `${NOTIFICATIONS_URL}/notifications`,
       },
       {
         source: '/notifications/:path*',
@@ -58,7 +70,7 @@ if (folderName === 'procureiq-nextjs') {
       },
       {
         source: '/email',
-        destination: `${EMAIL_URL}/email/`,
+        destination: `${EMAIL_URL}/email`,
       },
       {
         source: '/email/:path*',
@@ -66,7 +78,7 @@ if (folderName === 'procureiq-nextjs') {
       },
       {
         source: '/campaigns',
-        destination: `${CAMPAIGNS_URL}/campaigns/`,
+        destination: `${CAMPAIGNS_URL}/campaigns`,
       },
       {
         source: '/campaigns/:path*',
@@ -74,7 +86,7 @@ if (folderName === 'procureiq-nextjs') {
       },
       {
         source: '/fieldservice',
-        destination: `${FIELDSERVICE_URL}/fieldservice/`,
+        destination: `${FIELDSERVICE_URL}/fieldservice`,
       },
       {
         source: '/fieldservice/:path*',
@@ -82,7 +94,7 @@ if (folderName === 'procureiq-nextjs') {
       },
       {
         source: '/github',
-        destination: `${GITHUB_URL}/github/`,
+        destination: `${GITHUB_URL}/github`,
       },
       {
         source: '/github/:path*',
@@ -90,7 +102,7 @@ if (folderName === 'procureiq-nextjs') {
       },
       {
         source: '/jobs',
-        destination: `${JOBS_URL}/jobs/`,
+        destination: `${JOBS_URL}/jobs`,
       },
       {
         source: '/jobs/:path*',

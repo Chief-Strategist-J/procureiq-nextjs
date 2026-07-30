@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react"
 import { useTheme } from "next-themes"
 import { Button } from "./button"
+import { traceNavigation } from "../../lib/tracing"
 import { 
   Sun, 
   Moon, 
@@ -83,6 +84,7 @@ export function Header({ activePath }: HeaderProps) {
               <a
                 key={item.path}
                 href={item.path}
+                onClick={() => traceNavigation(item.path, currentPath, { item_name: item.name })}
                 className={`flex items-center space-x-1.5 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-accent/50 ${
                   active 
                     ? "text-primary bg-primary/10 border border-primary/20 shadow-sm" 

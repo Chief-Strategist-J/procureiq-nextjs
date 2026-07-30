@@ -10,3 +10,5 @@ export {
 } from "./components/ui/card"
 export { Header } from "./components/ui/header"
 export { Footer } from "./components/ui/footer"
+export { traceNavigation, generateTraceId } from "./lib/tracing"
+export type { TraceEvent } from "./lib/tracing"
