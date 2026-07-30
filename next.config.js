@@ -46,67 +46,67 @@ if (folderName === 'procureiq-nextjs') {
     return [
       {
         source: '/crypto',
-        destination: `${CRYPTO_URL}/crypto`,
+        destination: `${CRYPTO_URL}/`,
       },
       {
         source: '/crypto/:path*',
-        destination: `${CRYPTO_URL}/crypto/:path*`,
+        destination: `${CRYPTO_URL}/:path*`,
       },
       {
         source: '/auth',
-        destination: `${AUTH_URL}/auth`,
+        destination: `${AUTH_URL}/`,
       },
       {
         source: '/auth/:path*',
-        destination: `${AUTH_URL}/auth/:path*`,
+        destination: `${AUTH_URL}/:path*`,
       },
       {
         source: '/notifications',
-        destination: `${NOTIFICATIONS_URL}/notifications`,
+        destination: `${NOTIFICATIONS_URL}/`,
       },
       {
         source: '/notifications/:path*',
-        destination: `${NOTIFICATIONS_URL}/notifications/:path*`,
+        destination: `${NOTIFICATIONS_URL}/:path*`,
       },
       {
         source: '/email',
-        destination: `${EMAIL_URL}/email`,
+        destination: `${EMAIL_URL}/`,
       },
       {
         source: '/email/:path*',
-        destination: `${EMAIL_URL}/email/:path*`,
+        destination: `${EMAIL_URL}/:path*`,
       },
       {
         source: '/campaigns',
-        destination: `${CAMPAIGNS_URL}/campaigns`,
+        destination: `${CAMPAIGNS_URL}/`,
       },
       {
         source: '/campaigns/:path*',
-        destination: `${CAMPAIGNS_URL}/campaigns/:path*`,
+        destination: `${CAMPAIGNS_URL}/:path*`,
       },
       {
         source: '/fieldservice',
-        destination: `${FIELDSERVICE_URL}/fieldservice`,
+        destination: `${FIELDSERVICE_URL}/`,
       },
       {
         source: '/fieldservice/:path*',
-        destination: `${FIELDSERVICE_URL}/fieldservice/:path*`,
+        destination: `${FIELDSERVICE_URL}/:path*`,
       },
       {
         source: '/github',
-        destination: `${GITHUB_URL}/github`,
+        destination: `${GITHUB_URL}/`,
       },
       {
         source: '/github/:path*',
-        destination: `${GITHUB_URL}/github/:path*`,
+        destination: `${GITHUB_URL}/:path*`,
       },
       {
         source: '/jobs',
-        destination: `${JOBS_URL}/jobs`,
+        destination: `${JOBS_URL}/`,
       },
       {
         source: '/jobs/:path*',
-        destination: `${JOBS_URL}/jobs/:path*`,
+        destination: `${JOBS_URL}/:path*`,
       },
     ];
   };
