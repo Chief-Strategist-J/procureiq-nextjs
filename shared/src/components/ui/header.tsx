@@ -99,18 +99,6 @@ export function Header({ activePath }: HeaderProps) {
         {/* System Controls & Connections */}
         <div className="flex items-center space-x-3">
           
-          {/* Connection Indicators (Desktop only) */}
-          <div className="hidden lg:flex items-center space-x-3 text-xs bg-muted/50 border rounded-full px-3 py-1 font-mono text-muted-foreground">
-            <span className="flex items-center space-x-1">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>AlloyDB</span>
-            </span>
-            <span className="flex items-center space-x-1">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>WebRTC</span>
-            </span>
-          </div>
-
           {/* Theme toggler */}
           <Button
             variant="ghost"
@@ -162,18 +150,6 @@ export function Header({ activePath }: HeaderProps) {
                 </a>
               )}
             )}
-            
-            {/* Mobile Connection status */}
-            <div className="col-span-full mt-4 flex justify-around items-center rounded-lg border bg-muted/30 p-3 text-xs font-mono text-muted-foreground">
-              <span className="flex items-center space-x-1.5">
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>AlloyDB Omni: Connected</span>
-              </span>
-              <span className="flex items-center space-x-1.5">
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>WebRTC WS: Active</span>
-              </span>
-            </div>
           </nav>
         </div>
       )}
