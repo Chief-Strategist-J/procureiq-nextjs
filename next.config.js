@@ -11,19 +11,22 @@ if (targetApp.startsWith('mfe-')) {
   basePath = '/' + targetApp.replace('mfe-', '');
 }
 
-const CRYPTO_URL = process.env.NEXT_PUBLIC_CRYPTO_URL || 'http://localhost:8991';
-const AUTH_URL = process.env.NEXT_PUBLIC_AUTH_URL || 'http://localhost:8992';
-const NOTIFICATIONS_URL = process.env.NEXT_PUBLIC_NOTIFICATIONS_URL || 'http://localhost:8993';
-const EMAIL_URL = process.env.NEXT_PUBLIC_EMAIL_URL || 'http://localhost:8994';
-const CAMPAIGNS_URL = process.env.NEXT_PUBLIC_CAMPAIGNS_URL || 'http://localhost:8995';
-const FIELDSERVICE_URL = process.env.NEXT_PUBLIC_FIELDSERVICE_URL || 'http://localhost:8996';
-const GITHUB_URL = process.env.NEXT_PUBLIC_GITHUB_URL || 'http://localhost:8997';
-const JOBS_URL = process.env.NEXT_PUBLIC_JOBS_URL || 'http://localhost:8998';
+const CRYPTO_URL = process.env.NEXT_PUBLIC_CRYPTO_URL || 'http://127.0.0.1:8991';
+const AUTH_URL = process.env.NEXT_PUBLIC_AUTH_URL || 'http://127.0.0.1:8992';
+const NOTIFICATIONS_URL = process.env.NEXT_PUBLIC_NOTIFICATIONS_URL || 'http://127.0.0.1:8993';
+const EMAIL_URL = process.env.NEXT_PUBLIC_EMAIL_URL || 'http://127.0.0.1:8994';
+const CAMPAIGNS_URL = process.env.NEXT_PUBLIC_CAMPAIGNS_URL || 'http://127.0.0.1:8995';
+const FIELDSERVICE_URL = process.env.NEXT_PUBLIC_FIELDSERVICE_URL || 'http://127.0.0.1:8996';
+const GITHUB_URL = process.env.NEXT_PUBLIC_GITHUB_URL || 'http://127.0.0.1:8997';
+const JOBS_URL = process.env.NEXT_PUBLIC_JOBS_URL || 'http://127.0.0.1:8998';
 
 const nextConfig = {
   basePath: basePath,
   reactStrictMode: false,
-  swcMinify: true,
+  swcMinify: false,
+  httpAgentOptions: {
+    keepAlive: false,
+  },
   experimental: {
     proxyTimeout: 120000,
     optimizePackageImports: ['lucide-react', '@radix-ui/react-slot', '@radix-ui/react-dropdown-menu'],
@@ -33,6 +36,10 @@ const nextConfig = {
     config.resolve.alias['@shared'] = path.resolve(__dirname, 'shared/src');
     
     if (dev) {
+      config.parallelism = 1;
+      config.cache = {
+        type: 'filesystem',
+      };
       config.watchOptions = {
         ignored: ['**/node_modules/**', '**/.next/**'],
         aggregateTimeout: 300,

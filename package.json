@@ -23,6 +23,7 @@
     "build:github": "next build mfe-github",
     "build:jobs": "next build mfe-jobs",
     "build:all": "concurrently \"npm run build:host\" \"npm run build:crypto\" \"npm run build:auth\" \"npm run build:notifications\" \"npm run build:email\" \"npm run build:campaigns\" \"npm run build:fieldservice\" \"npm run build:github\" \"npm run build:jobs\"",
+    "dev:all": "concurrently -k \"npm run dev:host\" \"npm run dev:crypto\" \"npm run dev:auth\" \"npm run dev:notifications\" \"npm run dev:email\" \"npm run dev:campaigns\" \"npm run dev:fieldservice\" \"npm run dev:github\" \"npm run dev:jobs\"",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },
