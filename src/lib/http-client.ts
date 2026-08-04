@@ -8,6 +8,24 @@ export interface ApiSingleResponse<T> {
   error?: string;
 }
 
+function generateTraceId(): string {
+  const chars = '0123456789abcdef';
+  let traceId = '';
+  for (let i = 0; i < 32; i++) {
+    traceId += chars[Math.floor(Math.random() * 16)];
+  }
+  return traceId;
+}
+
+function generateSpanId(): string {
+  const chars = '0123456789abcdef';
+  let spanId = '';
+  for (let i = 0; i < 16; i++) {
+    spanId += chars[Math.floor(Math.random() * 16)];
+  }
+  return spanId;
+}
+
 export class HttpClient {
   private static token: string | null = null;
 
@@ -20,9 +38,16 @@ export class HttpClient {
   }
 
   private static getHeaders(headers: Record<string, string> = {}): Record<string, string> {
+    const traceId = generateTraceId();
+    const spanId = generateSpanId();
+    const correlationId = `corr-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
     const defaultHeaders: Record<string, string> = {
       'Content-Type': 'application/json',
       Accept: 'application/json',
+      'X-Trace-Id': traceId,
+      'X-Correlation-Id': correlationId,
+      traceparent: `00-${traceId}-${spanId}-01`,
       ...headers,
     };
 

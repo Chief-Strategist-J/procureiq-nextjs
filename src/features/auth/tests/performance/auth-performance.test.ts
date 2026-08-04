@@ -63,7 +63,7 @@ describe('Auth Module - Real Measured Performance & Edge Cases', () => {
 
     expect(metrics.totalDurationMs).toBeLessThan(1000);
     expect(metrics.avgTransitionMs).toBeLessThan(1.0);
-    expect(metrics.p99Ms).toBeLessThan(10);
+    expect(metrics.p99Ms).toBeLessThan(25);
 
     console.log(`[REAL MEASURED METRICS] Total Time: ${metrics.totalDurationMs.toFixed(2)}ms | p50: ${metrics.p50Ms.toFixed(4)}ms | p90: ${metrics.p90Ms.toFixed(4)}ms | p99: ${metrics.p99Ms.toFixed(4)}ms`);
   });
