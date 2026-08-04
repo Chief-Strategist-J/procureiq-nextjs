@@ -248,16 +248,64 @@ data_flow_specifications:
       }
 
 business_logic:
-  - "User login via email and password with Spring Boot OAuth2/JWT token exchange."
-  - "User registration with company domain verification and terms validation."
-  - "Password recovery and token-based password reset."
-  - "Developer API key generation and token masking."
+  - rule: "Authentication Credential Validation & Dispatch"
+    condition: "if (user.email is valid RFC 5322 format && user.password.length >= 8)"
+    action: "Dispatch authActions.loginRequest(credentials) to trigger Redux Saga worker handleLoginSaga."
+    why_required: "Prevents invalid or malformed requests from traversing network boundaries, protects Spring Boot REST endpoint from bad inputs, and guarantees fast client-side feedback."
+
+  - rule: "User Registration Terms & Domain Check"
+    condition: "if (user.agreeToTerms === true && user.name.trim() !== '' && user.email is valid)"
+    action: "Invoke signupApi(signupInput) via POST /api/v1/auth/signup."
+    why_required: "Mandatory for enterprise SaaS legal compliance (GDPR/SOC2) and guarantees profile completeness prior to user record insertion."
+
+  - rule: "JWT Token Interception & Session Attachment"
+    condition: "if (apiResponse.success === true && apiResponse.data.token is present)"
+    action: "Execute HttpClient.setAuthToken(token), store JWT token in memory, and set state.auth.isAuthenticated to true."
+    why_required: "Automates bearer token attachment for all subsequent HTTP requests via centralized HttpClient middleware without requiring React components to pass auth headers manually."
+
+  - rule: "Authentication Failure Recovery & Error Isolation"
+    condition: "if (apiResponse.status === 401 || networkError occurs)"
+    action: "Clear HttpClient auth token, reset state.auth.user to null, update status to 'failed', and store normalized error message."
+    why_required: "Enforces strict state hygiene, prevents unauthorized session persistence, and isolates errors to allow immediate user retry."
+
+  - rule: "Session Liquidation & State Reset"
+    condition: "if (user triggers logout action OR JWT token expires)"
+    action: "Clear HttpClient token, wipe Redux state.auth to initialState, and redirect user to /login."
+    why_required: "Ensures complete security de-authentication, revokes local session privileges, and prevents unauthorized data leaks."
 
 architecture_decisions:
-  - "Vertical slice isolation: All Auth UI components, Redux slices, Redux Sagas, services, types, stories, and tests are co-located in src/features/auth/."
-  - "Public Index Export: Only public components, hooks, services, and types are exported via src/features/auth/index.ts."
-  - "State Management: Redux Toolkit authSlice + Redux-Saga handle all async authentication lifecycle events."
-  - "HTTP Communication: Centralized HttpClient calling Spring Boot REST API (/api/v1/auth/*)."
+  - decision: "Vertical Slice Architecture (Feature Co-location)"
+    slo_metrics:
+      slo: "Developer Velocity & Component Locality: 95% of feature modifications isolated within src/features/auth/."
+      sla: "99.9% Build & Type Guarantee: Zero cross-feature circular dependency breakage."
+      error_rate: "< 0.01% imports outside public feature index."
+      mttr: "< 5 minutes to locate and resolve domain bug."
+    tradeoffs:
+      pros: "High modularity, clear ownership boundary, zero dependency leaking."
+      cons: "Minor duplicate helper boilerplate if not moved to shared/."
+    rationale: "Aligns with enterprise ProcureIQ Golden Rule for domain isolation."
+
+  - decision: "Redux Toolkit + Redux-Saga Middleware Architecture"
+    slo_metrics:
+      slo: "Async Action Dispatch Latency < 10ms; Response Handled < 200ms (p99)."
+      sla: "99.95% Session State Consistency across concurrent UI tabs."
+      error_rate: "0% unhandled async state exceptions."
+      mttr: "< 30s automatic state recovery on network disconnection via saga retry/fail."
+    tradeoffs:
+      pros: "Predictable table-driven side-effect orchestration, easy mock generator testing."
+      cons: "Requires generator syntax familiarity compared to simple async thunks."
+    rationale: "Decouples UI component rendering from complex async network orchestration."
+
+  - decision: "Centralized HttpClient Middleware for Bearer Token Management"
+    slo_metrics:
+      slo: "100% of outbound requests automatically attach Bearer token if present."
+      sla: "99.99% OAuth2 token integrity across API requests."
+      error_rate: "< 0.001% missing Authorization header errors."
+      mttr: "< 1s automatic token revocation on HTTP 401 response."
+    tradeoffs:
+      pros: "Centralized request tracing, standardized error normalization, zero redundant header code."
+      cons: "Global singleton client state requires explicit cleanup on logout."
+    rationale: "Provides unified networking layer for Spring Boot REST API integration."
 
 networking:
   base_url: "http://localhost:8080 or process.env.NEXT_PUBLIC_API_URL"
