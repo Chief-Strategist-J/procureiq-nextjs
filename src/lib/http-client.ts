@@ -1,11 +1,12 @@
 import { API_BASE_URL } from './api-endpoints';
 
 export interface ApiSingleResponse<T> {
-  status: number;
-  success: boolean;
-  data?: T;
+  status: number | string;
+  code?: number;
+  success?: boolean;
+  data?: any;
   message?: string;
-  error?: string;
+  error?: any;
 }
 
 function generateTraceId(): string {
@@ -24,6 +25,38 @@ function generateSpanId(): string {
     spanId += chars[Math.floor(Math.random() * 16)];
   }
   return spanId;
+}
+
+function extractErrorMessage(responseData: any, httpStatus: number): string {
+  if (!responseData) {
+    return `HTTP ${httpStatus}: Request failed`;
+  }
+
+  if (responseData.data?.details && typeof responseData.data.details === 'object') {
+    const details = responseData.data.details;
+    const messages = Object.entries(details)
+      .map(([key, val]) => `${key}: ${val}`)
+      .join(', ');
+    if (messages) return messages;
+  }
+
+  if (responseData.data?.message) {
+    return responseData.data.message;
+  }
+
+  if (typeof responseData.error === 'string') {
+    return responseData.error;
+  }
+
+  if (responseData.error?.message) {
+    return responseData.error.message;
+  }
+
+  if (responseData.message) {
+    return responseData.message;
+  }
+
+  return `HTTP ${httpStatus}: Request failed`;
 }
 
 export class HttpClient {
@@ -72,15 +105,16 @@ export class HttpClient {
         body: JSON.stringify(body),
       });
 
-      const responseData: ApiSingleResponse<TRes> = await response.json();
+      const responseData: any = await response.json();
+      const code = responseData?.code || response.status;
+      const isSuccess = response.ok && (code === 200 || code === 201) && responseData?.status !== 'error';
 
-      if (!response.ok || !responseData.success) {
-        const errorMsg =
-          responseData.message || responseData.error || `HTTP ${response.status}: Request failed`;
+      if (!isSuccess) {
+        const errorMsg = extractErrorMessage(responseData, response.status);
         throw new Error(errorMsg);
       }
 
-      return responseData.data as TRes;
+      return (responseData.data ?? responseData) as TRes;
     } catch (error: any) {
       if (error instanceof Error) {
         throw error;
@@ -101,15 +135,16 @@ export class HttpClient {
         headers: HttpClient.getHeaders(customHeaders),
       });
 
-      const responseData: ApiSingleResponse<TRes> = await response.json();
+      const responseData: any = await response.json();
+      const code = responseData?.code || response.status;
+      const isSuccess = response.ok && (code === 200 || code === 201) && responseData?.status !== 'error';
 
-      if (!response.ok || !responseData.success) {
-        const errorMsg =
-          responseData.message || responseData.error || `HTTP ${response.status}: Request failed`;
+      if (!isSuccess) {
+        const errorMsg = extractErrorMessage(responseData, response.status);
         throw new Error(errorMsg);
       }
 
-      return responseData.data as TRes;
+      return (responseData.data ?? responseData) as TRes;
     } catch (error: any) {
       if (error instanceof Error) {
         throw error;

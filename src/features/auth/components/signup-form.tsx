@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { SignupInput } from '../types';
 import { AuthStatusDialog } from './auth-status-dialog';
+import { AuthValidator } from '../utils/validation';
 
 export interface SignupFormProps {
   onSubmit?: (data: SignupInput) => void;
@@ -29,22 +30,44 @@ export function SignupForm({
   const [password, setPassword] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [agreeToTerms, setAgreeToTerms] = useState(false);
-  const [showErrorModal, setShowErrorModal] = useState(true);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [showDialog, setShowDialog] = useState(false);
+  const [dialogMessage, setDialogMessage] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setShowErrorModal(true);
+
+    const validation = AuthValidator.validateSignupForm(
+      name,
+      email,
+      password,
+      companyName,
+      agreeToTerms
+    );
+
+    if (!validation.isValid) {
+      setFieldErrors(validation.errors);
+      const firstError = Object.values(validation.errors)[0];
+      setDialogMessage(firstError);
+      setShowDialog(true);
+      return;
+    }
+
+    setFieldErrors({});
+    setShowDialog(true);
     if (onSubmit) {
       onSubmit({ name, email, password, companyName, agreeToTerms });
     }
   };
 
-  const handleCloseModal = () => {
-    setShowErrorModal(false);
+  const handleCloseDialog = () => {
+    setShowDialog(false);
     if (onClearError) {
       onClearError();
     }
   };
+
+  const currentError = errorMessage || (showDialog ? dialogMessage : '');
 
   return (
     <>
@@ -55,7 +78,6 @@ export function SignupForm({
         className="w-full max-w-md mx-auto"
       >
         <Card className="relative overflow-hidden border-slate-800 bg-slate-900/90 shadow-2xl backdrop-blur-xl">
-          {/* Animated Loading Overlay */}
           {isLoading && (
             <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-sm space-y-3">
               <div className="relative flex h-12 w-12 items-center justify-center">
@@ -97,16 +119,22 @@ export function SignupForm({
                     type="text"
                     placeholder="Jaydeep Vagh"
                     value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="pl-9"
+                    onChange={(e) => {
+                      setName(e.target.value);
+                      if (fieldErrors.name) setFieldErrors((prev) => ({ ...prev, name: '' }));
+                    }}
+                    className={`pl-9 ${fieldErrors.name ? 'border-rose-500 bg-rose-500/5' : ''}`}
                     required
                   />
                 </div>
+                {fieldErrors.name && (
+                  <p className="text-[11px] font-medium text-rose-400 mt-1">{fieldErrors.name}</p>
+                )}
               </div>
 
               <div className="space-y-1">
                 <label htmlFor="signup-email" className="block text-xs font-medium text-slate-300">
-                  Work Email
+                  Work Email Address
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
@@ -115,11 +143,17 @@ export function SignupForm({
                     type="email"
                     placeholder="jaydeep@company.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-9"
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: '' }));
+                    }}
+                    className={`pl-9 ${fieldErrors.email ? 'border-rose-500 bg-rose-500/5' : ''}`}
                     required
                   />
                 </div>
+                {fieldErrors.email && (
+                  <p className="text-[11px] font-medium text-rose-400 mt-1">{fieldErrors.email}</p>
+                )}
               </div>
 
               <div className="space-y-1">
@@ -133,11 +167,17 @@ export function SignupForm({
                     type="text"
                     placeholder="Acme Global Inc."
                     value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    className="pl-9"
+                    onChange={(e) => {
+                      setCompanyName(e.target.value);
+                      if (fieldErrors.companyName) setFieldErrors((prev) => ({ ...prev, companyName: '' }));
+                    }}
+                    className={`pl-9 ${fieldErrors.companyName ? 'border-rose-500 bg-rose-500/5' : ''}`}
                     required
                   />
                 </div>
+                {fieldErrors.companyName && (
+                  <p className="text-[11px] font-medium text-rose-400 mt-1">{fieldErrors.companyName}</p>
+                )}
               </div>
 
               <div className="space-y-1">
@@ -151,23 +191,36 @@ export function SignupForm({
                     type="password"
                     placeholder="••••••••"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-9"
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (fieldErrors.password) setFieldErrors((prev) => ({ ...prev, password: '' }));
+                    }}
+                    className={`pl-9 ${fieldErrors.password ? 'border-rose-500 bg-rose-500/5' : ''}`}
                     required
                   />
                 </div>
+                {fieldErrors.password && (
+                  <p className="text-[11px] font-medium text-rose-400 mt-1">{fieldErrors.password}</p>
+                )}
               </div>
 
-              <div className="flex items-center space-x-2 pt-2">
-                <Checkbox
-                  id="signup-terms"
-                  checked={agreeToTerms}
-                  onCheckedChange={(checked) => setAgreeToTerms(Boolean(checked))}
-                />
-                <label htmlFor="signup-terms" className="text-xs text-slate-300 cursor-pointer">
-                  I agree to the{' '}
-                  <span className="text-brand-400 hover:underline">Terms of Service</span> and Privacy Policy.
-                </label>
+              <div className="space-y-1 pt-1">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="signup-terms"
+                    checked={agreeToTerms}
+                    onCheckedChange={(checked) => {
+                      setAgreeToTerms(Boolean(checked));
+                      if (fieldErrors.agreeToTerms) setFieldErrors((prev) => ({ ...prev, agreeToTerms: '' }));
+                    }}
+                  />
+                  <label htmlFor="signup-terms" className="text-xs text-slate-300 cursor-pointer">
+                    I agree to the <span className="text-brand-400 hover:underline">Terms of Service</span> and Privacy Policy.
+                  </label>
+                </div>
+                {fieldErrors.agreeToTerms && (
+                  <p className="text-[11px] font-medium text-rose-400 mt-1">{fieldErrors.agreeToTerms}</p>
+                )}
               </div>
             </CardContent>
 
@@ -199,15 +252,14 @@ export function SignupForm({
         </Card>
       </motion.div>
 
-      {/* Error Modal Dialog */}
-      {errorMessage && (
+      {currentError && showDialog && (
         <AuthStatusDialog
-          isOpen={showErrorModal}
+          isOpen={showDialog}
           type="error"
-          title="Registration Error"
-          message={errorMessage}
-          onClose={handleCloseModal}
-          onAction={handleCloseModal}
+          title="Registration Validation Error"
+          message={currentError}
+          onClose={handleCloseDialog}
+          onAction={handleCloseDialog}
           actionText="Try Again"
         />
       )}

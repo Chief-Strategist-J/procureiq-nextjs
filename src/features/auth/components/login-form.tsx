@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { LoginInput } from '../types';
 import { AuthStatusDialog } from './auth-status-dialog';
+import { AuthValidator } from '../utils/validation';
 
 export interface LoginFormProps {
   onSubmit?: (data: LoginInput) => void;
@@ -25,22 +26,37 @@ export function LoginForm({
 }: LoginFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showErrorModal, setShowErrorModal] = useState(true);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [showDialog, setShowDialog] = useState(false);
+  const [dialogMessage, setDialogMessage] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setShowErrorModal(true);
+
+    const validation = AuthValidator.validateLoginForm(email, password);
+    if (!validation.isValid) {
+      setFieldErrors(validation.errors);
+      const firstError = Object.values(validation.errors)[0];
+      setDialogMessage(firstError);
+      setShowDialog(true);
+      return;
+    }
+
+    setFieldErrors({});
+    setShowDialog(true);
     if (onSubmit) {
       onSubmit({ email, password });
     }
   };
 
-  const handleCloseModal = () => {
-    setShowErrorModal(false);
+  const handleCloseDialog = () => {
+    setShowDialog(false);
     if (onClearError) {
       onClearError();
     }
   };
+
+  const currentError = errorMessage || (showDialog ? dialogMessage : '');
 
   return (
     <>
@@ -51,7 +67,6 @@ export function LoginForm({
         className="w-full max-w-md mx-auto"
       >
         <Card className="relative overflow-hidden border-slate-800 bg-slate-900/90 shadow-2xl backdrop-blur-xl">
-          {/* Animated Loading Overlay */}
           {isLoading && (
             <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-sm space-y-3">
               <div className="relative flex h-12 w-12 items-center justify-center">
@@ -77,8 +92,8 @@ export function LoginForm({
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
               {errorMessage && (
-                <div className="rounded-lg bg-rose-500/10 border border-rose-500/20 p-3 text-xs text-rose-400 flex items-center justify-between">
-                  <span>{errorMessage}</span>
+                <div className="rounded-lg bg-rose-500/10 border border-rose-500/20 p-3 text-xs text-rose-400">
+                  {errorMessage}
                 </div>
               )}
 
@@ -90,14 +105,20 @@ export function LoginForm({
                   <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
                   <Input
                     id="email-input"
-                    type="email"
-                    placeholder="name@company.com"
+                    type="text"
+                    placeholder="name@company.com or username"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-9"
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: '' }));
+                    }}
+                    className={`pl-9 ${fieldErrors.email ? 'border-rose-500 bg-rose-500/5' : ''}`}
                     required
                   />
                 </div>
+                {fieldErrors.email && (
+                  <p className="text-[11px] font-medium text-rose-400 mt-1">{fieldErrors.email}</p>
+                )}
               </div>
 
               <div className="space-y-1">
@@ -116,11 +137,17 @@ export function LoginForm({
                     type="password"
                     placeholder="••••••••"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-9"
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (fieldErrors.password) setFieldErrors((prev) => ({ ...prev, password: '' }));
+                    }}
+                    className={`pl-9 ${fieldErrors.password ? 'border-rose-500 bg-rose-500/5' : ''}`}
                     required
                   />
                 </div>
+                {fieldErrors.password && (
+                  <p className="text-[11px] font-medium text-rose-400 mt-1">{fieldErrors.password}</p>
+                )}
               </div>
             </CardContent>
 
@@ -152,15 +179,14 @@ export function LoginForm({
         </Card>
       </motion.div>
 
-      {/* Error & Lockout Modal Dialog */}
-      {errorMessage && (
+      {currentError && showDialog && (
         <AuthStatusDialog
-          isOpen={showErrorModal}
-          type={errorMessage.toLowerCase().includes('locked') ? 'lockout' : 'error'}
-          title={errorMessage.toLowerCase().includes('locked') ? 'Account Temporarily Locked' : 'Authentication Error'}
-          message={errorMessage}
-          onClose={handleCloseModal}
-          onAction={handleCloseModal}
+          isOpen={showDialog}
+          type={currentError.toLowerCase().includes('locked') ? 'lockout' : 'error'}
+          title={currentError.toLowerCase().includes('locked') ? 'Account Temporarily Locked' : 'Validation / Auth Failure'}
+          message={currentError}
+          onClose={handleCloseDialog}
+          onAction={handleCloseDialog}
           actionText="Try Again"
         />
       )}
