@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  nextjs-app:
+    build: .
+    container_name: procureiq-nextjs-app-local
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8080/api/v1
+      - NEXT_PUBLIC_PYTHON_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_WEBRTC_SIGNALING_URL=ws://localhost:8082
+      - DATABASE_URL=postgresql://postgres:postgres@localhost:5432/procureiq
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318/v1/traces
+    restart: always
