@@ -1,4 +1,5 @@
 import { API_BASE_URL } from './api-endpoints';
+import { TelemetryService } from './telemetry';
 
 export interface ApiSingleResponse<T> {
   status: number | string;
@@ -40,24 +41,6 @@ export function extractErrorMessage(responseData: any, httpStatus: number): stri
   return `HTTP ${httpStatus}: Request failed`;
 }
 
-function generateTraceId(): string {
-  const chars = '0123456789abcdef';
-  let traceId = '';
-  for (let i = 0; i < 32; i++) {
-    traceId += chars[Math.floor(Math.random() * 16)];
-  }
-  return traceId;
-}
-
-function generateSpanId(): string {
-  const chars = '0123456789abcdef';
-  let spanId = '';
-  for (let i = 0; i < 16; i++) {
-    spanId += chars[Math.floor(Math.random() * 16)];
-  }
-  return spanId;
-}
-
 export class HttpClient {
   private static token: string | null = null;
 
@@ -69,17 +52,15 @@ export class HttpClient {
     return HttpClient.token;
   }
 
-  private static getHeaders(headers: Record<string, string> = {}): Record<string, string> {
-    const traceId = generateTraceId();
-    const spanId = generateSpanId();
-    const correlationId = `corr-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+  private static getHeaders(endpoint: string, headers: Record<string, string> = {}): Record<string, string> {
+    const span = TelemetryService.createSpan(`http-request:${endpoint}`);
 
     const defaultHeaders: Record<string, string> = {
       'Content-Type': 'application/json',
       Accept: 'application/json',
-      'X-Trace-Id': traceId,
-      'X-Correlation-Id': correlationId,
-      traceparent: `00-${traceId}-${spanId}-01`,
+      'X-Trace-Id': span.traceId,
+      'X-Correlation-Id': span.correlationId,
+      traceparent: span.traceParent,
       ...headers,
     };
 
@@ -100,7 +81,7 @@ export class HttpClient {
     try {
       const response = await fetch(url, {
         method: 'POST',
-        headers: HttpClient.getHeaders(customHeaders),
+        headers: HttpClient.getHeaders(endpoint, customHeaders),
         body: JSON.stringify(body),
       });
 
@@ -131,7 +112,7 @@ export class HttpClient {
     try {
       const response = await fetch(url, {
         method: 'GET',
-        headers: HttpClient.getHeaders(customHeaders),
+        headers: HttpClient.getHeaders(endpoint, customHeaders),
       });
 
       const responseData: any = await response.json();

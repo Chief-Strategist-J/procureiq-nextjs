@@ -10,6 +10,9 @@ export { useApiKeyService } from './hooks/use-api-key-service';
 
 export { ApiKeyService } from './services/api-key-service';
 
+export { AuthValidator } from './utils/validation';
+export * from './constants/index';
+
 export type {
   UserProfile,
   LoginInput,

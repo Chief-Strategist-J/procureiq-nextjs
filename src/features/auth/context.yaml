@@ -1,6 +1,6 @@
 feature:
   name: "auth"
-  purpose: "Enterprise Identity & Access Management (IAM) vertical slice owning authentication, user registration, credential verification, and JWT session security."
+  purpose: "Enterprise Identity & Access Management (IAM) vertical slice owning authentication, user registration, credential verification, OpenTelemetry distributed tracing, and JWT session security."
   criticality: "CRITICAL"
 
 tla_formal_verification_results:
@@ -30,7 +30,7 @@ tla_formal_verification_results:
 
 empirical_measured_performance_metrics:
   benchmark_environment: "Node v20.11 / Vitest v4.1 / JSDOM Environment"
-  measured_at: "2026-08-04T14:51:21Z"
+  measured_at: "2026-08-04T16:30:00Z"
   sample_size: "1,000 full authentication cycles (3,000 state transitions)"
   results:
     total_benchmark_duration_ms: 190.77
@@ -49,10 +49,16 @@ ascii_architecture_tree: |
   |     ├── LoginForm.tsx ------------+                                                               |
   |     ├── SignupForm.tsx -----------|                                                               |
   |     ├── ForgotPasswordForm.tsx ---+                                                               |
-  |     └── ApiKeyCard.tsx            |                                                               |
+  |     └── DashboardView.tsx         |                                                               |
   |                                   v                                                               |
-  |  [Custom Hooks Layer]                                                                             |
-  |     └── useAuthManagement() (src/features/auth/hooks/use-auth-management.ts)                     |
+  |  [Modular Validation Layer] (DRY Principle)                                                      |
+  |     ├── validation/types.ts -------> Models & Interfaces (ValidationResult, ValidationRule)       |
+  |     ├── validation/rules.ts -------> Declarative Schema Configurations (LOGIN_SCHEMA)            |
+  |     └── validation/engine.ts ------> Schema Execution Engine & AuthValidator                      |
+  |                                   |                                                               |
+  |  [Custom Hooks Layer]             v                                                               |
+  |     ├── useAuthManagement() (src/features/auth/hooks/use-auth-management.ts)                     |
+  |     └── useApiKeyService() (src/features/auth/hooks/use-api-key-service.ts)                      |
   |                                   |                                                               |
   |                                   | Dispatches Redux Action                                       |
   |                                   v                                                               |
@@ -65,14 +71,16 @@ ascii_architecture_tree: |
   |                                   |                                                               |
   |                                   | Invokes Service Function                                      |
   |                                   v                                                               |
-  |  [API Services Layer]                                                                             |
+  |  [API & Core Services Layer]                                                                      |
+  |     ├── ApiKeyService -------------> Constructor DI Overridable Service                           |
   |     └── auth-api.ts -------------> loginApi() / signupApi() / forgotPasswordApi()                 |
   |           (src/features/auth/services/auth-api.ts)                                               |
   |                                   |                                                               |
-  |                                   | HTTP Request via Centralized Client                           |
+  |                                   | HTTP Request via Centralized Telemetry Client                 |
   |                                   v                                                               |
-  |  [Shared Infrastructure Layer]                                                                    |
-  |     ├── HttpClient (src/lib/http-client.ts) -- Attaches Authorization: Bearer <JWT>              |
+  |  [Shared Infrastructure & OpenTelemetry Layer]                                                    |
+  |     ├── TelemetryService (src/lib/telemetry.ts) -- W3C Distributed Context Generator               |
+  |     ├── HttpClient (src/lib/http-client.ts) ----- Attaches traceparent & Bearer Token              |
   |     └── API_ENDPOINTS (src/lib/api-endpoints.ts)                                                  |
   |                                   |                                                               |
   |                                   v (HTTP POST / GET)                                             |
@@ -91,7 +99,7 @@ ascii_logical_flow: |
   +---------------------------------------------------------------------------------------------------+
   |                                                                                                   |
   |   (1) User Input                                                                                  |
-  |        [LoginForm] --(submit email/password)--> [useAuthManagement]                               |
+  |        [LoginForm] --(validate via AuthValidator)--> [useAuthManagement]                          |
   |                                                         |                                         |
   |   (2) Redux Dispatch                                    v                                         |
   |        [store.dispatch(authActions.loginRequest(credentials))]                                    |
@@ -99,7 +107,8 @@ ascii_logical_flow: |
   |   (3) Redux Saga Interception                           v                                         |
   |        [handleLoginSaga] --(call)--> [loginApi(credentials)]                                      |
   |                                                 |                                                 |
-  |   (4) Network Transmission                          v                                         |
+  |   (4) Network Transmission & Distributed Tracing    v                                         |
+  |        [TelemetryService.createSpan()] --> Attach traceparent                                     |
   |        [HttpClient.post('/api/v1/auth/login')] ----> [Spring Boot REST API]                        |
   |                                                         |                                         |
   |   (5) Response Resolution                               v                                         |
@@ -130,19 +139,29 @@ ascii_directory_tree: |
   │   ├── login-form.tsx
   │   ├── signup-form.tsx
   │   ├── forgot-password-form.tsx
-  │   └── api-key-card.tsx
+  │   ├── auth-status-dialog.tsx
+  │   └── dashboard-view.tsx
+  ├── constants/
+  │   └── index.ts
   ├── hooks/
-  │   └── use-auth-management.ts
+  │   ├── use-auth-management.ts
+  │   └── use-api-key-service.ts
   ├── services/
+  │   ├── api-key-service.ts
   │   └── auth-api.ts
   ├── store/
   │   ├── auth-slice.ts
   │   └── auth-saga.ts
+  ├── validation/
+  │   ├── types.ts
+  │   ├── rules.ts
+  │   └── engine.ts
   ├── stories/
   │   ├── login-form.stories.tsx
   │   ├── signup-form.stories.tsx
   │   ├── forgot-password-form.stories.tsx
-  │   └── api-key-card.stories.tsx
+  │   ├── auth-status-dialog.stories.tsx
+  │   └── dashboard-view.stories.tsx
   ├── tests/
   │   ├── unit/
   │   │   ├── login-form.test.tsx
@@ -245,6 +264,9 @@ data_flow_specifications:
         "headers": {
           "Content-Type": "<string: 'application/json'>",
           "Accept": "<string: 'application/json'>",
+          "X-Trace-Id": "<string: 32-char hex trace ID>",
+          "X-Correlation-Id": "<string: corr-timestamp-random>",
+          "traceparent": "<string: 00-traceId-spanId-01>",
           "Authorization": "<string: 'Bearer <JWT_TOKEN>' | optional>"
         },
         "body": {
@@ -258,9 +280,9 @@ data_flow_specifications:
     inbound_api_response_structure: |
       {
         "status": "<number: HTTP Status Code | 200 | 400 | 401 | 500>",
-        "success": "<boolean: Execution Result | true | false>",
+        "code": "<number: Response Status Code>",
         "message": "<string: Human Readable Message | optional>",
-        "error": "<string: Error Code Constant | optional>",
+        "error": "<string | object: Error payload | optional>",
         "data": {
           "token": "<string: JWT Bearer Token | required on success>",
           "user": {
@@ -408,7 +430,7 @@ observability:
       - "Span 2: Redux Saga Execution (handleLoginSaga)"
       - "Span 3: Spring Boot REST Handler (AuthController.login)"
       - "Span 4: Database Query (UserCredentials validation)"
-    context_propagation: "X-Trace-Id / W3C Trace Context headers (traceparent) passed across HTTP client network requests."
+    context_propagation: "X-Trace-Id / W3C Trace Context headers (traceparent) passed across HTTP client network requests via TelemetryService."
     correlation_id: "X-Correlation-Id attached at ingress and logged on every downstream service call."
 
   golden_signals:
@@ -478,9 +500,9 @@ architecture_decisions:
       cons: "Requires generator syntax familiarity compared to simple async thunks."
     rationale: "Decouples UI component rendering from complex async network orchestration."
 
-  - decision: "Centralized HttpClient Middleware for Bearer Token Management"
+  - decision: "Centralized HttpClient Middleware for Bearer Token Management & Telemetry"
     slo_metrics:
-      slo: "100% of outbound requests automatically attach Bearer token if present."
+      slo: "100% of outbound requests automatically attach Bearer token and OpenTelemetry W3C traceparent headers."
       sla: "99.99% OAuth2 token integrity across API requests."
       error_rate: "< 0.001% missing Authorization header errors."
       mttr: "< 1s automatic token revocation on HTTP 401 response."
@@ -490,7 +512,7 @@ architecture_decisions:
     rationale: "Provides unified networking layer for Spring Boot REST API integration."
 
 networking:
-  base_url: "http://localhost:8080 or process.env.NEXT_PUBLIC_API_URL"
+  base_url: "http://localhost:6565 or process.env.NEXT_PUBLIC_API_URL"
   endpoints:
     login: "/api/v1/auth/login"
     signup: "/api/v1/auth/signup"
@@ -501,4 +523,4 @@ networking:
 invariants:
   - "Zero unhandled async states: Status must strictly adhere to 'idle' | 'loading' | 'succeeded' | 'failed'."
   - "No credentials in local state or browser storage render cycles."
-  - "Security: JWT Bearer tokens attached automatically via HttpClient middleware."
+  - "Security: JWT Bearer tokens and OpenTelemetry W3C traceparent headers attached automatically via HttpClient middleware."
