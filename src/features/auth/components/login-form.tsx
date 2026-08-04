@@ -1,110 +1,169 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Lock, Mail, ShieldCheck } from 'lucide-react';
+import { Lock, Mail, ShieldCheck, Loader2 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { LoginInput } from '../types';
+import { AuthStatusDialog } from './auth-status-dialog';
 
 export interface LoginFormProps {
   onSubmit?: (data: LoginInput) => void;
   isLoading?: boolean;
   errorMessage?: string;
+  onClearError?: () => void;
 }
 
-export function LoginForm({ onSubmit, isLoading = false, errorMessage }: LoginFormProps) {
+export function LoginForm({
+  onSubmit,
+  isLoading = false,
+  errorMessage,
+  onClearError,
+}: LoginFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showErrorModal, setShowErrorModal] = useState(true);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setShowErrorModal(true);
     if (onSubmit) {
       onSubmit({ email, password });
     }
   };
 
+  const handleCloseModal = () => {
+    setShowErrorModal(false);
+    if (onClearError) {
+      onClearError();
+    }
+  };
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: 'easeOut' }}
-      className="w-full max-w-md mx-auto"
-    >
-      <Card className="border-slate-800 bg-slate-900/90 shadow-2xl backdrop-blur-xl">
-        <CardHeader className="space-y-2 text-center pb-6">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-brand-600/20 border border-brand-500/30 text-brand-400">
-            <ShieldCheck className="h-6 w-6" />
-          </div>
-          <CardTitle className="text-2xl font-bold text-white">Welcome back</CardTitle>
-          <CardDescription className="text-slate-400 text-sm">
-            Sign in to access your ProcureIQ dashboard
-          </CardDescription>
-        </CardHeader>
-
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
-            {errorMessage && (
-              <div className="rounded-lg bg-rose-500/10 border border-rose-500/20 p-3 text-xs text-rose-400">
-                {errorMessage}
+    <>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
+        className="w-full max-w-md mx-auto"
+      >
+        <Card className="relative overflow-hidden border-slate-800 bg-slate-900/90 shadow-2xl backdrop-blur-xl">
+          {/* Animated Loading Overlay */}
+          {isLoading && (
+            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-sm space-y-3">
+              <div className="relative flex h-12 w-12 items-center justify-center">
+                <div className="absolute h-12 w-12 rounded-full border-2 border-brand-500/20 border-t-brand-500 animate-spin" />
+                <ShieldCheck className="h-6 w-6 text-brand-400 animate-pulse" />
               </div>
-            )}
-
-            <div className="space-y-1">
-              <label htmlFor="email-input" className="block text-xs font-medium text-slate-300">
-                Work Email
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
-                <Input
-                  id="email-input"
-                  type="email"
-                  placeholder="name@company.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-9"
-                  required
-                />
-              </div>
+              <p className="text-xs font-semibold text-brand-300 tracking-wide">
+                Authenticating credentials with ProcureIQ backend...
+              </p>
             </div>
+          )}
 
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <label htmlFor="password-input" className="block text-xs font-medium text-slate-300">
-                  Password
+          <CardHeader className="space-y-2 text-center pb-6">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-brand-600/20 border border-brand-500/30 text-brand-400">
+              <ShieldCheck className="h-6 w-6" />
+            </div>
+            <CardTitle className="text-2xl font-bold text-white">Welcome back</CardTitle>
+            <CardDescription className="text-slate-400 text-sm">
+              Sign in to access your ProcureIQ IAM dashboard
+            </CardDescription>
+          </CardHeader>
+
+          <form onSubmit={handleSubmit}>
+            <CardContent className="space-y-4">
+              {errorMessage && (
+                <div className="rounded-lg bg-rose-500/10 border border-rose-500/20 p-3 text-xs text-rose-400 flex items-center justify-between">
+                  <span>{errorMessage}</span>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <label htmlFor="email-input" className="block text-xs font-medium text-slate-300">
+                  Work Email / Username
                 </label>
-                <a href="#" className="text-xs text-brand-400 hover:underline">
-                  Forgot password?
-                </a>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+                  <Input
+                    id="email-input"
+                    type="email"
+                    placeholder="name@company.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-9"
+                    required
+                  />
+                </div>
               </div>
-              <div className="relative">
-                <Lock className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
-                <Input
-                  id="password-input"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-9"
-                  required
-                />
-              </div>
-            </div>
-          </CardContent>
 
-          <CardFooter className="pt-2">
-            <Button
-              type="submit"
-              variant="default"
-              isLoading={isLoading}
-              className="w-full bg-brand-600 hover:bg-brand-500 text-white shadow-lg shadow-brand-600/30"
-            >
-              Sign In to ProcureIQ
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
-    </motion.div>
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="password-input" className="block text-xs font-medium text-slate-300">
+                    Password
+                  </label>
+                  <Link href="/forgot-password" className="text-xs text-brand-400 hover:underline">
+                    Forgot password?
+                  </Link>
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+                  <Input
+                    id="password-input"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-9"
+                    required
+                  />
+                </div>
+              </div>
+            </CardContent>
+
+            <CardFooter className="flex flex-col space-y-4 pt-2">
+              <Button
+                type="submit"
+                variant="default"
+                disabled={isLoading}
+                className="w-full bg-brand-600 hover:bg-brand-500 text-white shadow-lg shadow-brand-600/30 gap-2"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Signing In...</span>
+                  </>
+                ) : (
+                  <span>Sign In to ProcureIQ</span>
+                )}
+              </Button>
+
+              <div className="text-center text-xs text-slate-400">
+                Don't have an account?{' '}
+                <Link href="/signup" className="font-semibold text-brand-400 hover:underline">
+                  Register Account
+                </Link>
+              </div>
+            </CardFooter>
+          </form>
+        </Card>
+      </motion.div>
+
+      {/* Error & Lockout Modal Dialog */}
+      {errorMessage && (
+        <AuthStatusDialog
+          isOpen={showErrorModal}
+          type={errorMessage.toLowerCase().includes('locked') ? 'lockout' : 'error'}
+          title={errorMessage.toLowerCase().includes('locked') ? 'Account Temporarily Locked' : 'Authentication Error'}
+          message={errorMessage}
+          onClose={handleCloseModal}
+          onAction={handleCloseModal}
+          actionText="Try Again"
+        />
+      )}
+    </>
   );
 }
