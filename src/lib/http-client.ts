@@ -9,6 +9,37 @@ export interface ApiSingleResponse<T> {
   error?: any;
 }
 
+export type ErrorExtractorRule = (responseData: any, httpStatus: number) => string | null;
+
+export const ERROR_EXTRACTOR_PIPELINE: ErrorExtractorRule[] = [
+  (responseData) => {
+    if (responseData?.data?.details && typeof responseData.data.details === 'object') {
+      const details = responseData.data.details;
+      const messages = Object.entries(details)
+        .map(([key, val]) => `${key}: ${val}`)
+        .join(', ');
+      if (messages) return messages;
+    }
+    return null;
+  },
+  (responseData) => (typeof responseData?.data?.message === 'string' ? responseData.data.message : null),
+  (responseData) => (typeof responseData?.error === 'string' ? responseData.error : null),
+  (responseData) => (typeof responseData?.error?.message === 'string' ? responseData.error.message : null),
+  (responseData) => (typeof responseData?.message === 'string' ? responseData.message : null),
+  (_responseData, httpStatus) => `HTTP ${httpStatus}: Request failed`,
+];
+
+export function extractErrorMessage(responseData: any, httpStatus: number): string {
+  if (!responseData) {
+    return `HTTP ${httpStatus}: Request failed`;
+  }
+  for (const rule of ERROR_EXTRACTOR_PIPELINE) {
+    const result = rule(responseData, httpStatus);
+    if (result) return result;
+  }
+  return `HTTP ${httpStatus}: Request failed`;
+}
+
 function generateTraceId(): string {
   const chars = '0123456789abcdef';
   let traceId = '';
@@ -25,38 +56,6 @@ function generateSpanId(): string {
     spanId += chars[Math.floor(Math.random() * 16)];
   }
   return spanId;
-}
-
-function extractErrorMessage(responseData: any, httpStatus: number): string {
-  if (!responseData) {
-    return `HTTP ${httpStatus}: Request failed`;
-  }
-
-  if (responseData.data?.details && typeof responseData.data.details === 'object') {
-    const details = responseData.data.details;
-    const messages = Object.entries(details)
-      .map(([key, val]) => `${key}: ${val}`)
-      .join(', ');
-    if (messages) return messages;
-  }
-
-  if (responseData.data?.message) {
-    return responseData.data.message;
-  }
-
-  if (typeof responseData.error === 'string') {
-    return responseData.error;
-  }
-
-  if (responseData.error?.message) {
-    return responseData.error.message;
-  }
-
-  if (responseData.message) {
-    return responseData.message;
-  }
-
-  return `HTTP ${httpStatus}: Request failed`;
 }
 
 export class HttpClient {
