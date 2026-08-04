@@ -17,7 +17,7 @@ export default function RootLayout({
     <html lang="en" className="dark scroll-smooth">
       <body className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
         <Providers>
-          <Header userName="IAM Admin" userRole="Security Lead" />
+          <Header />
           <main className="flex-1">{children}</main>
         </Providers>
       </body>
