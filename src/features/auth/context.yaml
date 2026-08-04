@@ -1,0 +1,274 @@
+feature:
+  name: "auth"
+  purpose: "Enterprise Identity & Access Management (IAM) vertical slice owning authentication, user registration, credential verification, and JWT session security."
+  criticality: "CRITICAL"
+
+ascii_architecture_tree: |
+  +---------------------------------------------------------------------------------------------------+
+  |                                   AUTH FEATURE VERTICAL SLICE                                     |
+  +---------------------------------------------------------------------------------------------------+
+  |                                                                                                   |
+  |  [React UI Layer]                                                                                 |
+  |     ├── LoginForm.tsx ------------+                                                               |
+  |     ├── SignupForm.tsx -----------|                                                               |
+  |     ├── ForgotPasswordForm.tsx ---+                                                               |
+  |     └── ApiKeyCard.tsx            |                                                               |
+  |                                   v                                                               |
+  |  [Custom Hooks Layer]                                                                             |
+  |     └── useAuthManagement() (src/features/auth/hooks/use-auth-management.ts)                     |
+  |                                   |                                                               |
+  |                                   | Dispatches Redux Action                                       |
+  |                                   v                                                               |
+  |  [State Management Layer]                                                                         |
+  |     ├── authSlice.ts <------------+ (src/features/auth/store/auth-slice.ts)                        |
+  |     │     (reducers: loginRequest, loginSuccess, loginFailure, signupRequest, logout)            |
+  |     │                                                                                             |
+  |     └── authSaga.ts -------------> Intercepts takeLatest(loginRequest / signupRequest)            |
+  |           (src/features/auth/store/auth-saga.ts)                                                 |
+  |                                   |                                                               |
+  |                                   | Invokes Service Function                                      |
+  |                                   v                                                               |
+  |  [API Services Layer]                                                                             |
+  |     └── auth-api.ts -------------> loginApi() / signupApi() / forgotPasswordApi()                 |
+  |           (src/features/auth/services/auth-api.ts)                                               |
+  |                                   |                                                               |
+  |                                   | HTTP Request via Centralized Client                           |
+  |                                   v                                                               |
+  |  [Shared Infrastructure Layer]                                                                    |
+  |     ├── HttpClient (src/lib/http-client.ts) -- Attaches Authorization: Bearer <JWT>              |
+  |     └── API_ENDPOINTS (src/lib/api-endpoints.ts)                                                  |
+  |                                   |                                                               |
+  |                                   v (HTTP POST / GET)                                             |
+  |  [Spring Boot REST Backend]                                                                       |
+  |     ├── /api/v1/auth/login                                                                        |
+  |     ├── /api/v1/auth/signup                                                                       |
+  |     ├── /api/v1/auth/forgot-password                                                              |
+  |     ├── /api/v1/auth/reset-password                                                               |
+  |     └── /api/v1/auth/verify-email                                                                 |
+  |                                                                                                   |
+  +---------------------------------------------------------------------------------------------------+
+
+ascii_logical_flow: |
+  +---------------------------------------------------------------------------------------------------+
+  |                                   AUTHENTICATION EXECUTION FLOW                                   |
+  +---------------------------------------------------------------------------------------------------+
+  |                                                                                                   |
+  |   (1) User Input                                                                                  |
+  |        [LoginForm] --(submit email/password)--> [useAuthManagement]                               |
+  |                                                         |                                         |
+  |   (2) Redux Dispatch                                    v                                         |
+  |        [store.dispatch(authActions.loginRequest(credentials))]                                    |
+  |                                                         |                                         |
+  |   (3) Redux Saga Interception                           v                                         |
+  |        [handleLoginSaga] --(call)--> [loginApi(credentials)]                                      |
+  |                                                 |                                                 |
+  |   (4) Network Transmission                          v                                         |
+  |        [HttpClient.post('/api/v1/auth/login')] ----> [Spring Boot REST API]                        |
+  |                                                         |                                         |
+  |   (5) Response Resolution                               v                                         |
+  |        [ApiSingleResponse<T>] <-------------------------+                                         |
+  |                 |                                                                                 |
+  |        +--------+--------+                                                                        |
+  |        |                 |                                                                        |
+  |     [SUCCESS]         [FAILURE]                                                                   |
+  |        |                 |                                                                        |
+  |        v                 v                                                                        |
+  |  Set Bearer Token  Put loginFailure                                                               |
+  |        |           (authActions)                                                                  |
+  |        v                 |                                                                        |
+  |  Put loginSuccess        v                                                                        |
+  |  (authActions)    Update state.error                                                              |
+  |        |                 |                                                                        |
+  |        +--------+--------+                                                                        |
+  |                 |                                                                                 |
+  |                 v                                                                                 |
+  |   (6) UI Render Update                                                                            |
+  |        [LoginForm & App Header UI Update]                                                         |
+  |                                                                                                   |
+  +---------------------------------------------------------------------------------------------------+
+
+ascii_directory_tree: |
+  src/features/auth/
+  ├── components/
+  │   ├── login-form.tsx
+  │   ├── signup-form.tsx
+  │   ├── forgot-password-form.tsx
+  │   └── api-key-card.tsx
+  ├── hooks/
+  │   └── use-auth-management.ts
+  ├── services/
+  │   └── auth-api.ts
+  ├── store/
+  │   ├── auth-slice.ts
+  │   └── auth-saga.ts
+  ├── stories/
+  │   ├── login-form.stories.tsx
+  │   ├── signup-form.stories.tsx
+  │   ├── forgot-password-form.stories.tsx
+  │   └── api-key-card.stories.tsx
+  ├── tests/
+  │   ├── unit/
+  │   │   ├── login-form.test.tsx
+  │   │   └── auth-slice.test.ts
+  │   ├── integration/
+  │   │   └── auth-integration.test.ts
+  │   ├── performance/
+  │   │   └── auth-performance.test.ts
+  │   ├── system/
+  │   │   └── auth-system.test.ts
+  │   └── uat/
+  │       └── auth-uat.test.tsx
+  ├── tla/
+  │   ├── AuthFlow.tla
+  │   └── AuthFlow.cfg
+  ├── types/
+  │   └── index.ts
+  ├── context.yaml
+  └── index.ts
+
+data_flow_specifications:
+  stage_1_client_ui_input:
+    description: "Raw form input types, constraints, and validation rules captured in React UI components."
+    login_input_structure: |
+      {
+        "email": "<string: RFC 5322 Email Format | required | trimmed>",
+        "password": "<string: Min 8 Characters | required>"
+      }
+    signup_input_structure: |
+      {
+        "name": "<string: Full Name | required | trimmed>",
+        "email": "<string: RFC 5322 Email Format | required | trimmed>",
+        "password": "<string: Min 8 Characters | required>",
+        "companyName": "<string: Company Name | optional | trimmed>",
+        "agreeToTerms": "<boolean: Terms Acceptance | required: must be true>"
+      }
+
+  stage_2_redux_action_dispatch:
+    description: "Type signatures and payload contracts of dispatched Redux actions."
+    login_request_action_structure: |
+      {
+        "type": "<string: 'auth/loginRequest'>",
+        "payload": {
+          "email": "<string: Validated Email>",
+          "password": "<string: Raw Password>"
+        }
+      }
+    login_success_action_structure: |
+      {
+        "type": "<string: 'auth/loginSuccess'>",
+        "payload": {
+          "token": "<string: JWT Bearer Token>",
+          "user": {
+            "id": "<string: User Identifier>",
+            "email": "<string: User Email>",
+            "name": "<string: User Display Name>",
+            "role": "<enum: 'admin' | 'manager' | 'user'>"
+          }
+        }
+      }
+
+  stage_3_saga_payload_transformation:
+    description: "Redux-Saga interceptor input/output structures and generator side-effects."
+    saga_execution_schema: |
+      {
+        "actionReceived": {
+          "type": "<string: 'auth/loginRequest'>",
+          "payload": {
+            "email": "<string: Validated Email>",
+            "password": "<string: Password>"
+          }
+        },
+        "serviceCall": {
+          "function": "<string: 'loginApi'>",
+          "argumentSchema": {
+            "email": "<string: Validated Email>",
+            "password": "<string: Password>"
+          }
+        },
+        "putSuccessEffect": {
+          "type": "<string: 'auth/loginSuccess'>",
+          "payload": {
+            "token": "<string: JWT Bearer Token>",
+            "user": {
+              "id": "<string: User Identifier>",
+              "email": "<string: User Email>",
+              "name": "<string: User Display Name>",
+              "role": "<enum: 'admin' | 'manager' | 'user'>"
+            }
+          }
+        }
+      }
+
+  stage_4_http_network_wire_data:
+    description: "Outbound HTTP request envelope transmitted across wire to Spring Boot."
+    wire_request_envelope_structure: |
+      {
+        "method": "<string: 'POST'>",
+        "endpoint": "<string: '/api/v1/auth/login'>",
+        "headers": {
+          "Content-Type": "<string: 'application/json'>",
+          "Accept": "<string: 'application/json'>",
+          "Authorization": "<string: 'Bearer <JWT_TOKEN>' | optional>"
+        },
+        "body": {
+          "email": "<string: Trimmed Email | required>",
+          "password": "<string: Password String | required>"
+        }
+      }
+
+  stage_5_backend_response_parsing:
+    description: "Spring Boot ApiSingleResponse<T> JSON envelope structure and parsing constraints."
+    inbound_api_response_structure: |
+      {
+        "status": "<number: HTTP Status Code | 200 | 400 | 401 | 500>",
+        "success": "<boolean: Execution Result | true | false>",
+        "message": "<string: Human Readable Message | optional>",
+        "error": "<string: Error Code Constant | optional>",
+        "data": {
+          "token": "<string: JWT Bearer Token | required on success>",
+          "user": {
+            "id": "<string: Unique Identifier>",
+            "email": "<string: Email Address>",
+            "name": "<string: User Name>",
+            "role": "<enum: 'admin' | 'manager' | 'user'>"
+          }
+        }
+      }
+
+  stage_6_redux_store_state_mutation:
+    description: "Target slice schema and state mutation objects in Redux store."
+    target_slice: "state.auth"
+    auth_state_structure: |
+      {
+        "user": "<UserProfile object | null>",
+        "isAuthenticated": "<boolean: Session Active Flag>",
+        "token": "<string: JWT Token String | null>",
+        "status": "<enum: 'idle' | 'loading' | 'succeeded' | 'failed'>",
+        "error": "<string: Error Description | null>"
+      }
+
+business_logic:
+  - "User login via email and password with Spring Boot OAuth2/JWT token exchange."
+  - "User registration with company domain verification and terms validation."
+  - "Password recovery and token-based password reset."
+  - "Developer API key generation and token masking."
+
+architecture_decisions:
+  - "Vertical slice isolation: All Auth UI components, Redux slices, Redux Sagas, services, types, stories, and tests are co-located in src/features/auth/."
+  - "Public Index Export: Only public components, hooks, services, and types are exported via src/features/auth/index.ts."
+  - "State Management: Redux Toolkit authSlice + Redux-Saga handle all async authentication lifecycle events."
+  - "HTTP Communication: Centralized HttpClient calling Spring Boot REST API (/api/v1/auth/*)."
+
+networking:
+  base_url: "http://localhost:8080 or process.env.NEXT_PUBLIC_API_URL"
+  endpoints:
+    login: "/api/v1/auth/login"
+    signup: "/api/v1/auth/signup"
+    forgot_password: "/api/v1/auth/forgot-password"
+    reset_password: "/api/v1/auth/reset-password"
+    verify_email: "/api/v1/auth/verify-email"
+
+invariants:
+  - "Zero unhandled async states: Status must strictly adhere to 'idle' | 'loading' | 'succeeded' | 'failed'."
+  - "No credentials in local state or browser storage render cycles."
+  - "Security: JWT Bearer tokens attached automatically via HttpClient middleware."
