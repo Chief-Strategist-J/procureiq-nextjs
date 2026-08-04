@@ -22,8 +22,10 @@ export async function loginApi(input: LoginInput): Promise<LoginResponsePayload>
   if (!input || !input.email || !input.password) {
     throw new Error('Email and password are required.');
   }
-  return HttpClient.post<LoginInput, LoginResponsePayload>(API_ENDPOINTS.AUTH.LOGIN, {
-    email: input.email.trim(),
+  const identifier = input.email.trim();
+  return HttpClient.post<any, LoginResponsePayload>(API_ENDPOINTS.AUTH.LOGIN, {
+    username: identifier,
+    email: identifier,
     password: input.password,
   });
 }
@@ -35,8 +37,10 @@ export async function signupApi(input: SignupInput): Promise<UserResponsePayload
   if (!input.agreeToTerms) {
     throw new Error('You must accept the terms and conditions to register.');
   }
-  return HttpClient.post<SignupInput, UserResponsePayload>(API_ENDPOINTS.AUTH.SIGNUP, {
-    name: input.name.trim(),
+  const username = input.name.trim();
+  return HttpClient.post<any, UserResponsePayload>(API_ENDPOINTS.AUTH.SIGNUP, {
+    username: username,
+    name: username,
     email: input.email.trim(),
     password: input.password,
     companyName: input.companyName ? input.companyName.trim() : '',

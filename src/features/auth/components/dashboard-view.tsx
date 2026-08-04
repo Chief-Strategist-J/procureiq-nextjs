@@ -3,19 +3,14 @@
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ShieldCheck, LogOut, User, Lock, Activity, RefreshCw } from 'lucide-react';
+import { ShieldCheck, LogOut, Activity } from 'lucide-react';
 import { useAuthManagement } from '../hooks/use-auth-management';
-import { useApiKeyService } from '../hooks/use-api-key-service';
-import { ApiKeyCard } from './api-key-card';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { HttpClient } from '@/lib/http-client';
 
 export function DashboardView() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading, logout } = useAuthManagement();
-  const { apiKeys, handleCreateKey, handleRevokeKey } = useApiKeyService();
 
   useEffect(() => {
     if (!isAuthenticated && !isLoading) {
@@ -40,8 +35,6 @@ export function DashboardView() {
       </div>
     );
   }
-
-  const token = HttpClient.getAuthToken();
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
@@ -79,100 +72,6 @@ export function DashboardView() {
           </div>
         </div>
       </motion.div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="border-slate-800 bg-slate-900/80 hover:border-slate-700 transition-colors">
-          <CardHeader className="pb-2">
-            <div className="flex items-center gap-2 text-brand-400 mb-1">
-              <User className="h-5 w-5" />
-              <CardTitle className="text-base text-white">User Credentials</CardTitle>
-            </div>
-            <CardDescription className="text-slate-400 text-xs">
-              Verified identity and role permissions
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2 text-xs text-slate-300">
-            {user?.id && (
-              <div className="flex justify-between py-1 border-b border-slate-800">
-                <span className="text-slate-500">User ID:</span>
-                <span className="font-mono text-slate-200">{user.id}</span>
-              </div>
-            )}
-            <div className="flex justify-between py-1 border-b border-slate-800">
-              <span className="text-slate-500">Email:</span>
-              <span className="text-slate-200">{user?.email}</span>
-            </div>
-            {user?.role && (
-              <div className="flex justify-between py-1">
-                <span className="text-slate-500">Assigned Role:</span>
-                <span className="font-semibold text-brand-400 uppercase">{user.role}</span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-800 bg-slate-900/80 hover:border-slate-700 transition-colors">
-          <CardHeader className="pb-2">
-            <div className="flex items-center gap-2 text-emerald-400 mb-1">
-              <Lock className="h-5 w-5" />
-              <CardTitle className="text-base text-white">JWT Session Token</CardTitle>
-            </div>
-            <CardDescription className="text-slate-400 text-xs">
-              OAuth2 Bearer token active session info
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2 text-xs text-slate-300">
-            <div className="flex justify-between py-1 border-b border-slate-800">
-              <span className="text-slate-500">Encryption:</span>
-              <span className="font-mono text-emerald-400">HMAC-SHA256</span>
-            </div>
-            {token && (
-              <div className="flex justify-between py-1 border-b border-slate-800">
-                <span className="text-slate-500">Bearer Token:</span>
-                <span className="font-mono text-slate-400 truncate max-w-[140px]">
-                  {token}
-                </span>
-              </div>
-            )}
-            <div className="flex justify-between py-1">
-              <span className="text-slate-500">Expiration:</span>
-              <span className="text-slate-300">24 Hours (Rolling)</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-800 bg-slate-900/80 hover:border-slate-700 transition-colors">
-          <CardHeader className="pb-2">
-            <div className="flex items-center gap-2 text-amber-400 mb-1">
-              <RefreshCw className="h-5 w-5" />
-              <CardTitle className="text-base text-white">Token Rotation</CardTitle>
-            </div>
-            <CardDescription className="text-slate-400 text-xs">
-              Automatic refresh token rotation security
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2 text-xs text-slate-300">
-            <div className="flex justify-between py-1 border-b border-slate-800">
-              <span className="text-slate-500">Rotation Mode:</span>
-              <span className="text-amber-400 font-semibold">Strict Single-Use</span>
-            </div>
-            <div className="flex justify-between py-1 border-b border-slate-800">
-              <span className="text-slate-500">Lockout Guard:</span>
-              <span className="text-emerald-400">Active (3 Attempts)</span>
-            </div>
-            <div className="flex justify-between py-1">
-              <span className="text-slate-500">Audit Status:</span>
-              <span className="text-slate-300">Passed Formal TLA+ Invariants</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <ApiKeyCard
-        apiKeys={apiKeys}
-        onGenerateNewKey={() => handleCreateKey()}
-        onRevokeKey={handleRevokeKey}
-      />
     </div>
   );
 }
