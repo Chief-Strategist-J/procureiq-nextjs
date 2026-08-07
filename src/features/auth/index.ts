@@ -30,3 +30,12 @@ export {
   resetPasswordApi,
   verifyEmailApi,
 } from './services/auth-api';
+
+import { featureRegistry } from '@/core/store/feature-registry';
+import { authSlice } from './store/auth-slice';
+import { authSaga } from './store/auth-saga';
+
+featureRegistry.register('auth', {
+  reducer: authSlice.reducer,
+  saga: authSaga,
+});

@@ -132,4 +132,71 @@ export class HttpClient {
       throw new Error(error?.message || 'Network request failed');
     }
   }
+
+  public static async patch<TReq, TRes>(
+    endpoint: string,
+    body: TReq,
+    customHeaders?: Record<string, string>
+  ): Promise<TRes> {
+    const url = `${API_BASE_URL}${endpoint}`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'PATCH',
+        headers: HttpClient.getHeaders(endpoint, customHeaders),
+        body: JSON.stringify(body),
+      });
+
+      const responseData: any = await response.json();
+      const code = responseData?.code || response.status;
+      const isSuccess = response.ok && (code === 200 || code === 201) && responseData?.status !== 'error';
+
+      if (!isSuccess) {
+        const errorMsg = extractErrorMessage(responseData, response.status);
+        throw new Error(errorMsg);
+      }
+
+      return (responseData.data ?? responseData) as TRes;
+    } catch (error: any) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(error?.message || 'Network request failed');
+    }
+  }
+
+  public static async delete<TRes = void>(
+    endpoint: string,
+    customHeaders?: Record<string, string>
+  ): Promise<TRes> {
+    const url = `${API_BASE_URL}${endpoint}`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: HttpClient.getHeaders(endpoint, customHeaders),
+      });
+
+      let responseData: any = {};
+      try {
+        responseData = await response.json();
+      } catch {
+        // Handle cases where DELETE returns empty body
+      }
+      const code = responseData?.code || response.status;
+      const isSuccess = response.ok && (code === 200 || code === 204 || code === 201) && responseData?.status !== 'error';
+
+      if (!isSuccess) {
+        const errorMsg = extractErrorMessage(responseData, response.status);
+        throw new Error(errorMsg);
+      }
+
+      return (responseData.data ?? responseData) as TRes;
+    } catch (error: any) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(error?.message || 'Network request failed');
+    }
+  }
 }

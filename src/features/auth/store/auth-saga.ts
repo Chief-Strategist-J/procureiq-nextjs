@@ -33,3 +33,12 @@ export function* handleSignupSaga(action: PayloadAction<SignupInput>): Generator
     yield put(authActions.signupFailure(error?.message || 'Registration failed'));
   }
 }
+
+import { all, takeLatest } from 'redux-saga/effects';
+
+export function* authSaga(): Generator<any, void, any> {
+  yield all([
+    takeLatest(authActions.loginRequest.type, handleLoginSaga),
+    takeLatest(authActions.signupRequest.type, handleSignupSaga),
+  ]);
+}

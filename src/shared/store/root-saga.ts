@@ -1,14 +1,11 @@
-import { all, takeLatest } from 'redux-saga/effects';
-import { authActions } from '@/features/auth/store/auth-slice';
-import { handleLoginSaga, handleSignupSaga } from '@/features/auth/store/auth-saga';
-
-const sagaTable = [
-  { action: authActions.loginRequest, handler: handleLoginSaga },
-  { action: authActions.signupRequest, handler: handleSignupSaga },
-] as const;
+import { all, fork } from 'redux-saga/effects';
+import { featureRegistry } from '@/core/store/feature-registry';
 
 export function* rootSaga() {
-  yield all(
-    sagaTable.map(({ action, handler }) => takeLatest(action.type, handler))
-  );
+  const sagas = featureRegistry
+    .getAll()
+    .map(([, mod]) => mod.saga)
+    .filter((saga): saga is () => Generator => !!saga);
+
+  yield all(sagas.map((saga) => fork(saga)));
 }
