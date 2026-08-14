@@ -24,21 +24,18 @@ export function validateSchema<T extends Record<string, any>>(
 }
 
 export class AuthValidator {
-  public static validateLoginForm(email: string, password: string): ValidationResult {
-    return validateSchema({ email, password }, LOGIN_SCHEMA);
+  public static validateLoginForm(input: { email: string; password: string }): ValidationResult {
+    return validateSchema(input, LOGIN_SCHEMA);
   }
 
-  public static validateSignupForm(
-    name: string,
-    email: string,
-    password: string,
-    companyName: string,
-    agreeToTerms: boolean
-  ): ValidationResult {
-    return validateSchema(
-      { name, email, password, companyName, agreeToTerms },
-      SIGNUP_SCHEMA
-    );
+  public static validateSignupForm(input: {
+    name: string;
+    email: string;
+    password: string;
+    companyName: string;
+    agreeToTerms: boolean;
+  }): ValidationResult {
+    return validateSchema(input, SIGNUP_SCHEMA);
   }
 
   public static validateForgotPasswordForm(email: string): ValidationResult {

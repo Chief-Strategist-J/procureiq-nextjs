@@ -21,10 +21,10 @@ export const store = configureStore({
 
 sagaMiddleware.run(rootSaga);
 
-import { AuthState } from '@/features/auth';
+import { ExtendedAuthState } from '@/features/auth/store/auth-slice';
 
 export type RootState = {
   ui: ReturnType<typeof uiSlice.reducer>;
-  auth: AuthState;
+  auth: ExtendedAuthState;
 };
 export type AppDispatch = typeof store.dispatch;

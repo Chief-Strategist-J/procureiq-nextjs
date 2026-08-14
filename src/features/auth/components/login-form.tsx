@@ -3,13 +3,14 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Lock, Mail, ShieldCheck, Loader2 } from 'lucide-react';
+import { Lock, Mail, ShieldCheck, Loader2, Eye, EyeOff } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { LoginInput } from '../types';
 import { AuthStatusDialog } from './auth-status-dialog';
 import { AuthValidator } from '../utils/validation';
+import { useAuthManagement } from '../hooks/use-auth-management';
 
 export interface LoginFormProps {
   onSubmit?: (data: LoginInput) => void;
@@ -20,43 +21,52 @@ export interface LoginFormProps {
 
 export function LoginForm({
   onSubmit,
-  isLoading = false,
-  errorMessage,
+  isLoading: propIsLoading,
+  errorMessage: propErrorMessage,
   onClearError,
 }: LoginFormProps) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [showDialog, setShowDialog] = useState(false);
-  const [dialogMessage, setDialogMessage] = useState('');
+  const {
+    loginForm,
+    fieldErrors,
+    dialog,
+    isLoading: storeIsLoading,
+    error: storeError,
+    updateLoginForm,
+    toggleLoginPasswordVisibility,
+    closeDialog,
+    submitLoginForm,
+  } = useAuthManagement();
+
+  const isLoading = propIsLoading ?? storeIsLoading;
+  const { email, password, showPassword } = loginForm;
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const urlEmail = params.get('email');
+      if (urlEmail && !loginForm.email) {
+        updateLoginForm({ email: urlEmail });
+      }
+    }
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    const validation = AuthValidator.validateLoginForm(email, password);
-    if (!validation.isValid) {
-      setFieldErrors(validation.errors);
-      const firstError = Object.values(validation.errors)[0];
-      setDialogMessage(firstError);
-      setShowDialog(true);
-      return;
-    }
-
-    setFieldErrors({});
-    setShowDialog(true);
     if (onSubmit) {
-      onSubmit({ email, password });
+      onSubmit({ email: loginForm.email, password: loginForm.password });
+    } else {
+      submitLoginForm(loginForm);
     }
   };
 
   const handleCloseDialog = () => {
-    setShowDialog(false);
+    closeDialog();
     if (onClearError) {
       onClearError();
     }
   };
 
-  const currentError = errorMessage || (showDialog ? dialogMessage : '');
+  const currentError = propErrorMessage || storeError || (dialog.isOpen ? dialog.message : '');
 
   return (
     <>
@@ -79,8 +89,8 @@ export function LoginForm({
             </div>
           )}
 
-          <CardHeader className="space-y-2 text-center pb-6">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-brand-600/20 border border-brand-500/30 text-brand-400">
+          <CardHeader className="space-y-2 text-left pb-6">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-600/20 border border-brand-500/30 text-brand-400">
               <ShieldCheck className="h-6 w-6" />
             </div>
             <CardTitle className="text-2xl font-bold text-white">Welcome back</CardTitle>
@@ -91,9 +101,9 @@ export function LoginForm({
 
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
-              {errorMessage && (
+              {propErrorMessage && (
                 <div className="rounded-lg bg-rose-500/10 border border-rose-500/20 p-3 text-xs text-rose-400">
-                  {errorMessage}
+                  {propErrorMessage}
                 </div>
               )}
 
@@ -108,10 +118,7 @@ export function LoginForm({
                     type="text"
                     placeholder="name@company.com or username"
                     value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: '' }));
-                    }}
+                    onChange={(e) => updateLoginForm({ email: e.target.value })}
                     className={`pl-9 ${fieldErrors.email ? 'border-rose-500 bg-rose-500/5' : ''}`}
                     required
                   />
@@ -134,16 +141,21 @@ export function LoginForm({
                   <Lock className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
                   <Input
                     id="password-input"
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
                     value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value);
-                      if (fieldErrors.password) setFieldErrors((prev) => ({ ...prev, password: '' }));
-                    }}
-                    className={`pl-9 ${fieldErrors.password ? 'border-rose-500 bg-rose-500/5' : ''}`}
+                    onChange={(e) => updateLoginForm({ password: e.target.value })}
+                    className={`pl-9 pr-10 ${fieldErrors.password ? 'border-rose-500 bg-rose-500/5' : ''}`}
                     required
                   />
+                  <button
+                    type="button"
+                    onClick={toggleLoginPasswordVisibility}
+                    className="absolute right-3 top-2.5 text-slate-500 hover:text-slate-300 focus:outline-none transition-colors"
+                    aria-label={showPassword ? 'Hide password text' : 'Show password text'}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
                 {fieldErrors.password && (
                   <p className="text-[11px] font-medium text-rose-400 mt-1">{fieldErrors.password}</p>
@@ -168,7 +180,7 @@ export function LoginForm({
                 )}
               </Button>
 
-              <div className="text-center text-xs text-slate-400">
+              <div className="text-left text-xs text-slate-400">
                 Don't have an account?{' '}
                 <Link href="/signup" className="font-semibold text-brand-400 hover:underline">
                   Register Account
@@ -179,15 +191,15 @@ export function LoginForm({
         </Card>
       </motion.div>
 
-      {currentError && showDialog && (
+      {dialog.isOpen && (
         <AuthStatusDialog
-          isOpen={showDialog}
-          type={currentError.toLowerCase().includes('locked') ? 'lockout' : 'error'}
-          title={currentError.toLowerCase().includes('locked') ? 'Account Temporarily Locked' : 'Validation / Auth Failure'}
-          message={currentError}
+          isOpen={dialog.isOpen}
+          type={dialog.type}
+          title={dialog.title}
+          message={dialog.message}
           onClose={handleCloseDialog}
           onAction={handleCloseDialog}
-          actionText="Try Again"
+          actionText={dialog.actionText}
         />
       )}
     </>

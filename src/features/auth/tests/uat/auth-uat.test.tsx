@@ -1,13 +1,23 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
+import { Provider } from 'react-redux';
+import { configureStore } from '@reduxjs/toolkit';
 import { LoginForm } from '../../components/login-form';
 import { ForgotPasswordForm } from '../../components/forgot-password-form';
+import { authSlice } from '../../store/auth-slice';
+
+function renderWithRedux(ui: React.ReactElement) {
+  const store = configureStore({
+    reducer: { auth: authSlice.reducer },
+  });
+  return render(<Provider store={store}>{ui}</Provider>);
+}
 
 describe('Auth Module - User Acceptance Testing (UAT)', () => {
   it('UAT Journey 1: User fills in valid login credentials and submits form', () => {
     const handleLoginSubmit = vi.fn();
-    render(<LoginForm onSubmit={handleLoginSubmit} />);
+    renderWithRedux(<LoginForm onSubmit={handleLoginSubmit} />);
 
     // User types work email
     fireEvent.change(screen.getByLabelText(/work email/i), {
@@ -15,7 +25,7 @@ describe('Auth Module - User Acceptance Testing (UAT)', () => {
     });
 
     // User types secure password
-    fireEvent.change(screen.getByLabelText(/password/i), {
+    fireEvent.change(screen.getByLabelText('Password', { selector: 'input' }), {
       target: { value: 'EnterprisePass2026!' },
     });
 

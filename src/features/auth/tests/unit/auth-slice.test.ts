@@ -3,13 +3,7 @@ import { authSlice, authActions } from '../../store/auth-slice';
 import { AuthState } from '../../types';
 
 describe('Auth Redux Slice - Unit Tests', () => {
-  const initialState: AuthState = {
-    user: null,
-    isAuthenticated: false,
-    token: null,
-    status: 'idle',
-    error: null,
-  };
+  const initialState = authSlice.getInitialState();
 
   it('returns initial state on unknown action', () => {
     expect(authSlice.reducer(undefined, { type: 'UNKNOWN' })).toEqual(initialState);
@@ -40,7 +34,7 @@ describe('Auth Redux Slice - Unit Tests', () => {
   it('records error on loginFailure', () => {
     const state = authSlice.reducer(
       { ...initialState, status: 'loading' },
-      authActions.loginFailure('Unauthorized')
+      authActions.loginFailure({ message: 'Unauthorized', dialogType: 'error' })
     );
 
     expect(state.status).toBe('failed');
@@ -49,7 +43,8 @@ describe('Auth Redux Slice - Unit Tests', () => {
   });
 
   it('clears state on logout', () => {
-    const activeState: AuthState = {
+    const activeState: any = {
+      ...initialState,
       user: { id: 'usr-1', email: 'u@procureiq.com', name: 'User', role: 'admin' },
       isAuthenticated: true,
       token: 'jwt-token',

@@ -1,10 +1,18 @@
 'use client';
 
-import React from 'react';
-import { SignupForm, useAuthManagement, SignupInput } from '@/features/auth';
+import React, { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { SignupForm, useAuthManagement, SignupInput, AUTH_STATUS } from '@/features/auth';
 
 export default function SignupPage() {
-  const { signup, isLoading, error, resetStatus } = useAuthManagement();
+  const router = useRouter();
+  const { signup, isAuthenticated, status, isLoading, error, resetStatus } = useAuthManagement();
+
+  useEffect(() => {
+    if (isAuthenticated || status === AUTH_STATUS.SUCCEEDED) {
+      router.push('/dashboard');
+    }
+  }, [isAuthenticated, status, router]);
 
   const handleSignup = (data: SignupInput) => {
     signup(data);

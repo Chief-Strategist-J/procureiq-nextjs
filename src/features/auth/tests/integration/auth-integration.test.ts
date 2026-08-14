@@ -55,7 +55,12 @@ describe('Auth Module - Integration Tests (Saga + HttpClient + API)', () => {
 
     generator.next();
 
-    const errorResult = generator.throw(new Error('Invalid credentials provided')).value;
-    expect(errorResult).toEqual(put(authActions.loginFailure('Invalid credentials provided')));
+    const resolveStep = generator.throw(new Error('Invalid credentials provided')).value;
+    expect(resolveStep).toBeDefined();
+
+    const putStep = generator.next('error' as any).value;
+    expect(putStep).toEqual(
+      put(authActions.loginFailure({ message: 'Invalid credentials provided', dialogType: 'error' }))
+    );
   });
 });

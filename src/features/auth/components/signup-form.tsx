@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { User, Mail, Lock, Building, UserPlus, Loader2 } from 'lucide-react';
+import { User, Mail, Lock, Building, UserPlus, Loader2, Eye, EyeOff } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { SignupInput } from '../types';
 import { AuthStatusDialog } from './auth-status-dialog';
 import { AuthValidator } from '../utils/validation';
+import { useAuthManagement } from '../hooks/use-auth-management';
 
 export interface SignupFormProps {
   onSubmit?: (data: SignupInput) => void;
@@ -21,53 +22,33 @@ export interface SignupFormProps {
 
 export function SignupForm({
   onSubmit,
-  isLoading = false,
-  errorMessage,
+  isLoading: propIsLoading,
+  errorMessage: propErrorMessage,
   onClearError,
 }: SignupFormProps) {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [companyName, setCompanyName] = useState('');
-  const [agreeToTerms, setAgreeToTerms] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [showDialog, setShowDialog] = useState(false);
-  const [dialogMessage, setDialogMessage] = useState('');
+  const {
+    signupForm,
+    fieldErrors,
+    dialog,
+    isLoading: storeIsLoading,
+    error: storeError,
+    updateSignupForm,
+    toggleSignupPasswordVisibility,
+    closeDialog,
+    submitSignupForm,
+  } = useAuthManagement();
+
+  const isLoading = propIsLoading ?? storeIsLoading;
+  const { name, email, password, showPassword, companyName, agreeToTerms } = signupForm;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    const validation = AuthValidator.validateSignupForm(
-      name,
-      email,
-      password,
-      companyName,
-      agreeToTerms
-    );
-
-    if (!validation.isValid) {
-      setFieldErrors(validation.errors);
-      const firstError = Object.values(validation.errors)[0];
-      setDialogMessage(firstError);
-      setShowDialog(true);
-      return;
-    }
-
-    setFieldErrors({});
-    setShowDialog(true);
     if (onSubmit) {
-      onSubmit({ name, email, password, companyName, agreeToTerms });
+      onSubmit(signupForm);
+    } else {
+      submitSignupForm(signupForm);
     }
   };
-
-  const handleCloseDialog = () => {
-    setShowDialog(false);
-    if (onClearError) {
-      onClearError();
-    }
-  };
-
-  const currentError = errorMessage || (showDialog ? dialogMessage : '');
 
   return (
     <>
@@ -90,8 +71,8 @@ export function SignupForm({
             </div>
           )}
 
-          <CardHeader className="space-y-2 text-center pb-6">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-brand-600/20 border border-brand-500/30 text-brand-400">
+          <CardHeader className="space-y-2 text-left pb-6">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-600/20 border border-brand-500/30 text-brand-400">
               <UserPlus className="h-6 w-6" />
             </div>
             <CardTitle className="text-2xl font-bold text-white">Create Enterprise Account</CardTitle>
@@ -102,9 +83,9 @@ export function SignupForm({
 
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
-              {errorMessage && (
+              {propErrorMessage && (
                 <div className="rounded-lg bg-rose-500/10 border border-rose-500/20 p-3 text-xs text-rose-400">
-                  {errorMessage}
+                  {propErrorMessage}
                 </div>
               )}
 
@@ -119,10 +100,7 @@ export function SignupForm({
                     type="text"
                     placeholder="Jaydeep Vagh"
                     value={name}
-                    onChange={(e) => {
-                      setName(e.target.value);
-                      if (fieldErrors.name) setFieldErrors((prev) => ({ ...prev, name: '' }));
-                    }}
+                    onChange={(e) => updateSignupForm({ name: e.target.value })}
                     className={`pl-9 ${fieldErrors.name ? 'border-rose-500 bg-rose-500/5' : ''}`}
                     required
                   />
@@ -143,10 +121,7 @@ export function SignupForm({
                     type="email"
                     placeholder="jaydeep@company.com"
                     value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: '' }));
-                    }}
+                    onChange={(e) => updateSignupForm({ email: e.target.value })}
                     className={`pl-9 ${fieldErrors.email ? 'border-rose-500 bg-rose-500/5' : ''}`}
                     required
                   />
@@ -167,10 +142,7 @@ export function SignupForm({
                     type="text"
                     placeholder="Acme Global Inc."
                     value={companyName}
-                    onChange={(e) => {
-                      setCompanyName(e.target.value);
-                      if (fieldErrors.companyName) setFieldErrors((prev) => ({ ...prev, companyName: '' }));
-                    }}
+                    onChange={(e) => updateSignupForm({ companyName: e.target.value })}
                     className={`pl-9 ${fieldErrors.companyName ? 'border-rose-500 bg-rose-500/5' : ''}`}
                     required
                   />
@@ -188,16 +160,21 @@ export function SignupForm({
                   <Lock className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
                   <Input
                     id="signup-password"
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
                     value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value);
-                      if (fieldErrors.password) setFieldErrors((prev) => ({ ...prev, password: '' }));
-                    }}
-                    className={`pl-9 ${fieldErrors.password ? 'border-rose-500 bg-rose-500/5' : ''}`}
+                    onChange={(e) => updateSignupForm({ password: e.target.value })}
+                    className={`pl-9 pr-10 ${fieldErrors.password ? 'border-rose-500 bg-rose-500/5' : ''}`}
                     required
                   />
+                  <button
+                    type="button"
+                    onClick={toggleSignupPasswordVisibility}
+                    className="absolute right-3 top-2.5 text-slate-500 hover:text-slate-300 focus:outline-none transition-colors"
+                    aria-label={showPassword ? 'Hide password text' : 'Show password text'}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
                 {fieldErrors.password && (
                   <p className="text-[11px] font-medium text-rose-400 mt-1">{fieldErrors.password}</p>
@@ -209,10 +186,7 @@ export function SignupForm({
                   <Checkbox
                     id="signup-terms"
                     checked={agreeToTerms}
-                    onCheckedChange={(checked) => {
-                      setAgreeToTerms(Boolean(checked));
-                      if (fieldErrors.agreeToTerms) setFieldErrors((prev) => ({ ...prev, agreeToTerms: '' }));
-                    }}
+                    onCheckedChange={(checked) => updateSignupForm({ agreeToTerms: Boolean(checked) })}
                   />
                   <label htmlFor="signup-terms" className="text-xs text-slate-300 cursor-pointer">
                     I agree to the <span className="text-brand-400 hover:underline">Terms of Service</span> and Privacy Policy.
@@ -241,7 +215,7 @@ export function SignupForm({
                 )}
               </Button>
 
-              <div className="text-center text-xs text-slate-400">
+              <div className="text-left text-xs text-slate-400">
                 Already have an account?{' '}
                 <Link href="/login" className="font-semibold text-brand-400 hover:underline">
                   Sign In
@@ -252,15 +226,21 @@ export function SignupForm({
         </Card>
       </motion.div>
 
-      {currentError && showDialog && (
+      {dialog.isOpen && (
         <AuthStatusDialog
-          isOpen={showDialog}
-          type="error"
-          title="Registration Validation Error"
-          message={currentError}
-          onClose={handleCloseDialog}
-          onAction={handleCloseDialog}
-          actionText="Try Again"
+          isOpen={dialog.isOpen}
+          type={dialog.type}
+          title={dialog.title}
+          message={dialog.message}
+          onClose={closeDialog}
+          onAction={() => {
+            if (dialog.redirectTo) {
+              window.location.href = dialog.redirectTo;
+            } else {
+              closeDialog();
+            }
+          }}
+          actionText={dialog.actionText}
         />
       )}
     </>

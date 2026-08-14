@@ -30,4 +30,6 @@ export const AUTH_MESSAGES = {
   SIGNUP_FIELDS_REQUIRED: 'Name, email, and password are required for signup.',
   ACCOUNT_LOCKED: 'Account is temporarily locked due to multiple failed login attempts. Please try again later.',
   DEFAULT_ERROR: 'Authentication request failed. Please try again.',
+  LOGIN_FAILED: 'Login failed',
+  REGISTRATION_FAILED: 'Registration failed',
 } as const;

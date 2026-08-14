@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { authSlice, authActions } from '../../store/auth-slice';
-import { AuthState } from '../../types';
+import { ExtendedAuthState } from '../../store/auth-slice';
 
 describe('Auth Module - System Testing (Full State Machine Lifecycle)', () => {
   it('validates complete state transition lifecycle: Idle -> Loading -> Succeeded -> Logged Out', () => {
-    let state: AuthState = authSlice.reducer(undefined, { type: '@@INIT' });
+    let state: ExtendedAuthState = authSlice.reducer(undefined, { type: '@@INIT' });
     expect(state.status).toBe('idle');
     expect(state.isAuthenticated).toBe(false);
 
