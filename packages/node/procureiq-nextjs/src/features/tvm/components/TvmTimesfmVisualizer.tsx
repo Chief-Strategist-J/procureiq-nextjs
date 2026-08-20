@@ -149,11 +149,19 @@ export function TvmTimesfmVisualizer({
           {activeFormulaModal === "FV" && (
             <div className="space-y-3 text-slate-300 text-xs pt-2">
               <div className="font-mono bg-slate-950 p-4 rounded-xl border border-slate-800 text-cyan-300 font-bold text-sm text-center shadow-inner">
-                FV = PMT × [ ((1 + r/m)ᴺ - 1) / (r/m) ]
+                FV = PV × (1 + r)ᴺ
               </div>
               <p className="leading-relaxed text-slate-300">
-                <strong>Future Value (FV)</strong> computes the accumulated total value of cash payments invested over <em>N</em> compounding periods at rate <em>r/m</em>.
+                <strong>Future Value (FV)</strong> computes the accumulated total value of present cash flows invested over <em>N</em> compounding periods at rate <em>r</em>.
               </p>
+              <div className="rounded-lg bg-slate-950 p-3 border border-cyan-500/20 text-[11px] space-y-1 text-slate-400">
+                <p className="text-cyan-400 font-semibold">CFA Time Value Monotonicity Principles:</p>
+                <ul className="list-disc list-inside space-y-0.5 text-slate-300">
+                  <li>Money amounts can only be added directly when indexed at the exact same point in time.</li>
+                  <li>For a given interest rate <em>r</em>, Future Value increases monotonically with number of compounding periods <em>N</em>.</li>
+                  <li>For a given number of periods <em>N</em>, Future Value increases monotonically with interest rate <em>r</em>.</li>
+                </ul>
+              </div>
             </div>
           )}
 
