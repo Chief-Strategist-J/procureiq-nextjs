@@ -154,13 +154,19 @@ export function TvmTimesfmVisualizer({
               <p className="leading-relaxed text-slate-300">
                 <strong>Future Value (FV)</strong> computes the accumulated total value of present cash flows invested over <em>N</em> compounding periods at rate <em>r</em>.
               </p>
-              <div className="rounded-lg bg-slate-950 p-3 border border-cyan-500/20 text-[11px] space-y-1 text-slate-400">
-                <p className="text-cyan-400 font-semibold">CFA Time Value Monotonicity Principles:</p>
+              <div className="rounded-lg bg-slate-950 p-3 border border-cyan-500/20 text-[11px] space-y-2 text-slate-400">
+                <p className="text-cyan-400 font-semibold">CFA Quantitative Time Value Principles:</p>
                 <ul className="list-disc list-inside space-y-0.5 text-slate-300">
                   <li>Money amounts can only be added directly when indexed at the exact same point in time.</li>
-                  <li>For a given interest rate <em>r</em>, Future Value increases monotonically with number of compounding periods <em>N</em>.</li>
+                  <li>For a given interest rate <em>r</em>, Future Value increases monotonically with compounding periods <em>N</em>.</li>
                   <li>For a given number of periods <em>N</em>, Future Value increases monotonically with interest rate <em>r</em>.</li>
                 </ul>
+                <div className="pt-2 border-t border-slate-800 text-slate-300 space-y-1">
+                  <p className="font-semibold text-cyan-300">CFA Example Calculations:</p>
+                  <p>• <strong>Interim Cash Reinvested:</strong> $5M at 7% for 5 yrs = $5M × (1.07)⁵ = $7,012,758.65</p>
+                  <p>• <strong>Zero Interim Cash:</strong> ¥2.5M at 8% for 6 yrs = ¥2.5M × (1.08)⁶ = ¥3,967,186.00</p>
+                  <p>• <strong>Deferred Lump Sum (t=5 to t=15):</strong> $10M received at t=5 at 9% for 10 yrs = $10M × (1.09)¹⁰ = $23,673,636.75</p>
+                </div>
               </div>
             </div>
           )}
