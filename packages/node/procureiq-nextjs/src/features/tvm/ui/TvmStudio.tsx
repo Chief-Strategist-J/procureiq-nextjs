@@ -80,10 +80,10 @@ export function TvmStudio() {
       {activeTab === 'risk' ? (
         <CfaRiskBreakdown data={forecastData} currencySymbol={params.currencySymbol || "$"} />
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="p-5 md:p-6 rounded-2xl bg-slate-900/80 border border-slate-800 backdrop-blur-xl space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          <div className="lg:col-span-4 p-4 rounded-2xl bg-slate-900/80 border border-slate-800 backdrop-blur-xl space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+              <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
                 Quantitative Inputs
               </h3>
               <span className="text-[10px] uppercase tracking-wider text-emerald-400 font-mono">
@@ -98,7 +98,7 @@ export function TvmStudio() {
             />
           </div>
 
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-8 space-y-4">
             <TvmTimesfmVisualizer data={forecastData} currencySymbol={params.currencySymbol || "$"} />
             <SingleSumCompoundingChart data={forecastData} currencySymbol={params.currencySymbol || "$"} />
           </div>

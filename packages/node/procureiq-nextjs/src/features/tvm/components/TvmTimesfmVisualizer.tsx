@@ -72,11 +72,11 @@ export function TvmTimesfmVisualizer({
   const rangeY = maxY - minY || 1;
 
   const svgWidth = 800;
-  const svgHeight = 320;
+  const svgHeight = 180;
   const paddingLeft = 50;
   const paddingRight = 30;
-  const paddingTop = 30;
-  const paddingBottom = 40;
+  const paddingTop = 20;
+  const paddingBottom = 30;
   const chartWidth = svgWidth - paddingLeft - paddingRight;
   const chartHeight = svgHeight - paddingTop - paddingBottom;
 
@@ -248,9 +248,9 @@ export function TvmTimesfmVisualizer({
         </div>
       </div>
 
-      <div className="rounded-3xl bg-slate-900/90 border border-slate-800/80 p-6 md:p-8 backdrop-blur-2xl shadow-2xl space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-5">
-          <h3 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+      <div className="rounded-2xl bg-slate-900/90 border border-slate-800/80 p-4 md:p-5 backdrop-blur-2xl shadow-xl space-y-3 font-sans">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+          <h3 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
             <span className="relative flex h-2.5 w-2.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-500" />
@@ -319,26 +319,26 @@ export function TvmTimesfmVisualizer({
           </svg>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 pt-4 border-t border-slate-800/80">
-          <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
-            <span className="text-[11px] text-slate-400 block font-medium">Real Risk-Free Rate (r*)</span>
-            <span className="text-base font-bold text-slate-100 mt-0.5 block">{(data.riskFreeRate * 100).toFixed(2)}%</span>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 pt-2 border-t border-slate-800/80">
+          <div className="p-2 rounded-lg bg-slate-950/60 border border-slate-800">
+            <span className="text-[10px] text-slate-400 block font-medium">Risk-Free (r*)</span>
+            <span className="text-xs font-bold text-slate-100 mt-0.5 block">{(data.riskFreeRate * 100).toFixed(2)}%</span>
           </div>
-          <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
-            <span className="text-[11px] text-slate-400 block font-medium">Inflation Premium</span>
-            <span className="text-base font-bold text-slate-100 mt-0.5 block">{(data.inflationPremium * 100).toFixed(2)}%</span>
+          <div className="p-2 rounded-lg bg-slate-950/60 border border-slate-800">
+            <span className="text-[10px] text-slate-400 block font-medium">Inflation</span>
+            <span className="text-xs font-bold text-slate-100 mt-0.5 block">{(data.inflationPremium * 100).toFixed(2)}%</span>
           </div>
-          <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
-            <span className="text-[11px] text-slate-400 block font-medium">Default Risk Premium</span>
-            <span className="text-base font-bold text-slate-100 mt-0.5 block">{(data.defaultPremium * 100).toFixed(2)}%</span>
+          <div className="p-2 rounded-lg bg-slate-950/60 border border-slate-800">
+            <span className="text-[10px] text-slate-400 block font-medium">Default Risk</span>
+            <span className="text-xs font-bold text-slate-100 mt-0.5 block">{(data.defaultPremium * 100).toFixed(2)}%</span>
           </div>
-          <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
-            <span className="text-[11px] text-slate-400 block font-medium">Liquidity Premium</span>
-            <span className="text-base font-bold text-slate-100 mt-0.5 block">{(data.liquidityPremium * 100).toFixed(2)}%</span>
+          <div className="p-2 rounded-lg bg-slate-950/60 border border-slate-800">
+            <span className="text-[10px] text-slate-400 block font-medium">Liquidity</span>
+            <span className="text-xs font-bold text-slate-100 mt-0.5 block">{(data.liquidityPremium * 100).toFixed(2)}%</span>
           </div>
-          <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
-            <span className="text-[11px] text-slate-400 block font-medium">Maturity Premium</span>
-            <span className="text-base font-bold text-slate-100 mt-0.5 block">{(data.maturityPremium * 100).toFixed(2)}%</span>
+          <div className="p-2 rounded-lg bg-slate-950/60 border border-slate-800">
+            <span className="text-[10px] text-slate-400 block font-medium">Maturity</span>
+            <span className="text-xs font-bold text-slate-100 mt-0.5 block">{(data.maturityPremium * 100).toFixed(2)}%</span>
           </div>
         </div>
       </div>

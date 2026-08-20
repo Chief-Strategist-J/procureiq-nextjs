@@ -48,6 +48,11 @@ export function useTvmManagement() {
     params.calculationType,
     params.pmt,
     params.years,
+    params.riskFreeRate,
+    params.inflationPremium,
+    params.defaultPremium,
+    params.liquidityPremium,
+    params.maturityPremium,
     dispatch,
   ]);
 

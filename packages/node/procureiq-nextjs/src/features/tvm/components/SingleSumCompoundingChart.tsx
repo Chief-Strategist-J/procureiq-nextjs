@@ -36,11 +36,11 @@ export function SingleSumCompoundingChart({
   const rangeY = maxVal - minVal;
 
   const svgWidth = 800;
-  const svgHeight = 300;
+  const svgHeight = 170;
   const paddingLeft = 55;
   const paddingRight = 30;
-  const paddingTop = 25;
-  const paddingBottom = 40;
+  const paddingTop = 20;
+  const paddingBottom = 30;
   const chartWidth = svgWidth - paddingLeft - paddingRight;
   const chartHeight = svgHeight - paddingTop - paddingBottom;
 
@@ -63,10 +63,10 @@ export function SingleSumCompoundingChart({
   const areaPath = `${linePath} L ${pts[pts.length - 1].x},${svgHeight - paddingBottom} L ${pts[0].x},${svgHeight - paddingBottom} Z`;
 
   return (
-    <div className="rounded-3xl bg-slate-900/90 border border-slate-800/80 p-6 md:p-8 backdrop-blur-2xl shadow-2xl space-y-6 font-sans">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-5">
+    <div className="rounded-2xl bg-slate-900/90 border border-slate-800/80 p-4 md:p-5 backdrop-blur-2xl shadow-xl space-y-3 font-sans">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
         <div>
-          <h3 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+          <h3 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
             <span className="relative flex h-2.5 w-2.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
