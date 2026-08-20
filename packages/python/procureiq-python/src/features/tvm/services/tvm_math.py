@@ -21,9 +21,10 @@ def _calc_unequal_flows(rate_per_period: float, total_periods: int, pmt: float, 
     return pv_res, fv_res
 
 def _calc_single_sum(rate_per_period: float, total_periods: int, pmt: float, pv_in: float, fv_in: float, years: float, stated_rate: float, flows: List[float]) -> Tuple[float, float]:
-    pv_res = pv_in if pv_in != 0.0 else fv_in / math.pow(1.0 + rate_per_period, total_periods)
-    fv_res = fv_in if fv_in != 0.0 else pv_res * math.pow(1.0 + rate_per_period, total_periods)
-    return pv_res, fv_res
+    base_pv = pv_in if pv_in != 0.0 else (pmt if pmt != 0.0 else (flows[0] if flows else 100.0))
+    if fv_in != 0.0:
+        return fv_in / math.pow(1.0 + rate_per_period, total_periods), fv_in
+    return base_pv, base_pv * math.pow(1.0 + rate_per_period, total_periods)
 
 TVM_CALCULATION_RULESET: Dict[str, Callable[[float, int, float, float, float, float, float, List[float]], Tuple[float, float]]] = {
     "ORDINARY_ANNUITY": _calc_ordinary_annuity,

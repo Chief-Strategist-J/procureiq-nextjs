@@ -2,13 +2,10 @@
 
 import React, { useState } from "react";
 import { Info } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { EarFormulaDialog } from "./dialogs/EarFormulaDialog";
+import { PvFormulaDialog } from "./dialogs/PvFormulaDialog";
+import { FvFormulaDialog } from "./dialogs/FvFormulaDialog";
+import { HorizonFormulaDialog } from "./dialogs/HorizonFormulaDialog";
 
 export interface TimelinePoint {
   period: number;
@@ -113,76 +110,22 @@ export function TvmTimesfmVisualizer({
 
   return (
     <div className="space-y-6 font-sans">
-      <Dialog open={!!activeFormulaModal} onOpenChange={(open) => !open && setActiveFormulaModal(null)}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-slate-100 max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-indigo-400 font-bold text-lg">
-              <Info className="h-5 w-5" /> Mathematical Algorithm Formula
-            </DialogTitle>
-            <DialogDescription className="text-slate-400 text-xs">
-              Quantitative formulation applied by the Time Value of Money AI Engine
-            </DialogDescription>
-          </DialogHeader>
-
-          {activeFormulaModal === "EAR" && (
-            <div className="space-y-3 text-slate-300 text-xs pt-2">
-              <div className="font-mono bg-slate-950 p-4 rounded-xl border border-slate-800 text-indigo-300 font-bold text-sm text-center shadow-inner">
-                EAR = (1 + r / m)ᵐ - 1
-              </div>
-              <p className="leading-relaxed text-slate-300">
-                <strong>Effective Annual Rate (EAR)</strong> measures the actual annual yield earned on an investment when compounding occurs more frequently than once per year (where <em>r</em> is stated annual rate and <em>m</em> is compounding frequency per year).
-              </p>
-            </div>
-          )}
-
-          {activeFormulaModal === "PV" && (
-            <div className="space-y-3 text-slate-300 text-xs pt-2">
-              <div className="font-mono bg-slate-950 p-4 rounded-xl border border-slate-800 text-emerald-300 font-bold text-sm text-center shadow-inner">
-                PV = PMT × [ (1 - (1 + r/m)⁻ᴺ) / (r/m) ]
-              </div>
-              <p className="leading-relaxed text-slate-300">
-                <strong>Present Value (PV)</strong> calculates the current lump-sum value of a series of future cash flows discounted back at period interest rate <em>r/m</em> over total periods <em>N</em>.
-              </p>
-            </div>
-          )}
-
-          {activeFormulaModal === "FV" && (
-            <div className="space-y-3 text-slate-300 text-xs pt-2">
-              <div className="font-mono bg-slate-950 p-4 rounded-xl border border-slate-800 text-cyan-300 font-bold text-sm text-center shadow-inner">
-                FV = PV × (1 + r)ᴺ
-              </div>
-              <p className="leading-relaxed text-slate-300">
-                <strong>Future Value (FV)</strong> computes the accumulated total value of present cash flows invested over <em>N</em> compounding periods at rate <em>r</em>.
-              </p>
-              <div className="rounded-lg bg-slate-950 p-3 border border-cyan-500/20 text-[11px] space-y-2 text-slate-400">
-                <p className="text-cyan-400 font-semibold">CFA Quantitative Time Value Principles:</p>
-                <ul className="list-disc list-inside space-y-0.5 text-slate-300">
-                  <li>Money amounts can only be added directly when indexed at the exact same point in time.</li>
-                  <li>For a given interest rate <em>r</em>, Future Value increases monotonically with compounding periods <em>N</em>.</li>
-                  <li>For a given number of periods <em>N</em>, Future Value increases monotonically with interest rate <em>r</em>.</li>
-                </ul>
-                <div className="pt-2 border-t border-slate-800 text-slate-300 space-y-1">
-                  <p className="font-semibold text-cyan-300">CFA Example Calculations:</p>
-                  <p>• <strong>Interim Cash Reinvested:</strong> $5M at 7% for 5 yrs = $5M × (1.07)⁵ = $7,012,758.65</p>
-                  <p>• <strong>Zero Interim Cash:</strong> ¥2.5M at 8% for 6 yrs = ¥2.5M × (1.08)⁶ = ¥3,967,186.00</p>
-                  <p>• <strong>Deferred Lump Sum (t=5 to t=15):</strong> $10M received at t=5 at 9% for 10 yrs = $10M × (1.09)¹⁰ = $23,673,636.75</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeFormulaModal === "N" && (
-            <div className="space-y-3 text-slate-300 text-xs pt-2">
-              <div className="font-mono bg-slate-950 p-4 rounded-xl border border-slate-800 text-purple-300 font-bold text-sm text-center shadow-inner">
-                N = Investment Years × Compounding Frequency (m)
-              </div>
-              <p className="leading-relaxed text-slate-300">
-                <strong>Total Compounding Periods (N)</strong> represents the total discrete periods over which cash flows are discounted or compounded.
-              </p>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <EarFormulaDialog
+        isOpen={activeFormulaModal === "EAR"}
+        onClose={() => setActiveFormulaModal(null)}
+      />
+      <PvFormulaDialog
+        isOpen={activeFormulaModal === "PV"}
+        onClose={() => setActiveFormulaModal(null)}
+      />
+      <FvFormulaDialog
+        isOpen={activeFormulaModal === "FV"}
+        onClose={() => setActiveFormulaModal(null)}
+      />
+      <HorizonFormulaDialog
+        isOpen={activeFormulaModal === "N"}
+        onClose={() => setActiveFormulaModal(null)}
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 p-4 sm:p-5 border border-indigo-500/20 shadow-xl backdrop-blur-xl group hover:border-indigo-500/40 transition-all flex flex-col justify-between">
@@ -191,11 +134,14 @@ export function TvmTimesfmVisualizer({
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Effective Annual Rate</span>
             <button
               type="button"
-              onClick={() => setActiveFormulaModal("EAR")}
-              className="p-1 rounded-md bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveFormulaModal("EAR");
+              }}
+              className="relative z-10 p-1.5 rounded-md bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 transition-colors cursor-pointer"
               title="Click to view EAR formula"
             >
-              <Info className="h-3.5 w-3.5" />
+              <Info className="h-4 w-4" />
             </button>
           </div>
           <p className="text-xl sm:text-2xl font-extrabold text-indigo-400 mt-2 tracking-tight truncate">
@@ -205,16 +151,19 @@ export function TvmTimesfmVisualizer({
         </div>
 
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 p-4 sm:p-5 border border-emerald-500/20 shadow-xl backdrop-blur-xl group hover:border-emerald-500/40 transition-all flex flex-col justify-between">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all" />
+          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all pointer-events-none" />
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Present Value (PV)</span>
             <button
               type="button"
-              onClick={() => setActiveFormulaModal("PV")}
-              className="p-1 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveFormulaModal("PV");
+              }}
+              className="relative z-10 p-1.5 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-colors cursor-pointer"
               title="Click to view PV formula"
             >
-              <Info className="h-3.5 w-3.5" />
+              <Info className="h-4 w-4" />
             </button>
           </div>
           <p className="text-xl sm:text-2xl font-extrabold text-emerald-400 mt-2 tracking-tight truncate" title={`${currencySymbol}${data.presentValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}>
@@ -224,16 +173,19 @@ export function TvmTimesfmVisualizer({
         </div>
 
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 p-4 sm:p-5 border border-cyan-500/20 shadow-xl backdrop-blur-xl group hover:border-cyan-500/40 transition-all flex flex-col justify-between">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/10 rounded-full blur-2xl group-hover:bg-cyan-500/20 transition-all" />
+          <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/10 rounded-full blur-2xl group-hover:bg-cyan-500/20 transition-all pointer-events-none" />
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Future Value (FV)</span>
             <button
               type="button"
-              onClick={() => setActiveFormulaModal("FV")}
-              className="p-1 rounded-md bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveFormulaModal("FV");
+              }}
+              className="relative z-10 p-1.5 rounded-md bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 transition-colors cursor-pointer"
               title="Click to view FV formula"
             >
-              <Info className="h-3.5 w-3.5" />
+              <Info className="h-4 w-4" />
             </button>
           </div>
           <p className="text-xl sm:text-2xl font-extrabold text-cyan-400 mt-2 tracking-tight truncate" title={`${currencySymbol}${data.futureValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}>
@@ -243,16 +195,19 @@ export function TvmTimesfmVisualizer({
         </div>
 
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 p-4 sm:p-5 border border-purple-500/20 shadow-xl backdrop-blur-xl group hover:border-purple-500/40 transition-all flex flex-col justify-between">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl group-hover:bg-purple-500/20 transition-all" />
+          <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl group-hover:bg-purple-500/20 transition-all pointer-events-none" />
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Forecast Horizon</span>
             <button
               type="button"
-              onClick={() => setActiveFormulaModal("N")}
-              className="p-1 rounded-md bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveFormulaModal("N");
+              }}
+              className="relative z-10 p-1.5 rounded-md bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 transition-colors cursor-pointer"
               title="Click to view Horizon formula"
             >
-              <Info className="h-3.5 w-3.5" />
+              <Info className="h-4 w-4" />
             </button>
           </div>
           <p className="text-xl sm:text-2xl font-extrabold text-purple-400 mt-2 tracking-tight truncate">
