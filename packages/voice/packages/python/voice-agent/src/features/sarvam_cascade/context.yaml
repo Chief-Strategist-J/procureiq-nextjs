@@ -1,0 +1,91 @@
+name: sarvam_cascade
+description: Indian language voice assistant (Sarvam STT -> Sarvam LLM -> Sarvam TTS)
+criticality: medium
+
+why_it_exists: >
+  Only pipeline in this repo giving native Indian-language STT/LLM/TTS from a
+  single vendor (Sarvam AI), instead of stitching together separate
+  US/EU providers per stage.
+
+architecture_decision: >
+  Cascade (STT -> LLM -> TTS as three discrete calls), not realtime
+  (single duplex model). Chosen because Sarvam ships no realtime
+  speech-to-speech model -- cascade is the only architecture Sarvam's
+  API surface supports today. Trade-off: turn-taking latency is the
+  sum of three sequential network calls instead of one streamed call.
+
+logical_flow: |
+  1. runner.py -- load_dotenv() reads this feature's own .env (never a
+     shared one -- every pipeline is fully self-contained).
+  2. runner.py/make_context() -- src/meeting.py resolves room credentials.
+       - VIDEOSDK_TOKEN present -> used as-is.
+       - VIDEOSDK_TOKEN absent  -> self-issued JWT from
+         VIDEOSDK_API_KEY + VIDEOSDK_SECRET_KEY (24h expiry,
+         permissions allow_join + allow_mod).
+       - VIDEOSDK_MEETING_ID present -> used as-is.
+       - VIDEOSDK_MEETING_ID absent  -> POST /v2/rooms on
+         api.videosdk.live with the resolved token, roomId returned
+         becomes the meeting id for this run.
+     There is no hardcoded fallback id -- a real room is required to
+     join, so a missing meeting id is always resolved, never guessed.
+  3. WorkerJob(entrypoint, jobctx=make_context, Options(agent_id=
+     "voice-agent-sarvam-cascade", max_processes=5, register=True))
+     starts and registers with the VideoSDK backend.
+  4. On dispatch, entrypoint(ctx) runs -> src/agent.py build_session(ctx):
+       - reads SARVAM_API_KEY.
+       - builds Pipeline(stt=SarvamAISTT, llm=SarvamAILLM,
+         tts=SarvamAITTS, vad=SileroVAD) -- all three cascade stages are
+         Sarvam, VAD is Silero (Sarvam has no VAD model).
+       - ctx.connect() joins the resolved room.
+       - returns AgentSession(agent=SarvamCascadeAgent, pipeline, ctx).
+  5. session.start() -- per conversational turn: SileroVAD detects speech
+     end -> SarvamAISTT transcribes -> SarvamAILLM (sarvam-30b, no
+     MODEL_NAME override wired) generates a reply -> SarvamAITTS
+     (bulbul:v3) synthesizes -> audio published back into the room.
+     on_enter() fires once at session start and speaks a greeting via
+     session.say().
+  6. Tracing (opt-in, see tracing section below) -- the videosdk-agents
+     SDK itself creates one OTel span per turn stage (VAD, STT, EOU,
+     LLM incl. TTFT, TTS, errors/interruptions). No manual
+     instrumentation lives in agent.py; runner.py only supplies where
+     those spans get exported.
+
+networking: |
+  inbound:  VideoSDK room (WebRTC), joined via room_id + auth_token
+            resolved in logical_flow step 2.
+  outbound: api.videosdk.live   (room creation, only if auto-created)
+            api.sarvam.ai       (STT/LLM/TTS calls, via videosdk-plugins-sarvamai)
+            langfuse OTLP endpoint (traces, only if TRACING_ENABLED=true)
+
+dependencies:
+  - videosdk-agents
+  - videosdk-plugins-sarvamai
+  - videosdk-plugins-silero
+  - python-dotenv
+  - pyjwt   # src/meeting.py self-issues VideoSDK JWTs
+
+tracing:
+  backend: langfuse (self-hosted, OTel-native LLM observability)
+  mechanism: >
+    videosdk-agents' built-in OTel tracer exports via
+    RoomOptions.traces (TracesOptions) to Langfuse's OTLP ingestion
+    endpoint -- no custom span code in agent.py.
+  compose: ../../../deploy/docker/docker-compose.langfuse.yaml
+  enabled_via: TRACING_ENABLED=true in this feature's .env
+  endpoint: "{LANGFUSE_HOST}/api/public/otel/v1/traces"
+  auth: "Basic base64(LANGFUSE_PUBLIC_KEY:LANGFUSE_SECRET_KEY)"
+  requires:
+    - "LANGFUSE_HOST -- default http://localhost:3000; use http://host.docker.internal:3000 when this pipeline runs under its own docker-compose.yaml"
+    - "LANGFUSE_PUBLIC_KEY -- defaults to the headless-init dev key"
+    - "LANGFUSE_SECRET_KEY -- defaults to the headless-init dev key"
+  no_signup_required: >
+    docker-compose.langfuse.yaml sets LANGFUSE_INIT_* env vars, so
+    Langfuse provisions org/project/user/API-keys on first boot.
+    The default dev keys it provisions (pk-lf-voice-agent-dev /
+    sk-lf-voice-agent-dev) are exactly what runner.py defaults to --
+    no UI signup or key copy-paste needed for local dev. Override the
+    LANGFUSE_INIT_* values before exposing this stack beyond localhost.
+
+deployment:
+  local: "docker compose up --build   (this feature's own docker-compose.yaml)"
+  cloud: "videosdk deploy videosdk.yaml"

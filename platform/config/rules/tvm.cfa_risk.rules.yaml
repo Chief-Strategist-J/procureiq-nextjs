@@ -1,0 +1,16 @@
+ruleset: tvm.cfa_risk
+version: 1.0.0
+description: "CFA Quantitative Risk Premium Decomposition Rules"
+
+rules:
+  - id: RULE-CFA-001
+    name: DefaultRiskDecomposition
+    priority: 100
+    condition: "facts.statedRate > 0"
+    action: "DECOMPOSE_PROPORTIONAL"
+    parameters:
+      riskFreeRateRatio: 0.30
+      inflationPremiumRatio: 0.25
+      defaultPremiumRatio: 0.20
+      liquidityPremiumRatio: 0.15
+      maturityPremiumRatio: 0.10

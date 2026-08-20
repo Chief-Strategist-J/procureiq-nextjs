@@ -1,0 +1,11 @@
+version: "1.0"
+deployment:
+  id: sip_voice_agent
+  entry:
+    path: packages/python/voice-agent/src/features/sip/runner.py
+  env:
+    path: packages/python/voice-agent/.env
+  secrets:
+    VIDEOSDK_AUTH_TOKEN: ${VIDEOSDK_TOKEN}
+  deploy:
+    cloud: true

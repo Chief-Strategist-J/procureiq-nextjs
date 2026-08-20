@@ -1,0 +1,4 @@
+# Port registry for sub-package procureiq-springboot
+rest:
+  port: 8080
+  path: "/api/v1"

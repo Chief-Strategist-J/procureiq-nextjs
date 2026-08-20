@@ -1,0 +1,5 @@
+videosdk-agents
+videosdk-plugins-openai
+videosdk-plugins-silero
+python-dotenv
+pyjwt

@@ -1,0 +1,16 @@
+name: openai_realtime
+description: Voice assistant using OpenAI Realtime low-latency API
+criticality: high
+dependencies:
+  - videosdk-plugins-openai
+  - openai
+  - python-dotenv
+  - pyjwt
+tracing:
+  backend: langfuse (self-hosted)
+  compose: ../../../deploy/docker/docker-compose.langfuse.yaml
+  enabled_via: TRACING_ENABLED=true in .env
+  requires:
+    - LANGFUSE_HOST
+    - LANGFUSE_PUBLIC_KEY
+    - LANGFUSE_SECRET_KEY

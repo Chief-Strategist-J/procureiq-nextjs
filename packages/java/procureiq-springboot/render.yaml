@@ -1,0 +1,43 @@
+services:
+  - type: web
+    name: procureiq-springboot
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: DB_HOST
+        fromDatabase:
+          name: procureiq-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: procureiq-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: procureiq-db
+          property: database
+      - key: SPRING_DATASOURCE_USERNAME
+        fromDatabase:
+          name: procureiq-db
+          property: user
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase:
+          name: procureiq-db
+          property: password
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRATION_MS
+        value: "86400000"
+      - key: OTEL_SDK_DISABLED
+        value: "true"
+      - key: RENDER_EXTERNAL_URL
+        # Replace this with your actual Render app URL
+        value: "https://procureiq-springboot.onrender.com"
+
+databases:
+  - name: procureiq-db
+    plan: free
+    databaseName: procureiq
+    user: procureiq_user

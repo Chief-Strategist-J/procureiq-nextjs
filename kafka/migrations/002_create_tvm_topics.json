@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "description": "Google TimesFM zero-shot forecast event topics",
+  "topics": [
+    {
+      "name": "tvm.forecasts.v1",
+      "partitions": 1,
+      "replicationFactor": 1,
+      "configs": {
+        "retention.ms": "604800000"
+      }
+    }
+  ]
+}

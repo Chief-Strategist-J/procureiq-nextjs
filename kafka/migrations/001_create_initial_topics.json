@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "description": "Initial platform core event topics",
+  "topics": [
+    {
+      "name": "procureiq.events.v1",
+      "partitions": 1,
+      "replicationFactor": 1,
+      "configs": {
+        "retention.ms": "604800000"
+      }
+    }
+  ]
+}

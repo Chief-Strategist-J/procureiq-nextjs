@@ -1,0 +1,7 @@
+videosdk-agents
+videosdk-plugins-deepgram
+videosdk-plugins-anthropic
+videosdk-plugins-elevenlabs
+videosdk-plugins-silero
+python-dotenv
+pyjwt

@@ -1,0 +1,16 @@
+name: openai_cascade
+description: OpenAI speech stack voice assistant (OpenAI Whisper STT -> GPT-4o LLM -> OpenAI TTS)
+criticality: medium
+dependencies:
+  - videosdk-plugins-openai
+  - videosdk-plugins-silero
+  - python-dotenv
+  - pyjwt
+tracing:
+  backend: langfuse (self-hosted)
+  compose: ../../../deploy/docker/docker-compose.langfuse.yaml
+  enabled_via: TRACING_ENABLED=true in .env
+  requires:
+    - LANGFUSE_HOST
+    - LANGFUSE_PUBLIC_KEY
+    - LANGFUSE_SECRET_KEY

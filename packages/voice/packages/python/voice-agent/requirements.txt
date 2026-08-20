@@ -1,0 +1,15 @@
+videosdk-agents>=1.0.24
+videosdk-plugins-openai>=1.0.24
+openai>=2.44.0
+python-dotenv>=1.2.2
+fastapi>=0.115.0
+uvicorn>=0.30.0
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+videosdk-plugins-turn-detector>=1.0.24
+videosdk-plugins-silero>=1.0.24
+videosdk-plugins-google>=1.0.24
+videosdk-plugins-sarvamai>=1.0.24
+videosdk-plugins-deepgram>=1.0.24
+videosdk-plugins-elevenlabs>=1.0.24
+videosdk-plugins-anthropic>=1.0.24

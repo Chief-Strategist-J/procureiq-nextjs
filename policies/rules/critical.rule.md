@@ -1,0 +1,46 @@
+- do not write unnesassry code please only required one please 
+- strictly declare type for each please 
+- never make any kind of assumption at all if not sure ask me
+- write code which have tracing, and for each function you have to write unite test
+- never hardcode anything, all string, endpoint, theme, constant, enum,s, colors it must declare in centralized place actually
+- code must be small and managable
+- write logic separate from frontend code 
+- each function your writing it must have unite 
+ - 1. test cases( each case must be actually critical, cover all the edge cases)
+ - 2. tla+ file so we know exactly what is happening
+ - 3. is that function is affecting flow then you have to update then flow in yml formate we wi writing
+ - 4. each functioanl or critical function must have proper error handling
+
+- while writing code you have to maintain the adoption or haxagoanl pattern actually
+- strictlly follow all the rules please do not miss any rule otherwise I have to regenerate whole file and waste of time for me 
+- all the config must be centrally managed alway 
+- all endpoint must have once central place to manage 
+- them must be consistant and in one place managed 
+- http call and https call must have one central place to manage 
+- never do over just scoped thing only do not do over engineering
+- alway check memory and change log for references
+- follow apis structure rule : policies/rules/folderStructure/api-structure.md
+- alway follow package structure rule : policies/rules/folderStructure/package-structure.md
+- alway follow contract first approch write contract for same
+- never write code from scratch alway use existing code 
+- alway use opentelemetry for distributed tracing
+- alway write test cases and code for same and run test case after code change
+- stricty follow all the rules policies/rules/codeQuality/coupling-strength-spectrum.md, policies/rules/codeQuality/dry.md, policies/rules/codeQuality/function-parameter-limit-rule.md,
+policies/rules/codeQuality/package-namming-rules.md, policies/rules/codeQuality/prototype.md, policies/rules/codeQuality/srp.md, policies/rules/codeQuality/typecasting-rules.md,
+policies/rules/codeQuality/react-hook-state.md, policies/rules/codeQuality/state-management.md, policies/rules/codeQuality/redux.md
+
+- alway update contracts first then migration related files if has change and then code 
+- use existing library of package methods insted of writing code from scrach
+
+- whenever de desided desisions we are making you have to kip update ascii tree accordingly desison tree in this file logs/change.log with time stamp and file name also do not explain in code just always add/update on point and follow consistancy in tree and if tree is going to biggger and bigger devide into short tree 
+
+- example of change log
+
+[timestamp] one line summery
+└── File: file names and file path
+    ├── Choice: 
+    └── Changes:
+        ├── feature-name-> changes
+        └── affected files and what is affected
+
+- whenever I say save this as memory that time you have to create add in last memory log same formate as change.log ascii tree update location logs/memory.log

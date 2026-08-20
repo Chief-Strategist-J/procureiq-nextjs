@@ -1,0 +1,5 @@
+name: "procureiq-springboot"
+language: "java"
+type: "sub-package"
+description: "Core Spring Boot backend application handling business features."
+stage: 2

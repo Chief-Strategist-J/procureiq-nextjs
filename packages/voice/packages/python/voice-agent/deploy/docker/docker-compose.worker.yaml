@@ -1,0 +1,49 @@
+services:
+  openai-realtime-agent:
+    build:
+      context: src/features/openai_realtime
+      dockerfile: Dockerfile
+    env_file: src/features/openai_realtime/.env
+    restart: unless-stopped
+
+  google-realtime-agent:
+    build:
+      context: src/features/google_realtime
+      dockerfile: Dockerfile
+    env_file: src/features/google_realtime/.env
+    restart: unless-stopped
+
+  google-cascade-agent:
+    build:
+      context: src/features/google_cascade
+      dockerfile: Dockerfile
+    env_file: src/features/google_cascade/.env
+    restart: unless-stopped
+
+  sarvam-cascade-agent:
+    build:
+      context: src/features/sarvam_cascade
+      dockerfile: Dockerfile
+    env_file: src/features/sarvam_cascade/.env
+    restart: unless-stopped
+
+  custom-cascade-agent:
+    build:
+      context: src/features/custom_cascade
+      dockerfile: Dockerfile
+    env_file: src/features/custom_cascade/.env
+    restart: unless-stopped
+
+  openai-cascade-agent:
+    build:
+      context: src/features/openai_cascade
+      dockerfile: Dockerfile
+    env_file: src/features/openai_cascade/.env
+    restart: unless-stopped
+
+  sip-agent:
+    build:
+      context: src/features/sip
+      dockerfile: Dockerfile
+    env_file: src/features/sip/.env
+    restart: unless-stopped

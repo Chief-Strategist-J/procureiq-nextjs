@@ -1,0 +1,16 @@
+name: google_cascade
+description: Google speech stack voice assistant (Google STT -> Gemini LLM -> Google TTS)
+criticality: medium
+dependencies:
+  - videosdk-plugins-google
+  - videosdk-plugins-silero
+  - python-dotenv
+  - pyjwt
+tracing:
+  backend: langfuse (self-hosted)
+  compose: ../../../deploy/docker/docker-compose.langfuse.yaml
+  enabled_via: TRACING_ENABLED=true in .env
+  requires:
+    - LANGFUSE_HOST
+    - LANGFUSE_PUBLIC_KEY
+    - LANGFUSE_SECRET_KEY

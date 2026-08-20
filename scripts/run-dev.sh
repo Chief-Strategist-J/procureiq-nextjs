@@ -1,0 +1,411 @@
+#!/usr/bin/env bash
+
+# Helper script to run dev services in the correct environment (Local vs Production)
+# Based on the configuration in the root .env file.
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
+ROOT_ENV_FILE="$PROJECT_ROOT/.env"
+
+# Colors for output
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+if [ ! -f "$ROOT_ENV_FILE" ]; then
+    echo -e "${YELLOW}Root .env file not found! Generating default local .env file...${NC}"
+    cat << 'EOF' > "$ROOT_ENV_FILE"
+PROCUREIQ_ENV=local
+
+# Local Environment Variables
+LOCAL_DB_HOST=localhost
+LOCAL_DB_PORT=5432
+LOCAL_DB_NAME=procureiq
+LOCAL_DB_USER=postgres
+LOCAL_DB_PASS=postgres
+LOCAL_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/procureiq
+
+LOCAL_NEXT_SPRINGBOOT_API=http://localhost:8080/api/v1
+LOCAL_NEXT_PYTHON_API=http://localhost:8000/api/v1
+LOCAL_NEXT_WEBRTC_WS=ws://localhost:8080/webrtc
+
+# Production / Remote Supabase Environment Variables
+PROD_DB_HOST=localhost
+PROD_DB_PORT=5432
+PROD_DB_NAME=procureiq
+PROD_DB_USER=postgres
+PROD_DB_PASS=postgres
+PROD_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/procureiq
+
+PROD_NEXT_SPRINGBOOT_API=http://localhost:8080/api/v1
+PROD_NEXT_PYTHON_API=http://localhost:8000/api/v1
+PROD_NEXT_WEBRTC_WS=ws://localhost:8080/webrtc
+EOF
+    echo -e "${GREEN}Default .env file successfully created at $ROOT_ENV_FILE!${NC}"
+fi
+
+# Load variables
+export $(grep -v '^#' "$ROOT_ENV_FILE" | xargs)
+
+ENV_MODE=${PROCUREIQ_ENV:-local}
+
+echo -e "${BLUE}===============================================${NC}"
+echo -e "Starting ProcureIQ standalone runner in ${GREEN}${ENV_MODE}${NC} mode"
+echo -e "${BLUE}===============================================${NC}"
+
+setup_env_vars() {
+    if [ "$ENV_MODE" = "local" ]; then
+        # Backend environment variables
+        export DB_HOST="$LOCAL_DB_HOST"
+        export DB_PORT="$LOCAL_DB_PORT"
+        export DB_NAME="$LOCAL_DB_NAME"
+        export SPRING_DATASOURCE_URL="jdbc:postgresql://${LOCAL_DB_HOST}:${LOCAL_DB_PORT}/${LOCAL_DB_NAME}?stringtype=unspecified"
+        export SPRING_DATASOURCE_USERNAME="$LOCAL_DB_USER"
+        export SPRING_DATASOURCE_PASSWORD="$LOCAL_DB_PASS"
+        export DATABASE_URL="$LOCAL_DATABASE_URL"
+        
+        # Frontend environment variables
+        export NEXT_PUBLIC_API_URL="$LOCAL_NEXT_SPRINGBOOT_API"
+        export NEXT_PUBLIC_PYTHON_API_URL="$LOCAL_NEXT_PYTHON_API"
+        export NEXT_PUBLIC_WEBRTC_SIGNALING_URL="$LOCAL_NEXT_WEBRTC_WS"
+        export NEXT_DISABLE_SWC_LOCKFILE_PATCH=1
+    else
+        # Backend environment variables (Production / Remote Supabase)
+        export DB_HOST="$PROD_DB_HOST"
+        export DB_PORT="$PROD_DB_PORT"
+        export DB_NAME="$PROD_DB_NAME"
+        export SPRING_DATASOURCE_URL="jdbc:postgresql://${PROD_DB_HOST}:${PROD_DB_PORT}/${PROD_DB_NAME}?stringtype=unspecified"
+        export SPRING_DATASOURCE_USERNAME="$PROD_DB_USER"
+        export SPRING_DATASOURCE_PASSWORD="$PROD_DB_PASS"
+        export DATABASE_URL="$PROD_DATABASE_URL"
+        
+        # Frontend environment variables
+        export NEXT_PUBLIC_API_URL="$PROD_NEXT_SPRINGBOOT_API"
+        export NEXT_PUBLIC_PYTHON_API_URL="$PROD_NEXT_PYTHON_API"
+        export NEXT_PUBLIC_WEBRTC_SIGNALING_URL="$PROD_NEXT_WEBRTC_WS"
+        export NEXT_DISABLE_SWC_LOCKFILE_PATCH=1
+    fi
+}
+
+setup_local_database_schemas() {
+    if [ "$ENV_MODE" = "local" ]; then
+        echo -e "${YELLOW}Checking if local database schemas/tables need to be created...${NC}"
+        
+        if ! docker ps --format '{{.Names}}' | grep -q "^procureiq-alloydb-local$"; then
+            echo -e "${YELLOW}Attempting to start database container (procureiq-alloydb-local)...${NC}"
+            docker start procureiq-alloydb-local >/dev/null 2>&1 || "$PROJECT_ROOT/deploy/alloydb/local/alloydb-cli.sh" local-up >/dev/null 2>&1 || true
+            sleep 3
+        fi
+
+        if ! docker ps --format '{{.Names}}' | grep -q "^procureiq-redis$"; then
+            echo -e "${YELLOW}Attempting to start Redis container (procureiq-redis)...${NC}"
+            docker start procureiq-redis >/dev/null 2>&1 || docker compose -f "$PROJECT_ROOT/deploy/alloydb/local/docker-compose.yml" up -d redis >/dev/null 2>&1 || true
+        fi
+
+        if ! docker ps --format '{{.Names}}' | grep -q "^procureiq-kafka$"; then
+            echo -e "${YELLOW}Attempting to start Kafka container (procureiq-kafka)...${NC}"
+            docker start procureiq-kafka >/dev/null 2>&1 || docker compose -f "$PROJECT_ROOT/deploy/alloydb/local/docker-compose.yml" up -d kafka >/dev/null 2>&1 || true
+            sleep 3
+        fi
+
+        # Run Kafka Topic Migrations
+        "$SCRIPT_DIR/kafka-init-topics.sh" >/dev/null 2>&1 || true
+
+        # Guarantee database $LOCAL_DB_NAME exists in PostgreSQL
+        docker exec -i procureiq-alloydb-local psql -U "$LOCAL_DB_USER" -d postgres -c "CREATE DATABASE $LOCAL_DB_NAME;" >/dev/null 2>&1 || true
+
+        local table_exists
+        table_exists=$(docker exec -i procureiq-alloydb-local psql -U "$LOCAL_DB_USER" -d "$LOCAL_DB_NAME" -tAc "SELECT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'channel_deliveries');" 2>/dev/null || echo "false")
+        
+        if [ "$table_exists" != "t" ]; then
+            echo -e "${YELLOW}Table 'channel_deliveries' not found. Running database migrations...${NC}"
+            
+            local migration_dir="$PROJECT_ROOT/packages/java/procureiq-springboot/database/migrations"
+            for sql_file in $(ls "$migration_dir"/00*.sql | sort); do
+                echo -e "Applying migration: ${BLUE}$(basename "$sql_file")${NC}"
+                docker exec -i procureiq-alloydb-local psql -U "$LOCAL_DB_USER" -d "$LOCAL_DB_NAME" < "$sql_file" > /dev/null
+            done
+            
+            echo -e "${GREEN}Database migrations completed successfully!${NC}"
+        else
+            echo -e "${GREEN}Database schemas are already initialized.${NC}"
+        fi
+    fi
+}
+
+free_port() {
+    local target_port="$1"
+    if [ -n "$target_port" ]; then
+        echo -e "${YELLOW}Force releasing port ${target_port}...${NC}"
+        fuser -k -9 -n tcp "${target_port}" >/dev/null 2>&1 || true
+        fuser -k -9 "${target_port}/tcp" >/dev/null 2>&1 || true
+        lsof -t -i:"${target_port}" | xargs -r kill -9 >/dev/null 2>&1 || true
+        if command -v ss &>/dev/null; then
+            local pids=$(ss -lptn "sport = :${target_port}" 2>/dev/null | grep -oP 'pid=\K\d+')
+            if [ -n "$pids" ]; then
+                echo "$pids" | xargs -r kill -9 >/dev/null 2>&1 || true
+            fi
+        fi
+        sleep 1
+    fi
+}
+
+run_backend_springboot() {
+    setup_env_vars
+    
+    if [ "$ENV_MODE" = "local" ]; then
+        free_port 6565
+        
+        echo -e "${YELLOW}Ensuring local database & Redis containers are running...${NC}"
+        if ! docker ps --format '{{.Names}}' | grep -q "^procureiq-alloydb-local$"; then
+            docker compose -f "$PROJECT_ROOT/deploy/alloydb/local/docker-compose.yml" up -d alloydb-omni >/dev/null 2>&1 || true
+            sleep 3
+        fi
+        if ! docker ps --format '{{.Names}}' | grep -q "^procureiq-redis$"; then
+            docker compose -f "$PROJECT_ROOT/deploy/alloydb/local/docker-compose.yml" up -d redis >/dev/null 2>&1 || true
+        fi
+    fi
+    
+    setup_local_database_schemas
+    run_db_backup
+    
+    local table_exists
+    if [ "$ENV_MODE" = "local" ]; then
+        table_exists=$(docker exec -i procureiq-alloydb-local psql -U "$LOCAL_DB_USER" -d "$LOCAL_DB_NAME" -tAc "SELECT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'channel_deliveries');" 2>/dev/null || echo "false")
+    fi
+
+    if [ "$table_exists" = "t" ]; then
+        echo -e "${GREEN}Database tables exist. Setting Hibernate DDL-Auto to 'none'...${NC}"
+        export SPRING_JPA_HIBERNATE_DDL_AUTO="none"
+    else
+        echo -e "${YELLOW}Database tables do not exist. Setting Hibernate DDL-Auto to 'update'...${NC}"
+        export SPRING_JPA_HIBERNATE_DDL_AUTO="update"
+    fi
+
+    echo -e "${YELLOW}Cleaning target directory for Spring Boot...${NC}"
+    cd "$PROJECT_ROOT/packages/java/procureiq-springboot"
+    ./mvnw clean
+    
+    echo -e "${YELLOW}Starting Spring Boot Backend...${NC}"
+    ./mvnw spring-boot:run
+}
+
+run_backend_dotnet() {
+    setup_env_vars
+    
+    if [ "$ENV_MODE" = "local" ]; then
+        free_port 5000
+    fi
+    
+    setup_local_database_schemas
+    run_db_backup
+    echo -e "${YELLOW}Starting .NET (dotnet) Backend...${NC}"
+    
+    if [ -d "$PROJECT_ROOT/packages/dotnet" ]; then
+        cd "$PROJECT_ROOT/packages/dotnet"
+        dotnet run
+    else
+        echo -e "${RED}Error: .NET backend package directory (packages/dotnet) not found!${NC}"
+        exit 1
+    fi
+}
+
+run_backend_python() {
+    setup_env_vars
+    
+    export KAFKA_BOOTSTRAP_SERVERS="localhost:9092"
+    export SPRINGBOOT_API_URL="http://localhost:6565"
+    export PYTHON_PORT="8000"
+
+    if [ "$ENV_MODE" = "local" ]; then
+        free_port 8000
+    fi
+    
+    setup_local_database_schemas
+    run_db_backup
+    
+    cd "$PROJECT_ROOT/packages/python/procureiq-python"
+    
+    if [ -f "venv/bin/activate" ]; then
+        source venv/bin/activate 2>/dev/null || true
+    fi
+    
+    if [ -f "requirements.txt" ]; then
+        echo -e "${YELLOW}Verifying Python dependencies...${NC}"
+        python3 -m pip install -r requirements.txt --user 2>/dev/null || pip install -r requirements.txt 2>/dev/null || true
+    fi
+    
+    local uvi_cmd="uvicorn"
+    if ! command -v uvicorn >/dev/null 2>&1; then
+        if [ -f "venv/bin/uvicorn" ]; then
+            uvi_cmd="venv/bin/uvicorn"
+        else
+            uvi_cmd="python3 -m uvicorn"
+        fi
+    fi
+    
+    echo -e "${GREEN}Starting FastAPI Python Backend (Port 8000, Kafka: localhost:9092)...${NC}"
+    $uvi_cmd src.api.main:app --reload --port 8000
+}
+
+run_db_backup() {
+    setup_env_vars
+    if [ "$ENV_MODE" = "local" ]; then
+        echo -e "${YELLOW}Starting local database backup...${NC}"
+        mkdir -p "$PROJECT_ROOT/deploy/alloydb/local/backups"
+        local file_path="$PROJECT_ROOT/deploy/alloydb/local/backups/latest_db_backup.sql.gz"
+        docker exec -t procureiq-alloydb-local pg_dump -U "$LOCAL_DB_USER" -d "$LOCAL_DB_NAME" | gzip > "$file_path"
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}Backup completed successfully! Saved to $file_path${NC}"
+        else
+            echo -e "${RED}Backup failed!${NC}"
+        fi
+    fi
+}
+
+run_db_restore() {
+    setup_env_vars
+    if [ "$ENV_MODE" = "local" ]; then
+        local file_path="$PROJECT_ROOT/deploy/alloydb/local/backups/latest_db_backup.sql.gz"
+        if [ ! -f "$file_path" ]; then
+            echo -e "${RED}Error: Backup file $file_path not found!${NC}"
+            exit 1
+        fi
+        echo -e "${YELLOW}Restoring database from: $file_path...${NC}"
+        docker exec -i procureiq-alloydb-local psql -U "$LOCAL_DB_USER" -d "$LOCAL_DB_NAME" -c "DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public;" > /dev/null
+        gunzip -c "$file_path" | docker exec -i procureiq-alloydb-local psql -U "$LOCAL_DB_USER" -d "$LOCAL_DB_NAME"
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}Restore completed successfully!${NC}"
+        else
+            echo -e "${RED}Restore failed!${NC}"
+        fi
+    fi
+}
+
+run_frontend() {
+    local target="$1"
+    setup_env_vars
+    local port=3000
+    case "$target" in
+        procureiq-nextjs|nextjs|frontend|next) port=3000 ;;
+        mfe-crypto) port=8991 ;;
+        mfe-auth) port=8992 ;;
+        mfe-notifications) port=8993 ;;
+        mfe-email) port=8994 ;;
+        mfe-campaigns) port=8995 ;;
+        mfe-fieldservice) port=8996 ;;
+        mfe-github) port=8997 ;;
+        mfe-jobs) port=8998 ;;
+    esac
+    
+    if [ "$ENV_MODE" = "local" ]; then
+        free_port "$port"
+    fi
+    echo -e "${YELLOW}Cleaning stale Next.js .next build cache...${NC}"
+    rm -rf "$PROJECT_ROOT/packages/node/procureiq-nextjs/.next"
+
+    echo -e "${YELLOW}Starting Next.js Frontend (${target}) on port ${port}...${NC}"
+    cd "$PROJECT_ROOT/packages/node/procureiq-nextjs"
+    cat << EOF > .env.local
+NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+NEXT_PUBLIC_PYTHON_API_URL=$NEXT_PUBLIC_PYTHON_API_URL
+NEXT_PUBLIC_WEBRTC_SIGNALING_URL=$NEXT_PUBLIC_WEBRTC_SIGNALING_URL
+NEXT_DISABLE_SWC_LOCKFILE_PATCH=1
+EOF
+    export NEXT_DISABLE_SWC_LOCKFILE_PATCH=1
+    if [ -d "$target" ]; then
+        NEXT_DISABLE_SWC_LOCKFILE_PATCH=1 npx next dev "$target" -p "$port"
+    else
+        NEXT_DISABLE_SWC_LOCKFILE_PATCH=1 npx next dev -p "$port"
+    fi
+}
+
+run_all_mfes() {
+    setup_env_vars
+    
+    echo -e "${YELLOW}Configuring frontend environment for backend integration...${NC}"
+    cd "$PROJECT_ROOT/packages/node/procureiq-nextjs"
+    rm -rf "$PROJECT_ROOT/packages/node/procureiq-nextjs/.next"
+    cat << EOF > .env.local
+NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+NEXT_PUBLIC_PYTHON_API_URL=$NEXT_PUBLIC_PYTHON_API_URL
+NEXT_PUBLIC_WEBRTC_SIGNALING_URL=$NEXT_PUBLIC_WEBRTC_SIGNALING_URL
+EOF
+
+    echo -e "${YELLOW}Cleaning up port 3000 upfront...${NC}"
+    free_port 3000
+
+    echo -e "${GREEN}Starting Next.js frontend dev server on port 3000...${NC}"
+    npx next dev -p 3000
+}
+
+run_prod_mfes() {
+    setup_env_vars
+    cd "$PROJECT_ROOT/packages/node/procureiq-nextjs"
+    cat << EOF > .env.local
+NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+NEXT_PUBLIC_PYTHON_API_URL=$NEXT_PUBLIC_PYTHON_API_URL
+NEXT_PUBLIC_WEBRTC_SIGNALING_URL=$NEXT_PUBLIC_WEBRTC_SIGNALING_URL
+EOF
+
+    free_port 3000
+
+    echo -e "${YELLOW}Building optimized production bundle...${NC}"
+    npm run build
+
+    echo -e "${GREEN}Starting production server on port 3000...${NC}"
+    npx next start -p 3000
+}
+
+show_help() {
+    echo "Usage: ./scripts/run-dev.sh [command]"
+    echo ""
+    echo "Backend Commands:"
+    echo "  springboot      - Run Spring Boot Java backend (Port 6565)"
+    echo "  python          - Run FastAPI Python backend (Port 8000)"
+    echo "  dotnet          - Run .NET backend (Port 5000)"
+    echo ""
+    echo "Frontend Commands:"
+    echo "  frontend        - Run Next.js frontend dev server (Port 3000)"
+    echo "  nextjs          - Run Next.js frontend dev server (Port 3000)"
+    echo "  prod-all        - Build & run production frontend server (Port 3000)"
+    echo "  mfe-auth        - Run Auth frontend on port 8992"
+    echo "  all-mfes        - Run Next.js frontend dev server"
+    echo ""
+    echo "Database Commands:"
+    echo "  backup          - Backup local database"
+    echo "  restore         - Restore local database from latest backup"
+    echo "  help            - Show this menu"
+}
+
+case "$1" in
+    springboot)
+        run_backend_springboot
+        ;;
+    python)
+        run_backend_python
+        ;;
+    dotnet)
+        run_backend_dotnet
+        ;;
+    prod-all)
+        run_prod_mfes
+        ;;
+    all-mfes)
+        run_all_mfes
+        ;;
+    frontend|nextjs|next|procureiq-nextjs|mfe-crypto|mfe-auth|mfe-notifications|mfe-email|mfe-campaigns|mfe-fieldservice|mfe-github|mfe-jobs)
+        run_frontend "$1"
+        ;;
+    backup)
+        run_db_backup
+        ;;
+    restore)
+        run_db_restore
+        ;;
+    help|*)
+        show_help
+        ;;
+esac

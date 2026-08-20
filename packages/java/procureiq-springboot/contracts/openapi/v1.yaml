@@ -1,0 +1,4439 @@
+openapi: 3.0.3
+info:
+  title: ProcureIQ Sales API
+  description: API for managing CRM Sales Orders, Products, Accounts, and Notifications in ProcureIQ.
+  version: 1.6.0
+paths:
+  /api/v1/auth/signup:
+    post:
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupRequest'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseUserResponse'
+        '400':
+          description: Username or email already exists / invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseErrorOnly'
+
+  /api/v1/auth/login:
+    post:
+      summary: Authenticate user and retrieve JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Successful authentication
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseLoginResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseErrorOnly'
+
+  /api/v1/auth/forgot-password:
+    post:
+      summary: Request a password reset link/token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '200':
+          description: If the email matches an account, a reset token is generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+        '400':
+          description: Invalid email format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseErrorOnly'
+
+  /api/v1/auth/reset-password:
+    post:
+      summary: Reset password using token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: Password reset successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+        '400':
+          description: Invalid or expired reset token / validation failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseErrorOnly'
+
+  /api/v1/notifications:
+    get:
+      summary: Retrieve paginated notifications feed for the authenticated user
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [all, pending, read, dismissed, failed]
+            default: all
+      responses:
+        '200':
+          description: A paginated list of notifications
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseNotificationListResponse'
+    post:
+      summary: Trigger / send a new notification (producer invocation)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendNotificationRequest'
+      responses:
+        '202':
+          description: Notification accepted for delivery
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+
+  /api/v1/notifications/{id}/status:
+    put:
+      summary: Update status of a notification for the recipient
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateNotificationStatusRequest'
+      responses:
+        '200':
+          description: Status updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+
+  /api/v1/notifications/unread-count:
+    get:
+      summary: Retrieve the combined count of unread targeted and broadcast notifications
+      responses:
+        '200':
+          description: Combined unread count response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseUnreadCountResponse'
+
+  /api/v1/notifications/devices:
+    post:
+      summary: Register or update a user device for push notifications
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterDeviceRequest'
+      responses:
+        '200':
+          description: Device registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+
+  /api/v1/reminders:
+    get:
+      summary: Retrieve all reminders
+      responses:
+        '200':
+          description: Reminders list retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseReminderList'
+    post:
+      summary: Create new reminder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Reminder'
+      responses:
+        '201':
+          description: Reminder created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseReminder'
+
+  /api/v1/reminders/{id}:
+    put:
+      summary: Update reminder details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Reminder'
+      responses:
+        '200':
+          description: Reminder updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseReminder'
+    delete:
+      summary: Delete reminder
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Reminder deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+  /api/v1/fieldservice/operating-hours:
+    get:
+      summary: Retrieve all operating hours
+      responses:
+        '200':
+          description: Operating hours list retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseOperatingHoursResponseList'
+    post:
+      summary: Create operating hours
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OperatingHoursRequest'
+      responses:
+        '201':
+          description: Operating hours created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseOperatingHoursResponse'
+
+  /api/v1/fieldservice/operating-hours/{id}:
+    get:
+      summary: Retrieve operating hours details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Operating hours retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseOperatingHoursResponse'
+    put:
+      summary: Update operating hours details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OperatingHoursRequest'
+      responses:
+        '200':
+          description: Operating hours updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseOperatingHoursResponse'
+    delete:
+      summary: Soft-delete operating hours
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Operating hours deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+
+  /api/v1/fieldservice/territories:
+    get:
+      summary: Retrieve all service territories
+      responses:
+        '200':
+          description: Service territories list retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseServiceTerritoryResponseList'
+    post:
+      summary: Create service territory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceTerritoryRequest'
+      responses:
+        '201':
+          description: Service territory created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseServiceTerritoryResponse'
+
+  /api/v1/fieldservice/territories/{id}:
+    get:
+      summary: Retrieve service territory details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Service territory retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseServiceTerritoryResponse'
+    put:
+      summary: Update service territory details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceTerritoryRequest'
+      responses:
+        '200':
+          description: Service territory updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseServiceTerritoryResponse'
+    delete:
+      summary: Soft-delete service territory
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Service territory deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+
+  /api/v1/fieldservice/resources:
+    get:
+      summary: Retrieve all service resources
+      responses:
+        '200':
+          description: Service resources list retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseServiceResourceResponseList'
+    post:
+      summary: Create service resource
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceResourceRequest'
+      responses:
+        '201':
+          description: Service resource created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseServiceResourceResponse'
+
+  /api/v1/fieldservice/resources/{id}:
+    get:
+      summary: Retrieve service resource details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Service resource retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseServiceResourceResponse'
+    put:
+      summary: Update service resource details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceResourceRequest'
+      responses:
+        '200':
+          description: Service resource updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseServiceResourceResponse'
+    delete:
+      summary: Soft-delete service resource
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Service resource deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+
+  /api/v1/fieldservice/work-types:
+    post:
+      summary: Create work type
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkTypeRequest'
+      responses:
+        '201':
+          description: Work type created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkTypeResponse'
+
+  /api/v1/fieldservice/work-types/{id}:
+    get:
+      summary: Retrieve work type details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Work type retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkTypeResponse'
+    put:
+      summary: Update work type details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkTypeRequest'
+      responses:
+        '200':
+          description: Work type updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkTypeResponse'
+    delete:
+      summary: Soft-delete work type
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Work type deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+
+  /api/v1/fieldservice/work-orders:
+    get:
+      summary: Retrieve all work orders
+      responses:
+        '200':
+          description: Work orders list retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOrderResponseList'
+    post:
+      summary: Create work order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkOrderRequest'
+      responses:
+        '201':
+          description: Work order created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOrderResponse'
+
+  /api/v1/fieldservice/work-orders/{id}:
+    get:
+      summary: Retrieve work order details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Work order retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOrderResponse'
+    put:
+      summary: Update work order details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkOrderRequest'
+      responses:
+        '200':
+          description: Work order updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOrderResponse'
+    delete:
+      summary: Soft-delete work order
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Work order deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+
+  /api/v1/fieldservice/appointments:
+    get:
+      summary: Retrieve all service appointments
+      responses:
+        '200':
+          description: Service appointments list retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseServiceAppointmentResponseList'
+    post:
+      summary: Create service appointment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceAppointmentRequest'
+      responses:
+        '201':
+          description: Service appointment created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseServiceAppointmentResponse'
+
+  /api/v1/fieldservice/appointments/{id}:
+    get:
+      summary: Retrieve service appointment details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Service appointment retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseServiceAppointmentResponse'
+    put:
+      summary: Update service appointment details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceAppointmentRequest'
+      responses:
+        '200':
+          description: Service appointment updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseServiceAppointmentResponse'
+    delete:
+      summary: Soft-delete service appointment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Service appointment deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+
+  /api/v1/fieldservice/appointments/{appointmentId}/assign:
+    post:
+      summary: Assign service resource to service appointment
+      parameters:
+        - name: appointmentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignResourceRequest'
+      responses:
+        '201':
+          description: Service resource assigned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAssignedResourceResponse'
+
+  /api/v1/fieldservice/assigned-resources/{id}:
+    delete:
+      summary: Remove service resource assignment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Assignment removed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+
+  /api/v1/fieldservice/appointments/{appointmentId}/candidates:
+    get:
+      summary: Retrieve candidate service resources for appointment using FSL constraints matching
+      parameters:
+        - name: appointmentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of candidate service resources
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  code:
+                    type: integer
+                    example: 200
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ServiceResourceResponse'
+
+  /api/v1/fieldservice/time-slots:
+    post:
+      summary: Create time slot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TimeSlotRequest'
+      responses:
+        '201':
+          description: Created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseTimeSlotResponse'
+
+  /api/v1/fieldservice/time-slots/{id}:
+    get:
+      summary: Retrieve time slot
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseTimeSlotResponse'
+    put:
+      summary: Update time slot
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TimeSlotRequest'
+      responses:
+        '200':
+          description: Updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseTimeSlotResponse'
+    delete:
+      summary: Delete time slot
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+
+  /api/v1/fieldservice/skills:
+    post:
+      summary: Create skill
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SkillRequest'
+      responses:
+        '201':
+          description: Created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseSkillResponse'
+
+  /api/v1/fieldservice/skills/{id}:
+    get:
+      summary: Retrieve skill
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseSkillResponse'
+    put:
+      summary: Update skill
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SkillRequest'
+      responses:
+        '200':
+          description: Updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseSkillResponse'
+    delete:
+      summary: Delete skill
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+
+  /api/v1/fieldservice/skill-requirements:
+    post:
+      summary: Create skill requirement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SkillRequirementRequest'
+      responses:
+        '201':
+          description: Created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseSkillRequirementResponse'
+
+  /api/v1/fieldservice/skill-requirements/{id}:
+    get:
+      summary: Retrieve skill requirement
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseSkillRequirementResponse'
+    put:
+      summary: Update skill requirement
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SkillRequirementRequest'
+      responses:
+        '200':
+          description: Updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseSkillRequirementResponse'
+    delete:
+      summary: Delete skill requirement
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+
+  /api/v1/fieldservice/asset-relationships:
+    post:
+      summary: Create asset relationship
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssetRelationshipRequest'
+      responses:
+        '201':
+          description: Created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAssetRelationshipResponse'
+
+  /api/v1/fieldservice/asset-relationships/{id}:
+    get:
+      summary: Retrieve asset relationship
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAssetRelationshipResponse'
+    put:
+      summary: Update asset relationship
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssetRelationshipRequest'
+      responses:
+        '200':
+          description: Updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAssetRelationshipResponse'
+    delete:
+      summary: Delete asset relationship
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+
+  /api/v1/fieldservice/service-crews:
+    post:
+      summary: Create service crew
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceCrewRequest'
+      responses:
+        '201':
+          description: Created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseServiceCrewResponse'
+
+  /api/v1/fieldservice/service-crews/{id}:
+    get:
+      summary: Retrieve service crew
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseServiceCrewResponse'
+    put:
+      summary: Update service crew
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceCrewRequest'
+      responses:
+        '200':
+          description: Updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseServiceCrewResponse'
+    delete:
+      summary: Delete service crew
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+
+  /api/v1/fieldservice/service-crew-members:
+    post:
+      summary: Create service crew member
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceCrewMemberRequest'
+      responses:
+        '201':
+          description: Created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseServiceCrewMemberResponse'
+
+  /api/v1/fieldservice/service-crew-members/{id}:
+    get:
+      summary: Retrieve service crew member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseServiceCrewMemberResponse'
+    put:
+      summary: Update service crew member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceCrewMemberRequest'
+      responses:
+        '200':
+          description: Updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseServiceCrewMemberResponse'
+    delete:
+      summary: Delete service crew member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+
+  /api/v1/fieldservice/service-resource-skills:
+    post:
+      summary: Create service resource skill
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceResourceSkillRequest'
+      responses:
+        '201':
+          description: Created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseServiceResourceSkillResponse'
+
+  /api/v1/fieldservice/service-resource-skills/{id}:
+    get:
+      summary: Retrieve service resource skill
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseServiceResourceSkillResponse'
+    put:
+      summary: Update service resource skill
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceResourceSkillRequest'
+      responses:
+        '200':
+          description: Updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseServiceResourceSkillResponse'
+    delete:
+      summary: Delete service resource skill
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+
+  /api/v1/fieldservice/service-territory-members:
+    post:
+      summary: Create service territory member
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceTerritoryMemberRequest'
+      responses:
+        '201':
+          description: Created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseServiceTerritoryMemberResponse'
+
+  /api/v1/fieldservice/service-territory-members/{id}:
+    get:
+      summary: Retrieve service territory member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseServiceTerritoryMemberResponse'
+    put:
+      summary: Update service territory member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceTerritoryMemberRequest'
+      responses:
+        '200':
+          description: Updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseServiceTerritoryMemberResponse'
+    delete:
+      summary: Delete service territory member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+
+  /api/v1/fieldservice/shifts:
+    post:
+      summary: Create shift
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShiftRequest'
+      responses:
+        '201':
+          description: Created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseShiftResponse'
+
+  /api/v1/fieldservice/shifts/{id}:
+    get:
+      summary: Retrieve shift
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseShiftResponse'
+    put:
+      summary: Update shift
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShiftRequest'
+      responses:
+        '200':
+          description: Updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseShiftResponse'
+    delete:
+      summary: Delete shift
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+
+  /api/v1/fieldservice/service-resource-capacities:
+    post:
+      summary: Create service resource capacity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceResourceCapacityRequest'
+      responses:
+        '201':
+          description: Created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseServiceResourceCapacityResponse'
+
+  /api/v1/fieldservice/service-resource-capacities/{id}:
+    get:
+      summary: Retrieve service resource capacity
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseServiceResourceCapacityResponse'
+    put:
+      summary: Update service resource capacity
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceResourceCapacityRequest'
+      responses:
+        '200':
+          description: Updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseServiceResourceCapacityResponse'
+    delete:
+      summary: Delete service resource capacity
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+
+  /api/v1/fieldservice/resource-absences:
+    post:
+      summary: Create resource absence
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResourceAbsenceRequest'
+      responses:
+        '201':
+          description: Created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseResourceAbsenceResponse'
+
+  /api/v1/fieldservice/resource-absences/{id}:
+    get:
+      summary: Retrieve resource absence
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseResourceAbsenceResponse'
+    put:
+      summary: Update resource absence
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResourceAbsenceRequest'
+      responses:
+        '200':
+          description: Updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseResourceAbsenceResponse'
+    delete:
+      summary: Delete resource absence
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+
+  /api/v1/fieldservice/resource-preferences:
+    post:
+      summary: Create resource preference
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResourcePreferenceRequest'
+      responses:
+        '201':
+          description: Created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseResourcePreferenceResponse'
+
+  /api/v1/fieldservice/resource-preferences/{id}:
+    get:
+      summary: Retrieve resource preference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseResourcePreferenceResponse'
+    put:
+      summary: Update resource preference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResourcePreferenceRequest'
+      responses:
+        '200':
+          description: Updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseResourcePreferenceResponse'
+    delete:
+      summary: Delete resource preference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+
+  /api/v1/fieldservice/maintenance-plans:
+    post:
+      summary: Create maintenance plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MaintenancePlanRequest'
+      responses:
+        '201':
+          description: Created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseMaintenancePlanResponse'
+
+  /api/v1/fieldservice/maintenance-plans/{id}:
+    get:
+      summary: Retrieve maintenance plan
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseMaintenancePlanResponse'
+    put:
+      summary: Update maintenance plan
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MaintenancePlanRequest'
+      responses:
+        '200':
+          description: Updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseMaintenancePlanResponse'
+    delete:
+      summary: Delete maintenance plan
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+
+  /api/v1/fieldservice/milestones:
+    post:
+      summary: Create milestone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MilestoneRequest'
+      responses:
+        '201':
+          description: Created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseMilestoneResponse'
+
+  /api/v1/fieldservice/milestones/{id}:
+    get:
+      summary: Retrieve milestone
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseMilestoneResponse'
+    put:
+      summary: Update milestone
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MilestoneRequest'
+      responses:
+        '200':
+          description: Updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseMilestoneResponse'
+    delete:
+      summary: Delete milestone
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+
+  /api/v1/fieldservice/case-milestones:
+    post:
+      summary: Create case milestone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaseMilestoneRequest'
+      responses:
+        '201':
+          description: Created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseCaseMilestoneResponse'
+
+  /api/v1/fieldservice/case-milestones/{id}:
+    get:
+      summary: Retrieve case milestone
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseCaseMilestoneResponse'
+    put:
+      summary: Update case milestone
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaseMilestoneRequest'
+      responses:
+        '200':
+          description: Updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseCaseMilestoneResponse'
+    delete:
+      summary: Delete case milestone
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+
+  /api/v1/campaigns:
+    get:
+      summary: Retrieve list of campaigns
+      responses:
+        '200':
+          description: List of campaigns retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseCampaignList'
+    post:
+      summary: Create a new campaign
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CampaignRequest'
+      responses:
+        '201':
+          description: Campaign created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseCampaign'
+
+  /api/v1/campaigns/{id}:
+    get:
+      summary: Retrieve campaign by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Campaign retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseCampaign'
+    put:
+      summary: Update a campaign
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CampaignRequest'
+      responses:
+        '200':
+          description: Campaign updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseCampaign'
+    delete:
+      summary: Delete a campaign
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Campaign deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+
+  /api/v1/campaigns/schedules:
+    get:
+      summary: Retrieve list of scheduled emails
+      responses:
+        '200':
+          description: List of scheduled emails retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseScheduledEmailList'
+    post:
+      summary: Create a new scheduled email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduledEmailRequest'
+      responses:
+        '201':
+          description: Scheduled email created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseScheduledEmail'
+
+  /api/v1/campaigns/schedules/{id}:
+    get:
+      summary: Retrieve scheduled email by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Scheduled email retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseScheduledEmail'
+    put:
+      summary: Update a scheduled email
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduledEmailRequest'
+      responses:
+        '200':
+          description: Scheduled email updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseScheduledEmail'
+    delete:
+      summary: Delete a scheduled email
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Scheduled email deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+
+  /api/v1/campaigns/recipients:
+    get:
+      summary: Retrieve list of recipients
+      responses:
+        '200':
+          description: List of recipients retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseRecipientList'
+    post:
+      summary: Create a new recipient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecipientRequest'
+      responses:
+        '201':
+          description: Recipient created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseRecipient'
+
+  /api/v1/campaigns/recipients/{id}:
+    get:
+      summary: Retrieve recipient by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Recipient retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseRecipient'
+    put:
+      summary: Update a recipient
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecipientRequest'
+      responses:
+        '200':
+          description: Recipient updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseRecipient'
+    delete:
+      summary: Delete a recipient
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Recipient deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+
+  /api/v1/jobs:
+    get:
+      summary: Retrieve list of jobs
+      responses:
+        '200':
+          description: List of jobs retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseJobList'
+    post:
+      summary: Create a new job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobRequest'
+      responses:
+        '201':
+          description: Job created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseJob'
+
+  /api/v1/jobs/{id}:
+    get:
+      summary: Retrieve job by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Job retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseJob'
+    put:
+      summary: Update a job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobRequest'
+      responses:
+        '200':
+          description: Job updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseJob'
+    delete:
+      summary: Delete a job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Job deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+
+  /api/v1/jobs/{id}/runs:
+    get:
+      summary: Retrieve list of runs for a job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of job runs retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseJobRunList'
+    post:
+      summary: Trigger/Create a job run
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '201':
+          description: Job run started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseJobRun'
+
+  /api/v1/jobs/runs/{runId}:
+    get:
+      summary: Retrieve job run by ID
+      parameters:
+        - name: runId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Job run retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseJobRun'
+
+  /api/v1/workflows:
+    get:
+      summary: Retrieve list of workflows
+      responses:
+        '200':
+          description: List of workflows retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkflowList'
+    post:
+      summary: Create a new workflow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowRequest'
+      responses:
+        '201':
+          description: Workflow created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkflow'
+
+  /api/v1/workflows/{id}:
+    get:
+      summary: Retrieve workflow by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Workflow retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkflow'
+    put:
+      summary: Update a workflow
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowRequest'
+      responses:
+        '200':
+          description: Workflow updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkflow'
+    delete:
+      summary: Delete a workflow
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Workflow deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+
+  /api/v1/workflows/{id}/runs:
+    get:
+      summary: Retrieve list of runs for a workflow
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of workflow runs retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkflowRunList'
+    post:
+      summary: Trigger/Create a workflow run
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '201':
+          description: Workflow run started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkflowRun'
+
+  /api/v1/workflows/runs/{runId}:
+    get:
+      summary: Retrieve workflow run by ID
+      parameters:
+        - name: runId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Workflow run retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkflowRun'
+
+  # ---------------------------------------------------------------------------
+  # Voice Call Scheduler Paths
+  # ---------------------------------------------------------------------------
+
+  /api/v1/voice/schedule:
+    post:
+      summary: Schedule a new outbound voice call
+      tags: [Voice]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleVoiceCallRequest'
+      responses:
+        '201':
+          description: Voice call scheduled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseScheduledCall'
+        '400':
+          description: Missing or invalid request fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseErrorOnly'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseErrorOnly'
+
+  /api/v1/voice/scheduled:
+    get:
+      summary: List all scheduled voice calls
+      tags: [Voice]
+      responses:
+        '200':
+          description: List of all scheduled voice calls
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseScheduledCallList'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseErrorOnly'
+
+  /api/v1/voice/{id}:
+    delete:
+      summary: Delete / cancel a scheduled voice call by ID
+      tags: [Voice]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Scheduled call deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseString'
+        '404':
+          description: Scheduled call not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseErrorOnly'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseErrorOnly'
+
+  /api/v1/github/templates:
+    get:
+      summary: Retrieve list of GitHub Action templates
+      responses:
+        '200':
+          description: List of GitHub Action templates retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseGithubActionTemplateList'
+
+  /api/v1/github/templates/{id}:
+    get:
+      summary: Retrieve GitHub Action template by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: GitHub Action template retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseGithubActionTemplate'
+        '400':
+          description: Template not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseErrorOnly'
+
+components:
+  schemas:
+    ApiError:
+      type: object
+      properties:
+        message:
+          type: string
+
+    ApiResponseErrorOnly:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        code:
+          type: integer
+          example: 400
+        data:
+          type: object
+          nullable: true
+          example: null
+        error:
+          $ref: '#/components/schemas/ApiError'
+
+    ApiResponseString:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 200
+        data:
+          type: string
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    ApiResponseUserResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 201
+        data:
+          $ref: '#/components/schemas/UserResponse'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    ApiResponseLoginResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 200
+        data:
+          $ref: '#/components/schemas/LoginResponse'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    ApiResponseNotificationListResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 200
+        data:
+          $ref: '#/components/schemas/NotificationListResponse'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    ApiResponseUnreadCountResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 200
+        data:
+          $ref: '#/components/schemas/UnreadCountResponse'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    ForgotPasswordRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+
+    ResetPasswordRequest:
+      type: object
+      required:
+        - token
+        - newPassword
+      properties:
+        token:
+          type: string
+        newPassword:
+          type: string
+
+    SignupRequest:
+      type: object
+      required:
+        - username
+        - password
+        - email
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        email:
+          type: string
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: '#/components/schemas/UserResponse'
+
+    NotificationResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        typeCode:
+          type: string
+        sourceService:
+          type: string
+        payload:
+          type: object
+        metadata:
+          type: object
+        priority:
+          type: integer
+        targetScope:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    NotificationListResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationResponse'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+
+    SendNotificationRequest:
+      type: object
+      required:
+        - typeCode
+        - sourceService
+        - targetScope
+        - payload
+      properties:
+        typeCode:
+          type: string
+        sourceService:
+          type: string
+        targetScope:
+          type: string
+          enum: [user, org, broadcast, segment]
+        targetId:
+          type: integer
+        dedupKey:
+          type: string
+        payload:
+          type: object
+        metadata:
+          type: object
+        priority:
+          type: integer
+        scheduledFor:
+          type: string
+          format: date-time
+
+    UpdateNotificationStatusRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [read, dismissed]
+
+    UnreadCountResponse:
+      type: object
+      properties:
+        unreadCount:
+          type: integer
+
+    RegisterDeviceRequest:
+      type: object
+      required:
+        - platform
+      properties:
+        platform:
+          type: string
+          enum: [web, ios, android]
+        pushToken:
+          type: string
+        webPushEndpoint:
+          type: object
+        appVersion:
+          type: string
+        osVersion:
+          type: string
+        capabilities:
+          type: object
+
+    OperatingHoursRequest:
+      type: object
+      required:
+        - name
+        - timezone
+      properties:
+        name:
+          type: string
+        timezone:
+          type: string
+
+    OperatingHoursResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        timezone:
+          type: string
+
+    ApiResponseOperatingHoursResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 201
+        data:
+          $ref: '#/components/schemas/OperatingHoursResponse'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    ServiceTerritoryRequest:
+      type: object
+      required:
+        - name
+        - operatingHoursId
+      properties:
+        name:
+          type: string
+        operatingHoursId:
+          type: integer
+        isActive:
+          type: boolean
+
+    ServiceTerritoryResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        operatingHoursId:
+          type: integer
+        isActive:
+          type: boolean
+
+    ApiResponseServiceTerritoryResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 201
+        data:
+          $ref: '#/components/schemas/ServiceTerritoryResponse'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    ServiceResourceRequest:
+      type: object
+      required:
+        - name
+        - resourceType
+      properties:
+        name:
+          type: string
+        resourceType:
+          type: string
+          enum: [technician, crew]
+        isActive:
+          type: boolean
+
+    ServiceResourceResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        resourceType:
+          type: string
+        isActive:
+          type: boolean
+
+    ApiResponseServiceResourceResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 201
+        data:
+          $ref: '#/components/schemas/ServiceResourceResponse'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    WorkTypeRequest:
+      type: object
+      required:
+        - name
+        - estimatedDuration
+        - durationType
+      properties:
+        name:
+          type: string
+        estimatedDuration:
+          type: number
+        durationType:
+          type: string
+          enum: [hours, minutes]
+        shouldAutoCreateAppointment:
+          type: boolean
+
+    WorkTypeResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        estimatedDuration:
+          type: number
+        durationType:
+          type: string
+        shouldAutoCreateAppointment:
+          type: boolean
+
+    ApiResponseWorkTypeResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 201
+        data:
+          $ref: '#/components/schemas/WorkTypeResponse'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    WorkOrderRequest:
+      type: object
+      required:
+        - subject
+      properties:
+        subject:
+          type: string
+        description:
+          type: string
+        workTypeId:
+          type: integer
+        status:
+          type: string
+        priority:
+          type: string
+        serviceTerritoryId:
+          type: integer
+        accountId:
+          type: integer
+
+    WorkOrderResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        subject:
+          type: string
+        description:
+          type: string
+        workTypeId:
+          type: integer
+        status:
+          type: string
+        priority:
+          type: string
+        serviceTerritoryId:
+          type: integer
+        accountId:
+          type: integer
+
+    ApiResponseWorkOrderResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 201
+        data:
+          $ref: '#/components/schemas/WorkOrderResponse'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    ServiceAppointmentRequest:
+      type: object
+      required:
+        - parentId
+        - parentType
+      properties:
+        parentId:
+          type: integer
+        parentType:
+          type: string
+          enum: [work_order, work_order_line_item]
+        status:
+          type: string
+        earliestStartPermitted:
+          type: string
+          format: date-time
+        dueDate:
+          type: string
+          format: date-time
+        arrivalWindowStart:
+          type: string
+          format: date-time
+        arrivalWindowEnd:
+          type: string
+          format: date-time
+        scheduledStart:
+          type: string
+          format: date-time
+        scheduledEnd:
+          type: string
+          format: date-time
+        duration:
+          type: number
+
+    ServiceAppointmentResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        parentId:
+          type: integer
+        parentType:
+          type: string
+        status:
+          type: string
+        earliestStartPermitted:
+          type: string
+          format: date-time
+        dueDate:
+          type: string
+          format: date-time
+        arrivalWindowStart:
+          type: string
+          format: date-time
+        arrivalWindowEnd:
+          type: string
+          format: date-time
+        scheduledStart:
+          type: string
+          format: date-time
+        scheduledEnd:
+          type: string
+          format: date-time
+        duration:
+          type: number
+
+    ApiResponseServiceAppointmentResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 201
+        data:
+          $ref: '#/components/schemas/ServiceAppointmentResponse'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    AssignResourceRequest:
+      type: object
+      required:
+        - serviceResourceId
+      properties:
+        serviceResourceId:
+          type: integer
+
+    AssignedResourceResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        serviceAppointmentId:
+          type: integer
+        serviceResourceId:
+          type: integer
+
+    ApiResponseAssignedResourceResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 201
+        data:
+          $ref: '#/components/schemas/AssignedResourceResponse'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    TimeSlotRequest:
+      type: object
+      required:
+        - operatingHoursId
+        - dayOfWeek
+        - startTime
+        - endTime
+      properties:
+        operatingHoursId:
+          type: integer
+        dayOfWeek:
+          type: integer
+        startTime:
+          type: string
+          example: "08:00:00"
+        endTime:
+          type: string
+          example: "17:00:00"
+
+    TimeSlotResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        operatingHoursId:
+          type: integer
+        dayOfWeek:
+          type: integer
+        startTime:
+          type: string
+        endTime:
+          type: string
+
+    ApiResponseTimeSlotResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 201
+        data:
+          $ref: '#/components/schemas/TimeSlotResponse'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    SkillRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+
+    SkillResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+
+    ApiResponseSkillResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 201
+        data:
+          $ref: '#/components/schemas/SkillResponse'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    SkillRequirementRequest:
+      type: object
+      required:
+        - skillId
+        - requiredForType
+        - requiredForId
+        - minSkillLevel
+      properties:
+        skillId:
+          type: integer
+        requiredForType:
+          type: string
+        requiredForId:
+          type: integer
+        minSkillLevel:
+          type: integer
+
+    SkillRequirementResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        skillId:
+          type: integer
+        requiredForType:
+          type: string
+        requiredForId:
+          type: integer
+        minSkillLevel:
+          type: integer
+
+    ApiResponseSkillRequirementResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 201
+        data:
+          $ref: '#/components/schemas/SkillRequirementResponse'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    AssetRelationshipRequest:
+      type: object
+      required:
+        - assetId
+        - relatedAssetId
+        - relationshipType
+      properties:
+        assetId:
+          type: integer
+        relatedAssetId:
+          type: integer
+        relationshipType:
+          type: string
+
+    AssetRelationshipResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        assetId:
+          type: integer
+        relatedAssetId:
+          type: integer
+        relationshipType:
+          type: string
+
+    ApiResponseAssetRelationshipResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 201
+        data:
+          $ref: '#/components/schemas/AssetRelationshipResponse'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    ServiceCrewRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+
+    ServiceCrewResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+
+    ApiResponseServiceCrewResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 201
+        data:
+          $ref: '#/components/schemas/ServiceCrewResponse'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    ServiceCrewMemberRequest:
+      type: object
+      required:
+        - serviceCrewId
+        - serviceResourceId
+        - memberRole
+        - startDate
+      properties:
+        serviceCrewId:
+          type: integer
+        serviceResourceId:
+          type: integer
+        memberRole:
+          type: string
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+
+    ServiceCrewMemberResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        serviceCrewId:
+          type: integer
+        serviceResourceId:
+          type: integer
+        memberRole:
+          type: string
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+
+    ApiResponseServiceCrewMemberResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 201
+        data:
+          $ref: '#/components/schemas/ServiceCrewMemberResponse'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    ServiceResourceSkillRequest:
+      type: object
+      required:
+        - serviceResourceId
+        - skillId
+        - skillLevel
+        - validFrom
+      properties:
+        serviceResourceId:
+          type: integer
+        skillId:
+          type: integer
+        skillLevel:
+          type: integer
+        validFrom:
+          type: string
+          format: date
+        validTo:
+          type: string
+          format: date
+
+    ServiceResourceSkillResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        serviceResourceId:
+          type: integer
+        skillId:
+          type: integer
+        skillLevel:
+          type: integer
+        validFrom:
+          type: string
+          format: date
+        validTo:
+          type: string
+          format: date
+
+    ApiResponseServiceResourceSkillResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 201
+        data:
+          $ref: '#/components/schemas/ServiceResourceSkillResponse'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    ServiceTerritoryMemberRequest:
+      type: object
+      required:
+        - serviceTerritoryId
+        - serviceResourceId
+        - territoryType
+        - travelMode
+      properties:
+        serviceTerritoryId:
+          type: integer
+        serviceResourceId:
+          type: integer
+        operatingHoursId:
+          type: integer
+        territoryType:
+          type: string
+        travelMode:
+          type: string
+
+    ServiceTerritoryMemberResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        serviceTerritoryId:
+          type: integer
+        serviceResourceId:
+          type: integer
+        operatingHoursId:
+          type: integer
+        territoryType:
+          type: string
+        travelMode:
+          type: string
+
+    ApiResponseServiceTerritoryMemberResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 201
+        data:
+          $ref: '#/components/schemas/ServiceTerritoryMemberResponse'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    ShiftRequest:
+      type: object
+      required:
+        - serviceResourceId
+        - serviceTerritoryId
+        - startTime
+        - endTime
+        - shiftType
+      properties:
+        serviceResourceId:
+          type: integer
+        serviceTerritoryId:
+          type: integer
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        shiftType:
+          type: string
+
+    ShiftResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        serviceResourceId:
+          type: integer
+        serviceTerritoryId:
+          type: integer
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        shiftType:
+          type: string
+
+    ApiResponseShiftResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 201
+        data:
+          $ref: '#/components/schemas/ShiftResponse'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    ServiceResourceCapacityRequest:
+      type: object
+      required:
+        - serviceResourceId
+        - capacityType
+        - capacityValue
+        - startDate
+      properties:
+        serviceResourceId:
+          type: integer
+        capacityType:
+          type: string
+        capacityValue:
+          type: number
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+
+    ServiceResourceCapacityResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        serviceResourceId:
+          type: integer
+        capacityType:
+          type: string
+        capacityValue:
+          type: number
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+
+    ApiResponseServiceResourceCapacityResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 201
+        data:
+          $ref: '#/components/schemas/ServiceResourceCapacityResponse'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    ResourceAbsenceRequest:
+      type: object
+      required:
+        - serviceResourceId
+        - absenceType
+        - startTime
+        - endTime
+        - status
+      properties:
+        serviceResourceId:
+          type: integer
+        absenceType:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        status:
+          type: string
+
+    ResourceAbsenceResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        serviceResourceId:
+          type: integer
+        absenceType:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        status:
+          type: string
+
+    ApiResponseResourceAbsenceResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 201
+        data:
+          $ref: '#/components/schemas/ResourceAbsenceResponse'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    ResourcePreferenceRequest:
+      type: object
+      required:
+        - serviceResourceId
+        - relatedRecordType
+        - relatedRecordId
+        - preferenceType
+      properties:
+        serviceResourceId:
+          type: integer
+        relatedRecordType:
+          type: string
+        relatedRecordId:
+          type: integer
+        preferenceType:
+          type: string
+
+    ResourcePreferenceResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        serviceResourceId:
+          type: integer
+        relatedRecordType:
+          type: string
+        relatedRecordId:
+          type: integer
+        preferenceType:
+          type: string
+
+    ApiResponseResourcePreferenceResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 201
+        data:
+          $ref: '#/components/schemas/ResourcePreferenceResponse'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    MaintenancePlanRequest:
+      type: object
+      required:
+        - accountId
+        - frequency
+        - generationLeadDays
+        - nextGenerationDate
+        - isActive
+      properties:
+        accountId:
+          type: integer
+        assetId:
+          type: integer
+        workTypeId:
+          type: integer
+        frequency:
+          type: string
+        generationLeadDays:
+          type: integer
+        nextGenerationDate:
+          type: string
+          format: date
+        isActive:
+          type: boolean
+
+    MaintenancePlanResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        accountId:
+          type: integer
+        assetId:
+          type: integer
+        workTypeId:
+          type: integer
+        frequency:
+          type: string
+        generationLeadDays:
+          type: integer
+        nextGenerationDate:
+          type: string
+          format: date
+        isActive:
+          type: boolean
+
+    ApiResponseMaintenancePlanResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 201
+        data:
+          $ref: '#/components/schemas/MaintenancePlanResponse'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    MilestoneRequest:
+      type: object
+      required:
+        - entitlementProcessId
+        - name
+        - targetMinutes
+        - sequence
+      properties:
+        entitlementProcessId:
+          type: integer
+        name:
+          type: string
+        targetMinutes:
+          type: integer
+        sequence:
+          type: integer
+
+    MilestoneResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        entitlementProcessId:
+          type: integer
+        name:
+          type: string
+        targetMinutes:
+          type: integer
+        sequence:
+          type: integer
+
+    ApiResponseMilestoneResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 201
+        data:
+          $ref: '#/components/schemas/MilestoneResponse'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    CaseMilestoneRequest:
+      type: object
+      required:
+        - caseId
+        - milestoneId
+        - startedAt
+        - isBreached
+      properties:
+        caseId:
+          type: integer
+        milestoneId:
+          type: integer
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        isBreached:
+          type: boolean
+
+    CaseMilestoneResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        caseId:
+          type: integer
+        milestoneId:
+          type: integer
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        isBreached:
+          type: boolean
+
+    ApiResponseCaseMilestoneResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 201
+        data:
+          $ref: '#/components/schemas/CaseMilestoneResponse'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    ApiResponseWorkOrderResponseList:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 200
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkOrderResponse'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    Reminder:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        dueAt:
+          type: string
+          format: date-time
+        recurrence:
+          type: string
+        priority:
+          type: string
+        contactPreference:
+          type: string
+        assigneeName:
+          type: string
+        assigneeContact:
+          type: string
+        status:
+          type: string
+        snoozeCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    ApiResponseReminder:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 200
+        data:
+          $ref: '#/components/schemas/Reminder'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    ApiResponseReminderList:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 200
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Reminder'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    Campaign:
+      type: object
+      properties:
+        id:
+          type: integer
+        orgId:
+          type: integer
+        name:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CampaignRequest:
+      type: object
+      required:
+        - orgId
+        - name
+      properties:
+        orgId:
+          type: integer
+        name:
+          type: string
+        status:
+          type: string
+
+    ApiResponseCampaign:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 200
+        data:
+          $ref: '#/components/schemas/Campaign'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    ApiResponseCampaignList:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 200
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Campaign'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    ScheduledEmail:
+      type: object
+      properties:
+        id:
+          type: integer
+        orgId:
+          type: integer
+        campaignId:
+          type: integer
+        contactId:
+          type: integer
+        templateId:
+          type: integer
+        scheduledAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ScheduledEmailRequest:
+      type: object
+      required:
+        - orgId
+        - contactId
+        - scheduledAt
+      properties:
+        orgId:
+          type: integer
+        campaignId:
+          type: integer
+        contactId:
+          type: integer
+        templateId:
+          type: integer
+        scheduledAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+
+    ApiResponseScheduledEmail:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 200
+        data:
+          $ref: '#/components/schemas/ScheduledEmail'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    ApiResponseScheduledEmailList:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 200
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduledEmail'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    Recipient:
+      type: object
+      properties:
+        id:
+          type: integer
+        accountId:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+
+    RecipientRequest:
+      type: object
+      required:
+        - accountId
+        - name
+      properties:
+        accountId:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+
+    ApiResponseRecipient:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 200
+        data:
+          $ref: '#/components/schemas/Recipient'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    ApiResponseRecipientList:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 200
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Recipient'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    Job:
+      type: object
+      properties:
+        id:
+          type: integer
+        orgId:
+          type: integer
+        categoryId:
+          type: integer
+          nullable: true
+        name:
+          type: string
+        status:
+          type: string
+        config:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    JobRequest:
+      type: object
+      required:
+        - orgId
+        - name
+      properties:
+        orgId:
+          type: integer
+        categoryId:
+          type: integer
+          nullable: true
+        name:
+          type: string
+        status:
+          type: string
+        config:
+          type: object
+          additionalProperties: true
+
+    ApiResponseJob:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 200
+        data:
+          $ref: '#/components/schemas/Job'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    ApiResponseJobList:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 200
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Job'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    JobRun:
+      type: object
+      properties:
+        id:
+          type: integer
+        jobId:
+          type: integer
+        status:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    ApiResponseJobRun:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 200
+        data:
+          $ref: '#/components/schemas/JobRun'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    ApiResponseJobRunList:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 200
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobRun'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    Workflow:
+      type: object
+      properties:
+        id:
+          type: integer
+        orgId:
+          type: integer
+        name:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    WorkflowRequest:
+      type: object
+      required:
+        - orgId
+        - name
+      properties:
+        orgId:
+          type: integer
+        name:
+          type: string
+        status:
+          type: string
+
+    ApiResponseWorkflow:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 200
+        data:
+          $ref: '#/components/schemas/Workflow'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    ApiResponseWorkflowList:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 200
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Workflow'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    WorkflowRun:
+      type: object
+      properties:
+        id:
+          type: integer
+        workflowId:
+          type: integer
+        status:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    ApiResponseWorkflowRun:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 200
+        data:
+          $ref: '#/components/schemas/WorkflowRun'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    ApiResponseWorkflowRunList:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 200
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowRun'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    # -------------------------------------------------------------------------
+    # Voice Call Scheduler Schemas
+    # -------------------------------------------------------------------------
+
+    ScheduleVoiceCallRequest:
+      type: object
+      required:
+        - phoneNumber
+        - instructions
+        - scheduledAt
+      properties:
+        phoneNumber:
+          type: string
+          description: E.164-formatted destination phone number
+          example: "+15551234567"
+        instructions:
+          type: string
+          description: Spoken text or script to deliver in the call
+          example: "Hello, your order has shipped and will arrive tomorrow."
+        scheduledAt:
+          type: string
+          format: date-time
+          description: ISO-8601 UTC timestamp when the call should be placed
+          example: "2026-07-12T12:00:00Z"
+        provider:
+          type: string
+          description: Voice provider to use (mock | twilio | vapi). Defaults to mock.
+          enum: [mock, twilio, vapi]
+          default: mock
+
+    ScheduledCall:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        phoneNumber:
+          type: string
+        instructions:
+          type: string
+        scheduledAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [PENDING, CALLED, FAILED]
+        provider:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    ApiResponseScheduledCall:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 201
+        data:
+          $ref: '#/components/schemas/ScheduledCall'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    ApiResponseScheduledCallList:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 200
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduledCall'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    GithubActionTemplate:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        cronExpression:
+          type: string
+        eventType:
+          type: string
+        yamlContent:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ApiResponseGithubActionTemplate:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 200
+        data:
+          $ref: '#/components/schemas/GithubActionTemplate'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+
+    ApiResponseGithubActionTemplateList:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 200
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/GithubActionTemplate'
+        error:
+          $ref: '#/components/schemas/ApiError'
+          nullable: true
+

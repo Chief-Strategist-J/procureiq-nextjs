@@ -1,0 +1,11 @@
+version: "1.0"
+deployment:
+  id: voice_agent_custom_cascade
+  entry:
+    path: packages/python/voice-agent/src/features/custom_cascade/runner.py
+  env:
+    path: packages/python/voice-agent/.env
+  secrets:
+    VIDEOSDK_AUTH_TOKEN: ${VIDEOSDK_TOKEN}
+  deploy:
+    cloud: true

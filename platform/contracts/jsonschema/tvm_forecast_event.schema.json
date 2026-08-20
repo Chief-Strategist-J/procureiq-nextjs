@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://procureiq.com/schemas/tvm_forecast_event.schema.json",
+  "title": "TimesFMForecastEvent",
+  "type": "object",
+  "required": [
+    "eventId",
+    "timestamp",
+    "modelName",
+    "horizon",
+    "historicalData",
+    "forecastPoint",
+    "quantile10",
+    "quantile90",
+    "effectiveAnnualRate",
+    "riskFreeRate",
+    "inflationPremium",
+    "defaultPremium",
+    "liquidityPremium",
+    "maturityPremium"
+  ],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "modelName": {
+      "type": "string",
+      "default": "google/timesfm-1.0-200m"
+    },
+    "horizon": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 120
+    },
+    "historicalData": {
+      "type": "array",
+      "items": { "type": "number" }
+    },
+    "forecastPoint": {
+      "type": "array",
+      "items": { "type": "number" }
+    },
+    "quantile10": {
+      "type": "array",
+      "items": { "type": "number" }
+    },
+    "quantile90": {
+      "type": "array",
+      "items": { "type": "number" }
+    },
+    "effectiveAnnualRate": { "type": "number" },
+    "riskFreeRate": { "type": "number" },
+    "inflationPremium": { "type": "number" },
+    "defaultPremium": { "type": "number" },
+    "liquidityPremium": { "type": "number" },
+    "maturityPremium": { "type": "number" }
+  },
+  "additionalProperties": false
+}

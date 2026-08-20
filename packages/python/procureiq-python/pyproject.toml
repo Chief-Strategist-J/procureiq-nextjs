@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "procureiq-python"
+version = "0.1.0"
+description = "ProcureIQ Python AI & Analytics Engine with Google TimesFM"
+authors = [{ name = "ProcureIQ Team" }]
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn>=0.28.0",
+    "pydantic>=2.6.4",
+    "pydantic-settings>=2.2.1",
+    "kafka-python>=2.0.2",
+    "timesfm>=1.1.0",
+    "torch>=2.2.1",
+    "sqlalchemy>=2.0.28",
+    "psycopg2-binary>=2.9.9",
+    "opentelemetry-api>=1.23.0",
+    "opentelemetry-sdk>=1.23.0"
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pyright]
+include = ["src"]
+extraPaths = ["src"]
+executionEnvironments = [
+  { root = "src" }
+]

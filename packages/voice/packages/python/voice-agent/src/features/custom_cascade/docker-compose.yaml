@@ -1,0 +1,12 @@
+services:
+  custom-cascade-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    restart: unless-stopped
+    # Lets LANGFUSE_HOST=http://host.docker.internal:3000 reach the
+    # self-hosted Langfuse stack (deploy/docker/docker-compose.langfuse.yaml)
+    # running as a separate compose project on the host.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
