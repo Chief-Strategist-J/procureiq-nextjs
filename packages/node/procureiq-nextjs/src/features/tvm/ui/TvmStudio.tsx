@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useTvmManagement } from "../hooks/use-tvm-management";
 import { TvmTimesfmVisualizer } from "../components/TvmTimesfmVisualizer";
+import { SingleSumCompoundingChart } from "../components/SingleSumCompoundingChart";
 import { CaHeader } from "../components/CaHeader";
 import { CfaRiskBreakdown } from "../components/CfaRiskBreakdown";
 import { DataForm } from "@/shared/ui/DataForm";
@@ -97,8 +98,9 @@ export function TvmStudio() {
             />
           </div>
 
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-6">
             <TvmTimesfmVisualizer data={forecastData} currencySymbol={params.currencySymbol || "$"} />
+            <SingleSumCompoundingChart data={forecastData} currencySymbol={params.currencySymbol || "$"} />
           </div>
         </div>
       )}
