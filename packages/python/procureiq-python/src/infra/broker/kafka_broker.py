@@ -37,8 +37,10 @@ class KafkaBroker:
             carrier: Dict[str, str] = {}
             propagator.inject(carrier)
             
+            # kafka-python requires: List[Tuple[str, bytes]]
+            # Key = plain str, Value = bytes — do NOT encode the key
             headers = [
-                (k.encode('utf-8'), v.encode('utf-8'))
+                (k, v.encode("utf-8"))
                 for k, v in carrier.items()
             ]
 

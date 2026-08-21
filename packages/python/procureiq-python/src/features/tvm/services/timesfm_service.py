@@ -63,17 +63,16 @@ class TimesFMService:
 
         ear = tvm_math.calculate_ear(rate_val, freq_val)
 
-        effective_freq = max(1, freq_val)
-        total_periods = int(years * effective_freq)
+        effective_freq = 1 if freq_val <= 0 else freq_val
+        total_periods = int(years) if freq_val <= 0 else int(years * effective_freq)
 
         pv_res, fv_res = tvm_math.calculate_pv_fv_pair(
-            calc_type, rate_val, effective_freq, total_periods, pmt, pv_in, fv_in, years, series
+            calc_type, rate_val, freq_val, total_periods, pmt, pv_in, fv_in, years, series
         )
 
         trend = 1.0 + (rate_val / effective_freq)
         vol = 0.035
 
-        # Functional combinators replacing imperative loops per LOOP-001
         step_tuples = [
             (
                 round(last_val * math.pow(trend, i), 2),
@@ -86,15 +85,26 @@ class TimesFMService:
         quantile_10 = [round(val - band, 2) for val, band in step_tuples]
         quantile_90 = [round(val + band, 2) for val, band in step_tuples]
 
-        timeline = [
-            {
-                "period": period,
-                "periodValue": round(pv_res * math.pow(1.0 + (rate_val / effective_freq), period), 2),
-                "discountFactor": round(math.pow(1.0 + (rate_val / effective_freq), -period), 6),
-                "compoundFactor": round(math.pow(1.0 + (rate_val / effective_freq), period), 6)
-            }
-            for period in range(0, total_periods + 1)
-        ]
+        if freq_val <= 0:
+            timeline = [
+                {
+                    "period": period,
+                    "periodValue": round(pv_res * math.exp(rate_val * period), 2),
+                    "discountFactor": round(math.exp(-rate_val * period), 6),
+                    "compoundFactor": round(math.exp(rate_val * period), 6)
+                }
+                for period in range(0, total_periods + 1)
+            ]
+        else:
+            timeline = [
+                {
+                    "period": period,
+                    "periodValue": round(pv_res * math.pow(1.0 + (rate_val / effective_freq), period), 2),
+                    "discountFactor": round(math.pow(1.0 + (rate_val / effective_freq), -period), 6),
+                    "compoundFactor": round(math.pow(1.0 + (rate_val / effective_freq), period), 6)
+                }
+                for period in range(0, total_periods + 1)
+            ]
 
         return {
             "eventId": str(uuid.uuid4()),

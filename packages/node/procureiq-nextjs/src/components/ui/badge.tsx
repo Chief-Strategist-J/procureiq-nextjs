@@ -16,6 +16,7 @@ const badgeVariants = cva(
         error: 'border-rose-500/20 bg-rose-500/10 text-rose-400',
         info: 'border-brand-500/20 bg-brand-500/10 text-brand-400',
         neutral: 'border-slate-700 bg-slate-800 text-slate-300',
+        pending: 'border-amber-500/30 bg-amber-500/10 text-amber-300 shadow-sm shadow-amber-500/5',
       },
     },
     defaultVariants: {
@@ -28,8 +29,18 @@ export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof badgeVariants> {}
 
-function Badge({ className, variant, ...props }: BadgeProps) {
-  return <div className={cn(badgeVariants({ variant }), className)} {...props} />;
+function Badge({ className, variant, children, ...props }: BadgeProps) {
+  return (
+    <div className={cn(badgeVariants({ variant }), className)} {...props}>
+      {variant === 'pending' && (
+        <span className="relative flex h-2 w-2 mr-1.5 shrink-0">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+        </span>
+      )}
+      {children}
+    </div>
+  );
 }
 
 export { Badge, badgeVariants };

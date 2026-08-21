@@ -2,6 +2,10 @@ package com.procureiq.springboot_app.shared.exceptions;
 
 import com.procureiq.springboot_app.shared.types.single.ApiSingleResponse;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -15,6 +19,8 @@ import java.util.Map;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<?> handleValidationExceptions(MethodArgumentNotValidException ex, HttpServletRequest request) {
@@ -67,15 +73,25 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(ApiSingleResponse.error(400, ex.getMessage()), HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
-    public ResponseEntity<?> handleDataIntegrityViolation(org.springframework.dao.DataIntegrityViolationException ex, HttpServletRequest request) {
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<?> handleDataIntegrityViolation(DataIntegrityViolationException ex, HttpServletRequest request) {
+        log.error("Database integrity violation at path {}: {}", request.getRequestURI(), ex.getMessage(), ex);
         String msg = ex.getMessage() != null ? ex.getMessage() : "";
         boolean isEmail = msg.contains("uq_users_email") || msg.contains("users_email_key") || msg.contains("uk_users_email_tenant") || msg.contains("email");
         HttpStatus status = isEmail ? HttpStatus.CONFLICT : HttpStatus.BAD_REQUEST;
         String responseMsg = isEmail
             ? "An account with this email address already exists for this tenant. Please sign in instead."
-            : "Database constraint violation occurred";
+            : "Database constraint violation occurred. Please check submitted parameters.";
         return new ResponseEntity<>(ApiSingleResponse.error(status.value(), responseMsg), status);
+    }
+
+    @ExceptionHandler(DataAccessException.class)
+    public ResponseEntity<?> handleDataAccessException(DataAccessException ex, HttpServletRequest request) {
+        log.error("Database access error at path {}: {}", request.getRequestURI(), ex.getMessage(), ex);
+        return new ResponseEntity<>(
+            ApiSingleResponse.error(500, "A database execution error occurred. Schema or query constraint failed."),
+            HttpStatus.INTERNAL_SERVER_ERROR
+        );
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
@@ -85,6 +101,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleGenericException(Exception ex, HttpServletRequest request) {
+        log.error("Unhandled exception at path {}: {}", request.getRequestURI(), ex.getMessage(), ex);
         String msg = ex.getMessage() != null ? ex.getMessage() : "An unexpected server error occurred";
         return new ResponseEntity<>(ApiSingleResponse.error(500, msg), HttpStatus.INTERNAL_SERVER_ERROR);
     }

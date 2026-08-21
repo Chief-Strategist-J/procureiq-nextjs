@@ -23,6 +23,15 @@ export const ROLE_FIELDS_SCHEMA: Record<UserRole, FieldConfig[]> = {
   admin: [
     { key: 'adminClearanceLevel', label: 'Admin Clearance Level', placeholder: 'ORG_ADMIN', required: true },
     { key: 'authorizationGrantCode', label: 'Authorization Code', placeholder: 'AUTH-KEY-881' }
+  ],
+  // CA roles — same fields as accountant (license number + tax ID)
+  chartered_accountant: [
+    { key: 'cpaLicenseNumber', label: 'CA License Number', placeholder: 'CA-994102', required: true },
+    { key: 'taxIdVat', label: 'Tax ID / VAT Registration', placeholder: 'VAT-990182' }
+  ],
+  ca: [
+    { key: 'cpaLicenseNumber', label: 'CA License Number', placeholder: 'CA-994102', required: true },
+    { key: 'taxIdVat', label: 'Tax ID / VAT Registration', placeholder: 'VAT-990182' }
   ]
 };
 

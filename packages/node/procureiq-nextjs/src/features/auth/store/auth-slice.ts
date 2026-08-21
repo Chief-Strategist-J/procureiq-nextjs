@@ -3,6 +3,10 @@ import { AuthState, LoginInput, SignupInput, UserProfile, UserRole } from '../ty
 import { AuthDialogType } from '../rules/auth.rules';
 import { AUTH_STATUS } from '../constants';
 
+// 24-hour session TTL in milliseconds (86,400,000 ms)
+const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+const SESSION_MAX_AGE_SEC = 24 * 60 * 60; // 86,400 seconds
+
 interface LoginFormFields {
   email: string;
   password: string;
@@ -68,6 +72,23 @@ const initialState: ExtendedAuthState = {
   dialog: { isOpen: false, type: 'error', title: '', message: '', actionText: 'Try Again' },
 };
 
+function persistSessionData(token: string, user: UserProfile) {
+  if (typeof window === 'undefined') return;
+  const now = Date.now();
+  localStorage.setItem('auth_token', token);
+  localStorage.setItem('auth_user', JSON.stringify(user));
+  localStorage.setItem('auth_login_timestamp', now.toString());
+  document.cookie = `procureiq_session=active; Max-Age=${SESSION_MAX_AGE_SEC}; Path=/; SameSite=Lax`;
+}
+
+function clearSessionData() {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem('auth_token');
+  localStorage.removeItem('auth_user');
+  localStorage.removeItem('auth_login_timestamp');
+  document.cookie = 'procureiq_session=; Max-Age=0; Path=/; SameSite=Lax';
+}
+
 export const authSlice = createSlice({
   name: 'auth',
   initialState,
@@ -119,10 +140,7 @@ export const authSlice = createSlice({
       state.error = null;
       state.fieldErrors = {};
       state.dialog.isOpen = false;
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('auth_token', action.payload.token);
-        localStorage.setItem('auth_user', JSON.stringify(action.payload.user));
-      }
+      persistSessionData(action.payload.token, action.payload.user);
     },
     loginFailure(state, action: PayloadAction<{ message: string; dialogType: AuthDialogType }>) {
       state.status = AUTH_STATUS.FAILED;
@@ -148,9 +166,8 @@ export const authSlice = createSlice({
       state.error = null;
       state.fieldErrors = {};
       state.dialog.isOpen = false;
-      if (typeof window !== 'undefined' && action.payload.token) {
-        localStorage.setItem('auth_token', action.payload.token);
-        localStorage.setItem('auth_user', JSON.stringify(action.payload.user));
+      if (action.payload.token) {
+        persistSessionData(action.payload.token, action.payload.user);
       }
     },
     signupFailure(state, action: PayloadAction<{ message: string; dialogType: AuthDialogType }>) {
@@ -176,23 +193,37 @@ export const authSlice = createSlice({
       state.error = null;
       state.fieldErrors = {};
       state.dialog.isOpen = false;
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('auth_user');
-      }
+      clearSessionData();
     },
     rehydrateAuth(state) {
       if (typeof window !== 'undefined') {
         try {
           const storedToken = localStorage.getItem('auth_token');
           const storedUser = localStorage.getItem('auth_user');
+          const loginTimestamp = localStorage.getItem('auth_login_timestamp');
+
           if (storedToken && storedUser) {
-            state.token = storedToken;
-            state.user = JSON.parse(storedUser);
-            state.isAuthenticated = true;
+            const loginTime = loginTimestamp ? parseInt(loginTimestamp, 10) : 0;
+            const now = Date.now();
+            const elapsed = now - loginTime;
+
+            // If session is older than 24 hours (86,400,000 ms) or timestamp missing -> Auto Logout!
+            if (!loginTimestamp || Number.isNaN(loginTime) || elapsed > SESSION_MAX_AGE_MS) {
+              clearSessionData();
+              state.user = null;
+              state.token = null;
+              state.isAuthenticated = false;
+            } else {
+              state.token = storedToken;
+              state.user = JSON.parse(storedUser);
+              state.isAuthenticated = true;
+            }
           }
         } catch {
-          // Ignore parse error
+          clearSessionData();
+          state.user = null;
+          state.token = null;
+          state.isAuthenticated = false;
         }
       }
     },

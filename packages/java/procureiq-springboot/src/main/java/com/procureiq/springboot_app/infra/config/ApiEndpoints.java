@@ -22,6 +22,9 @@ public final class ApiEndpoints {
     public static final String TVM = API_V1 + "/tvm";
     public static final String TVM_CALCULATE = "/calculate";
     public static final String TVM_TIMESFM_FORECAST = "/timesfm-forecast";
+    public static final String TVM_LEDGER = "/ledger";
+    public static final String TVM_LEDGER_ID = "/ledger/{ledgerId}";
+    public static final String TVM_LEDGER_EXPORT = "/ledger/{ledgerId}/export";
 
     public static final String TVM_AI = API_V1 + "/tvm-ai";
     public static final String TVM_AI_FORECAST = "/forecast";

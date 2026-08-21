@@ -1,109 +1,244 @@
+/**
+ * TvmStudio — CA & Financial Studio root page component.
+ *
+ * UX DESIGN PRINCIPLES:
+ *   - NO full-page scroll. The entire studio fits in the viewport (100vh).
+ *   - Header: fixed at top, compact (48px).
+ *   - Body: fills remaining height using flex-1 + overflow-hidden.
+ *   - Sidebar: scrolls independently (overflow-y-auto) so inputs never go offscreen.
+ *   - Content: scrolls independently per-panel.
+ *   - Self-contained tabs (Annuity, PV, Ledger): full-width, still no page scroll.
+ *
+ * ARCHITECTURE:
+ *   - State: Redux (params + forecastData) via useTvmManagement
+ *   - Tab routing: TAB_PANEL_MAP maps StudioTab → JSX (data-driven, no switch)
+ *   - No infinite loops: TvmInputPanel reads directly from Redux, never from `initial` prop
+ *
+ * UI-LOGIC-001: No business logic in JSX.
+ * UI-FETCH-001: All fetches in hooks.
+ */
 "use client";
 
-import React, { useState } from "react";
-import { useTvmManagement } from "../hooks/use-tvm-management";
-import { TvmTimesfmVisualizer } from "../components/TvmTimesfmVisualizer";
-import { SingleSumCompoundingChart } from "../components/SingleSumCompoundingChart";
-import { CaHeader } from "../components/CaHeader";
-import { CfaRiskBreakdown } from "../components/CfaRiskBreakdown";
-import { DataForm } from "@/shared/ui/DataForm";
-import { tvmSchema, TvmEntity } from "../schema/tvm.schema";
+import React, { useState, useEffect, useCallback } from "react";
+import { CaHeader, type StudioTab }     from "../components/CaHeader";
+import { TvmInputPanel }                 from "../components/TvmInputPanel";
+import { TvmTimesfmVisualizer }         from "../components/TvmTimesfmVisualizer";
+import { SingleSumCompoundingChart }     from "../components/SingleSumCompoundingChart";
+import { CompoundingFrequencyTable }     from "../components/CompoundingFrequencyTable";
+import { CfaRiskBreakdown }             from "../components/CfaRiskBreakdown";
+import { AnnuityCalculator }            from "../components/AnnuityCalculator";
+import { PvLumpSumCalculator }          from "../components/PvLumpSumCalculator";
+import { CaLedgerPanel }                from "../components/CaLedgerPanel";
+import { useTvmManagement }             from "../hooks/use-tvm-management";
+import { useCaLedger }                  from "../hooks/use-ca-ledger";
+import type { TvmParams }               from "../store/tvm-slice";
+import { Badge }                         from "@/components/ui/badge";
 
+// ── Tabs that show the input sidebar (left) + content panel (right) ───────────
+const SIDEBAR_TABS: StudioTab[] = ["tvm", "forecasting", "risk"];
+
+// ── Access denied ─────────────────────────────────────────────────────────────
+function AccessDenied() {
+  return (
+    <div className="h-screen bg-slate-950 flex items-center justify-center p-6">
+      <div className="max-w-md w-full p-8 rounded-2xl bg-slate-900/90 border border-red-500/30 text-center space-y-4 shadow-2xl">
+        <div className="w-14 h-14 rounded-full bg-red-500/10 text-red-400 mx-auto flex items-center justify-center text-2xl border border-red-500/20">🔒</div>
+        <h2 className="text-xl font-bold text-white">Accountant Access Required</h2>
+        <p className="text-sm text-slate-400">The CA & Financial Studio is restricted to Accountants and Finance Administrators.</p>
+      </div>
+    </div>
+  );
+}
+
+// ── Live status strip (compact, 1 line) ───────────────────────────────────────
+function StatusStrip({
+  forecastData,
+  isLoading,
+  error,
+  currencySymbol,
+}: {
+  forecastData: ReturnType<typeof useTvmManagement>["forecastData"];
+  isLoading: boolean;
+  error: string | null;
+  currencySymbol: string;
+}) {
+  const fmt = (v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 2 });
+
+  if (!forecastData && !isLoading && !error) {
+    return (
+      <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-900/60 border-b border-slate-800/60 text-[10px] text-slate-400">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+        Ready — click ▶ Run Quantitative Model to compute
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-3 px-3 py-1.5 bg-slate-900/60 border-b border-slate-800/60">
+      {isLoading && (
+        <span className="flex items-center gap-2 text-[10px] text-cyan-400 font-mono">
+          <Badge variant="pending" className="py-0 px-1.5 text-[9px]">Computing</Badge>
+          Running TimesFM Model…
+        </span>
+      )}
+      {error && <span className="text-[10px] text-red-400 font-mono">⚠ {error}</span>}
+      {forecastData && !isLoading && (
+        <>
+          <span className="text-[10px] font-mono text-slate-500">
+            PV <span className="text-emerald-400 font-bold">{currencySymbol}{fmt(forecastData.presentValue)}</span>
+          </span>
+          <span className="text-[10px] font-mono text-slate-500">
+            FV <span className="text-cyan-400 font-bold">{currencySymbol}{fmt(forecastData.futureValue)}</span>
+          </span>
+          <span className="text-[10px] font-mono text-slate-500">
+            EAR <span className="text-indigo-400 font-bold">{(forecastData.effectiveAnnualRate * 100).toFixed(4)}%</span>
+          </span>
+          <span className="text-[10px] font-mono text-slate-600 ml-auto">{forecastData.modelName}</span>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── TVM tab: 3 stacked visualizers ──────────────────────────────────────────
+function TvmTabContent({
+  forecastData,
+  params,
+  isLoading,
+  onRunModel,
+}: {
+  forecastData: ReturnType<typeof useTvmManagement>["forecastData"];
+  params: TvmParams;
+  isLoading: boolean;
+  onRunModel: () => void;
+}) {
+  const sym = params.currencySymbol || "$";
+  return (
+    <div className="space-y-3">
+      <TvmTimesfmVisualizer data={forecastData} isLoading={isLoading} onRunModel={onRunModel} currencySymbol={sym} />
+      <SingleSumCompoundingChart data={forecastData} currencySymbol={sym} />
+      <CompoundingFrequencyTable
+        presentValue={forecastData?.presentValue ?? 10_000}
+        statedRate={params.statedRate ?? 0.08}
+        years={params.years ?? 5}
+        currencySymbol={sym}
+      />
+    </div>
+  );
+}
+
+// ── Main Studio ───────────────────────────────────────────────────────────────
 export function TvmStudio() {
-  const [activeTab, setActiveTab] = useState<'tvm' | 'forecasting' | 'risk'>('tvm');
+  const [activeTab, setActiveTab] = useState<StudioTab>("tvm");
+
   const {
     params,
     forecastData,
     isLoading,
+    error,
     isAccountantAuthorized,
     updateParams,
     triggerForecast,
   } = useTvmManagement();
 
-  if (!isAccountantAuthorized) {
-    return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-6 font-sans">
-        <div className="max-w-md w-full p-8 rounded-2xl bg-slate-900/90 border border-red-500/30 text-center space-y-4 shadow-2xl backdrop-blur-xl">
-          <div className="w-12 h-12 rounded-full bg-red-500/10 text-red-400 mx-auto flex items-center justify-center font-bold text-xl border border-red-500/20">
-            🔒
-          </div>
-          <h2 className="text-xl font-bold text-white">Accountant Access Required</h2>
-          <p className="text-sm text-slate-400">
-            The Time Value of Money & Google TimesFM Quantitative Studio is restricted exclusively to Accountants and Finance Administrators.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  const ledger = useCaLedger();
 
-  const handleFormChange = (values: Partial<TvmEntity>) => {
-    const patch: Record<string, unknown> = {};
-    if (values.statedRate !== undefined) patch.statedRate = Number(values.statedRate);
-    if (values.frequency !== undefined) patch.frequency = Number(values.frequency);
-    if (values.horizon !== undefined) patch.horizon = Number(values.horizon);
-    if (values.calculationType !== undefined) patch.calculationType = String(values.calculationType);
-    if (values.pmt !== undefined) patch.pmt = Number(values.pmt);
-    if (values.years !== undefined) patch.years = Number(values.years);
-    if (values.currencySymbol !== undefined) patch.currencySymbol = String(values.currencySymbol);
-    if (values.riskFreeRate !== undefined) patch.riskFreeRate = Number(values.riskFreeRate);
-    if (values.inflationPremium !== undefined) patch.inflationPremium = Number(values.inflationPremium);
-    if (values.defaultPremium !== undefined) patch.defaultPremium = Number(values.defaultPremium);
-    if (values.liquidityPremium !== undefined) patch.liquidityPremium = Number(values.liquidityPremium);
-    if (values.maturityPremium !== undefined) patch.maturityPremium = Number(values.maturityPremium);
-    updateParams(patch);
+  // Auto-save to ledger when a new forecast result arrives (deduped by eventId)
+  const [lastSavedEventId, setLastSavedEventId] = useState<string | null>(null);
+  useEffect(() => {
+    if (forecastData?.eventId && forecastData.eventId !== lastSavedEventId) {
+      ledger.saveLedgerRecord(forecastData, params);
+      setLastSavedEventId(forecastData.eventId);
+    }
+  }, [forecastData, params, ledger, lastSavedEventId]);
+
+  const handleParamChange = useCallback(
+    (key: keyof TvmParams, value: unknown) => updateParams({ [key]: value }),
+    [updateParams]
+  );
+
+  const sym = params.currencySymbol || "$";
+  const showSidebar = SIDEBAR_TABS.includes(activeTab);
+
+  // Tab content map (data-driven — no switch/if chains)
+  const tabContent: Partial<Record<StudioTab, React.ReactNode>> = {
+    tvm: (
+      <TvmTabContent
+        forecastData={forecastData}
+        params={params}
+        isLoading={isLoading}
+        onRunModel={triggerForecast}
+      />
+    ),
+    forecasting: (
+      <TvmTimesfmVisualizer
+        data={forecastData}
+        isLoading={isLoading}
+        onRunModel={triggerForecast}
+        currencySymbol={sym}
+      />
+    ),
+    risk:       <CfaRiskBreakdown data={forecastData} currencySymbol={sym} />,
+    annuity:    <AnnuityCalculator currencySymbol={sym} />,
+    pv:         <PvLumpSumCalculator currencySymbol={sym} />,
+    ledger: (
+      <CaLedgerPanel
+        records={ledger.records}
+        onSaveNotes={ledger.updateNotes}
+        onExportCsv={ledger.exportCsv}
+        currencySymbol={sym}
+      />
+    ),
   };
 
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8 space-y-6 font-sans overflow-x-hidden">
-      <CaHeader activeTab={activeTab} onSelectTab={setActiveTab} />
+  if (!isAccountantAuthorized) return <AccessDenied />;
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/40 p-4 rounded-xl border border-slate-800">
-        <div className="space-y-1">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            {activeTab === 'tvm' && 'Time Value of Money (TVM) Controls'}
-            {activeTab === 'forecasting' && 'Google TimesFM Zero-Shot Forecast Engine'}
-            {activeTab === 'risk' && 'CFA Quantitative Risk Premium Analysis'}
-          </h2>
-          <p className="text-xs text-slate-400">
-            Schema-Driven DataForm controls synchronized in real-time via Redux-Saga
-          </p>
+  return (
+    // ── Outer shell: full viewport height, no page scroll ─────────────────────
+    <div className="h-screen flex flex-col bg-slate-950 text-slate-100 font-sans overflow-hidden">
+
+      {/* ── Compact top header ──────────────────────────────────────────────── */}
+      <div className="shrink-0 border-b border-slate-800/80 bg-slate-900/95 backdrop-blur-xl">
+        <div className="px-4 pt-3 pb-0">
+          <CaHeader activeTab={activeTab} onSelectTab={setActiveTab} />
         </div>
-        <button
-          onClick={triggerForecast}
-          disabled={isLoading}
-          className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-semibold text-xs shadow-lg shadow-emerald-500/20 transition-all disabled:opacity-50 shrink-0"
-        >
-          {isLoading ? "Calculating..." : "Re-run Quantitative Model"}
-        </button>
+        <StatusStrip
+          forecastData={forecastData}
+          isLoading={isLoading}
+          error={error ?? null}
+          currencySymbol={sym}
+        />
       </div>
 
-      {activeTab === 'risk' ? (
-        <CfaRiskBreakdown data={forecastData} currencySymbol={params.currencySymbol || "$"} />
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-          <div className="lg:col-span-4 p-4 rounded-2xl bg-slate-900/80 border border-slate-800 backdrop-blur-xl space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
-                Quantitative Inputs
-              </h3>
-              <span className="text-[10px] uppercase tracking-wider text-emerald-400 font-mono">
-                DataForm Schema
-              </span>
+      {/* ── Body: fills remaining height ────────────────────────────────────── */}
+      <div className="flex-1 overflow-hidden">
+        {showSidebar ? (
+          // Two-column layout — both columns scroll independently
+          <div className="h-full flex gap-0">
+            {/* Sidebar — scrollable */}
+            <aside className="w-72 xl:w-80 shrink-0 h-full overflow-y-auto border-r border-slate-800/60 bg-slate-900/40 p-3 space-y-3">
+              <TvmInputPanel
+                params={params}
+                isLoading={isLoading}
+                onParamChange={handleParamChange}
+                onRunModel={triggerForecast}
+              />
+            </aside>
+
+            {/* Content — scrollable */}
+            <main className="flex-1 h-full overflow-y-auto p-4">
+              {tabContent[activeTab]}
+            </main>
+          </div>
+        ) : (
+          // Full-width for self-contained calculators — scrollable
+          <div className="h-full overflow-y-auto p-4">
+            <div className="max-w-4xl mx-auto">
+              {tabContent[activeTab]}
             </div>
-
-            <DataForm<TvmEntity>
-              schema={tvmSchema}
-              initial={params}
-              onChange={handleFormChange}
-            />
           </div>
-
-          <div className="lg:col-span-8 space-y-4">
-            <TvmTimesfmVisualizer data={forecastData} currencySymbol={params.currencySymbol || "$"} />
-            <SingleSumCompoundingChart data={forecastData} currencySymbol={params.currencySymbol || "$"} />
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

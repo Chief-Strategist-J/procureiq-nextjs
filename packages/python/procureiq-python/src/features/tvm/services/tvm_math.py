@@ -51,6 +51,12 @@ class TvmMathEngine:
         years: float,
         cash_flows: List[float]
     ) -> Tuple[float, float]:
+        if freq_val <= 0:
+            base_pv = pv_in if pv_in != 0.0 else (pmt if pmt != 0.0 else (cash_flows[0] if cash_flows else 100.0))
+            if fv_in != 0.0:
+                return fv_in / math.exp(stated_rate * years), fv_in
+            return base_pv, base_pv * math.exp(stated_rate * years)
+
         rate_per_period = stated_rate / max(1, freq_val)
         rule = TVM_CALCULATION_RULESET.get(calc_type, _calc_single_sum)
         return rule(rate_per_period, total_periods, pmt, pv_in, fv_in, years, stated_rate, cash_flows)

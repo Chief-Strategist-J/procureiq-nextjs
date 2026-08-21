@@ -2,6 +2,7 @@
 
 import React from 'react';
 import type { RoleAssignment } from '../types';
+import { TableSkeleton } from '@/components/ui/skeleton';
 
 interface RoleAssignmentListProps {
   assignments: RoleAssignment[];
@@ -10,12 +11,7 @@ interface RoleAssignmentListProps {
 
 export function RoleAssignmentList({ assignments, isLoading }: RoleAssignmentListProps) {
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center p-8 text-slate-400">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent mr-3" />
-        Loading role assignments...
-      </div>
-    );
+    return <TableSkeleton rows={5} cols={5} />;
   }
 
   if (!assignments || assignments.length === 0) {

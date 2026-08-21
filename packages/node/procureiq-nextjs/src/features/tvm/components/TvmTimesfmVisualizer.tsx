@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
-import { Info } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Info, Play, Sparkles, TrendingUp, ShieldCheck, Activity } from "lucide-react";
 import { EarFormulaDialog } from "./dialogs/EarFormulaDialog";
 import { PvFormulaDialog } from "./dialogs/PvFormulaDialog";
 import { FvFormulaDialog } from "./dialogs/FvFormulaDialog";
 import { HorizonFormulaDialog } from "./dialogs/HorizonFormulaDialog";
+import { MetricSkeleton, ChartSkeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 
 export interface TimelinePoint {
   period: number;
@@ -34,30 +36,142 @@ export interface TimesfmForecastData {
   timeline: TimelinePoint[];
 }
 
+interface VisualizerProps {
+  data: TimesfmForecastData | null;
+  isLoading?: boolean;
+  currencySymbol?: string;
+  onRunModel?: () => void;
+}
+
+const PENDING_STEPS = [
+  "Initializing Google TimesFM Foundation Model...",
+  "Decomposing Risk Free Rate & Inflation Premiums...",
+  "Simulating Discounted Cash Flow Yield Curve...",
+  "Computing 10% & 90% Quantile Uncertainty Bounds...",
+  "Finalizing Present & Future Value Ledger Output...",
+];
+
 export function TvmTimesfmVisualizer({
   data,
+  isLoading = false,
   currencySymbol = "$",
-}: {
-  data: TimesfmForecastData | null;
-  currencySymbol?: string;
-}) {
+  onRunModel,
+}: VisualizerProps) {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const [activeFormulaModal, setActiveFormulaModal] = useState<string | null>(null);
+  const [pendingStepIdx, setPendingStepIdx] = useState(0);
 
-  if (!data) {
+  // Cycle through pending step labels to give dynamic feedback during loading
+  useEffect(() => {
+    if (!isLoading) {
+      setPendingStepIdx(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setPendingStepIdx((prev) => (prev + 1) % PENDING_STEPS.length);
+    }, 1200);
+    return () => clearInterval(interval);
+  }, [isLoading]);
+
+  // ── State 1: Active Pending / Loading View ────────────────────────────────
+  if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center p-16 rounded-3xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-2xl text-slate-400 shadow-2xl space-y-4">
-        <div className="relative flex items-center justify-center">
-          <div className="w-16 h-16 rounded-full border-4 border-indigo-500/20 border-t-indigo-500 animate-spin" />
-          <div className="absolute w-8 h-8 rounded-full bg-indigo-500/10 blur-sm" />
+      <div className="space-y-6 font-sans">
+        {/* Dynamic Pending Status Banner */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/30 p-5 shadow-2xl backdrop-blur-xl">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl animate-pulse" />
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
+            <div className="flex items-center gap-3">
+              <div className="relative flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
+                  <Activity className="h-5 w-5 animate-pulse" />
+                </div>
+                <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-cyan-500" />
+                </span>
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
+                  Computing TimesFM Forecast
+                  <Badge variant="pending">In Progress</Badge>
+                </h4>
+                <p className="text-xs text-indigo-300 font-mono mt-0.5 animate-pulse">
+                  {PENDING_STEPS[pendingStepIdx]}
+                </p>
+              </div>
+            </div>
+
+            {/* Progress bar shimmer */}
+            <div className="w-full sm:w-48 space-y-1.5">
+              <div className="flex justify-between text-[10px] font-mono text-slate-400">
+                <span>Phase {pendingStepIdx + 1}/5</span>
+                <span>{( (pendingStepIdx + 1) * 20 )}%</span>
+              </div>
+              <div className="h-2 w-full bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+                <div
+                  className="h-full bg-gradient-to-r from-indigo-500 to-cyan-400 rounded-full transition-all duration-500 shadow-glow"
+                  style={{ width: `${(pendingStepIdx + 1) * 20}%` }}
+                />
+              </div>
+            </div>
+          </div>
         </div>
-        <p className="text-sm font-semibold tracking-wide text-slate-300">
-          Running Financial Cash Flow AI Engine...
-        </p>
+
+        {/* Shimmering metric & chart skeletons */}
+        <MetricSkeleton count={4} />
+        <ChartSkeleton height={240} />
       </div>
     );
   }
 
+  // ── State 2: Idle / Ready State (data is null and not loading) ────────────
+  if (!data) {
+    return (
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-slate-900/90 via-slate-950 to-slate-950 border border-slate-800 p-8 sm:p-12 text-center backdrop-blur-2xl shadow-2xl space-y-6">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="inline-flex p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 mx-auto shadow-inner">
+          <Sparkles className="h-8 w-8" />
+        </div>
+
+        <div className="max-w-lg mx-auto space-y-2 relative z-10">
+          <h3 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
+            Financial Cash Flow AI Engine Ready
+          </h3>
+          <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+            Configure your stated rate, PMT cash flows, and forecast horizon in the panel, then click <strong className="text-cyan-400">Run Model</strong> to generate multi-period financial forecasts with quantile uncertainty.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-center gap-3 relative z-10">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/80 border border-slate-800 text-[11px] text-slate-300">
+            <TrendingUp className="h-3.5 w-3.5 text-emerald-400" /> Google TimesFM Model
+          </div>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/80 border border-slate-800 text-[11px] text-slate-300">
+            <ShieldCheck className="h-3.5 w-3.5 text-cyan-400" /> CFA Risk Premium Model
+          </div>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/80 border border-slate-800 text-[11px] text-slate-300">
+            <Activity className="h-3.5 w-3.5 text-purple-400" /> 10% & 90% Quantile Bounds
+          </div>
+        </div>
+
+        {onRunModel && (
+          <div className="pt-2 relative z-10">
+            <button
+              type="button"
+              onClick={onRunModel}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-bold text-xs shadow-lg shadow-cyan-500/20 transition-all hover:scale-105 active:scale-95"
+            >
+              <Play className="h-4 w-4 fill-white" /> Run Quantitative Model
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── State 3: Loaded Visualizer View ───────────────────────────────────────
   const forecast = data.forecastPoint || [];
   const q10 = data.quantile10 || forecast;
   const q90 = data.quantile90 || forecast;
@@ -127,6 +241,7 @@ export function TvmTimesfmVisualizer({
         onClose={() => setActiveFormulaModal(null)}
       />
 
+      {/* Financial KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 p-4 sm:p-5 border border-indigo-500/20 shadow-xl backdrop-blur-xl group hover:border-indigo-500/40 transition-all flex flex-col justify-between">
           <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl group-hover:bg-indigo-500/20 transition-all" />
@@ -217,6 +332,7 @@ export function TvmTimesfmVisualizer({
         </div>
       </div>
 
+      {/* Trajectory Visualizer SVG Chart */}
       <div className="rounded-2xl bg-slate-900/90 border border-slate-800/80 p-4 md:p-5 backdrop-blur-2xl shadow-xl space-y-3 font-sans">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
           <h3 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
@@ -260,9 +376,7 @@ export function TvmTimesfmVisualizer({
             <line x1={paddingLeft} y1={paddingTop + chartHeight * 0.75} x2={svgWidth - paddingRight} y2={paddingTop + chartHeight * 0.75} stroke="#1e293b" strokeWidth="1" strokeDasharray="3 3" />
 
             <path d={confidencePath} fill="url(#confidenceGlow)" />
-
             <path d={historyPath} fill="none" stroke="#64748b" strokeWidth="2.5" strokeDasharray="6 4" />
-
             <path d={forecastPath} fill="none" stroke="#38bdf8" strokeWidth="3.5" className="drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]" />
 
             {forecastPoints.map((pt, idx) => (
